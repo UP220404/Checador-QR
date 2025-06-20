@@ -73,23 +73,25 @@ async function cargarRegistros() {
   const snap = await getDocs(collection(db, "registros"));
   let registros = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
-  // Filtros
   const tipo = tipoFiltro.value;
   const fecha = fechaFiltro.value;
-  if (tipo) registros = registros.filter(r => r.tipo === tipo);
+  if (tipo && tipo !== "todos") registros = registros.filter(r => {
+    const tipoFormateado = r.tipo === "tiempo_completo" ? "Tiempo completo" : "Becario";
+    return tipoFormateado === tipo;
+  });
   if (fecha) registros = registros.filter(r => r.fecha === fecha);
 
-  // Orden por fecha/hora
   registros.sort((a, b) => new Date(a.timestamp.seconds * 1000) - new Date(b.timestamp.seconds * 1000));
 
   tabla.innerHTML = "";
   registros.forEach(r => {
     const { fecha, hora } = formatearFechaHora(r.timestamp);
+    const tipoFormateado = r.tipo === "tiempo_completo" ? "Tiempo completo" : "Becario";
     const fila = document.createElement("tr");
     fila.innerHTML = `
       <td>${r.nombre}</td>
       <td>${r.email}</td>
-      <td>${r.tipo}</td>
+      <td>${tipoFormateado}</td>
       <td>${fecha}</td>
       <td>${hora}</td>
       <td>${r.tipoEvento}</td>
