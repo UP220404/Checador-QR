@@ -3,136 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Cielito Home</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <title>Admin QR - Cielito Home</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { background-color: #f4f6f9; }
-    .sidebar {
-      height: 100vh;
-      background-color: #155d27;
-      color: white;
-    }
-    .sidebar a {
-      color: white;
-      text-decoration: none;
-      display: block;
-      padding: 1rem;
-    }
-    .sidebar a:hover {
-      background-color: #10451d;
-    }
-    .content {
-      padding: 2rem;
-    }
-    .card-kpi {
-      border-left: 5px solid #155d27;
-    }
-  </style>
 </head>
 <body>
-  <div class="container-fluid">
-    <div class="row">
-      <nav class="col-md-2 d-none d-md-block sidebar">
-        <h4 class="text-center py-3">Admin QR</h4>
-        <a href="#" onclick="mostrarSeccion('dashboard')"><i class="bi bi-speedometer"></i> Dashboard</a>
-        <a href="#" onclick="mostrarSeccion('registros')"><i class="bi bi-table"></i> Registros</a>
-        <a href="#" onclick="mostrarSeccion('analiticos')"><i class="bi bi-bar-chart"></i> Analíticos</a>
-        <a href="#" onclick="mostrarSeccion('reportes')"><i class="bi bi-file-earmark"></i> Reportes</a>
-      </nav>
-      <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 content">
+  <div class="d-flex">
+    <!-- Sidebar -->
+    <div class="bg-success text-white p-3" style="min-width: 250px; height: 100vh;">
+      <h4 class="text-white mb-4">CH Panel</h4>
+      <ul class="nav flex-column">
+        <li class="nav-item mb-2"><a href="#dashboard" class="nav-link text-white">📊 Dashboard</a></li>
+        <li class="nav-item mb-2"><a href="#registros" class="nav-link text-white">📋 Registros</a></li>
+        <li class="nav-item mb-2"><a href="#analisis" class="nav-link text-white">📈 Análisis</a></li>
+        <li class="nav-item mb-2"><a href="#reportes" class="nav-link text-white">📄 Reportes</a></li>
+      </ul>
+    </div>
 
-        <!-- Dashboard -->
-        <div id="dashboard">
-          <h2 class="mb-4">Panel de resumen</h2>
-          <div class="row">
-            <div class="col-md-4">
-              <div class="card card-kpi p-3 mb-3">
-                <h5>Total registros hoy</h5>
-                <p id="kpi-registros" class="fs-4">--</p>
+    <!-- Main Content -->
+    <div class="flex-grow-1 p-4">
+      <h2 class="text-success mb-4">Bienvenido, Administrador</h2>
+
+      <!-- Dashboard KPIs -->
+      <section id="dashboard">
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card border-success">
+              <div class="card-body">
+                <h6>Entradas Hoy</h6>
+                <h3 id="entradas-hoy">0</h3>
               </div>
             </div>
-            <div class="col-md-4">
-              <div class="card card-kpi p-3 mb-3">
-                <h5>Entradas tarde</h5>
-                <p id="kpi-retardos" class="fs-4">--</p>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-success">
+              <div class="card-body">
+                <h6>Salidas Hoy</h6>
+                <h3 id="salidas-hoy">0</h3>
               </div>
             </div>
-            <div class="col-md-4">
-              <div class="card card-kpi p-3 mb-3">
-                <h5>Tipo de usuarios</h5>
-                <canvas id="graficoTipos"></canvas>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body">
+                <canvas id="graficaAsistencias" height="100"></canvas>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- Registros -->
-        <div id="registros" style="display: none;">
-          <h2 class="mb-4">Registros</h2>
-          <div class="table-responsive">
-            <table class="table table-striped">
-              <thead>
-                <tr><th>Nombre</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Evento</th></tr>
-              </thead>
-              <tbody id="tabla-registros">
-                <!-- Datos dinámicos -->
-              </tbody>
-            </table>
-          </div>
+      <!-- Registros -->
+      <section id="registros">
+        <h4 class="mb-3">Tabla de Registros</h4>
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Evento</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-registros"></tbody>
+          </table>
         </div>
+      </section>
 
-        <!-- Analíticos -->
-        <div id="analiticos" style="display: none;">
-          <h2 class="mb-4">Análisis</h2>
-          <canvas id="graficoAsistencia"></canvas>
-        </div>
+      <!-- Análisis -->
+      <section id="analisis" class="mt-5">
+        <h4 class="mb-3">Resumen Semanal</h4>
+        <canvas id="graficaSemanal" height="100"></canvas>
+      </section>
 
-        <!-- Reportes -->
-        <div id="reportes" style="display: none;">
-          <h2 class="mb-4">Reportes</h2>
-          <button class="btn btn-outline-primary">Exportar a CSV</button>
-          <button class="btn btn-outline-danger">Generar PDF</button>
-        </div>
-
-      </main>
+      <!-- Reportes -->
+      <section id="reportes" class="mt-5">
+        <h4 class="mb-3">Exportar Datos</h4>
+        <button class="btn btn-outline-primary me-2" onclick="exportarCSV()"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
+        <button class="btn btn-outline-danger" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir Reporte</button>
+      </section>
     </div>
   </div>
 
-  <script>
-    function mostrarSeccion(id) {
-      document.querySelectorAll('main > div').forEach(div => div.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
-    // Inicializar con dashboard
-    mostrarSeccion('dashboard');
-
-    // Ejemplo de gráfica de torta
-    new Chart(document.getElementById("graficoTipos"), {
-      type: 'doughnut',
-      data: {
-        labels: ["Becario", "Tiempo completo"],
-        datasets: [{
-          label: "Usuarios",
-          data: [6, 4],
-          backgroundColor: ["#28a745", "#ffc107"]
-        }]
-      }
-    });
-
-    // Gráfico de asistencia
-    new Chart(document.getElementById("graficoAsistencia"), {
-      type: 'bar',
-      data: {
-        labels: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
-        datasets: [{
-          label: "Registros",
-          data: [12, 15, 10, 18, 20],
-          backgroundColor: "#198754"
-        }]
-      }
-    });
-  </script>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>
