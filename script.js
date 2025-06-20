@@ -76,7 +76,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
   const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
-  if (tipoEvento === "salida" && !permitido) {
+  /*if (tipoEvento === "salida" && !permitido) {
     mostrarEstado("error", "❌ Aún no es hora de salida.");
     return;
   }
@@ -85,7 +85,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   if (duplicado) {
     mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
     return;
-  }
+  }*/
 
   await addDoc(collection(db, "registros"), {
     uid: user.uid,
