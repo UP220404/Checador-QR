@@ -1,80 +1,27 @@
+<!-- admin.html actualizado -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - Registros QR | Cielito Home</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin - CH QR</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-  <style>
-    body {
-      background: linear-gradient(to right, #e8f5e9, #ffffff);
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .container {
-      max-width: 1100px;
-      margin-top: 3rem;
-      background: #fff;
-      border-radius: 15px;
-      padding: 2rem;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    }
-    h2 {
-      color: #155d27;
-      font-weight: 600;
-    }
-    #auth-status {
-      font-weight: 500;
-      color: #444;
-      margin-bottom: 1rem;
-    }
-    .alert-error {
-      background-color: #ffebee;
-      border-left: 5px solid #c62828;
-      padding: 1rem;
-      font-weight: bold;
-      color: #c62828;
-      border-radius: 8px;
-    }
-    .btn-danger {
-      font-weight: 500;
-    }
-    table {
-      font-size: 0.92rem;
-      margin-top: 1rem;
-    }
-    thead {
-      background-color: #155d27;
-      color: white;
-    }
-    tbody tr:nth-child(even) {
-      background-color: #f8f9fa;
-    }
-    .footer {
-      font-size: 0.8rem;
-      color: #aaa;
-      text-align: center;
-      margin-top: 3rem;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <h2 class="mb-3"><i class="bi bi-shield-check"></i> Registros de Asistencia - Cielito Home</h2>
-    <p id="auth-status">Verificando acceso...</p>
-    <div id="error-message" class="alert-error d-none"></div>
+<body class="bg-light">
+  <div class="container py-4">
+    <h2 class="text-success mb-3"><i class="bi bi-person-badge"></i> Panel de Administración</h2>
+    <div id="auth-status" class="mb-3">Verificando acceso...</div>
+    <div id="error-message" class="alert alert-danger d-none"></div>
     <button id="btn-login" class="btn btn-success mb-2">
       <i class="bi bi-google"></i> Iniciar sesión con Google
     </button>
     <button id="btn-logout" class="btn btn-secondary mb-2 d-none">
       <i class="bi bi-box-arrow-right"></i> Cerrar sesión
     </button>
-    <button id="btn-reset" class="btn btn-danger mb-3 d-none">
-      <i class="bi bi-trash3"></i> Borrar todos los registros
-    </button>
     <div class="table-responsive">
-      <table class="table table-bordered table-hover d-none" id="tabla-container">
-        <thead>
+      <table id="tabla-container" class="table table-striped table-hover d-none">
+        <thead class="table-success">
           <tr>
             <th>Nombre</th>
             <th>Email</th>
@@ -84,12 +31,12 @@
             <th>Evento</th>
             <th>Lat</th>
             <th>Lng</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody id="tabla-registros"></tbody>
       </table>
     </div>
-    <div class="footer">&copy; 2025 Cielito Home · Acceso restringido a personal autorizado</div>
   </div>
 
   <script type="module">
@@ -121,32 +68,20 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
     const tabla = document.getElementById("tabla-registros");
     const tablaContainer = document.getElementById("tabla-container");
     const status = document.getElementById("auth-status");
-    const errorMessage = document.getElementById("error-message");
-    const resetBtn = document.getElementById("btn-reset");
+    const errorBox = document.getElementById("error-message");
     const loginBtn = document.getElementById("btn-login");
     const logoutBtn = document.getElementById("btn-logout");
 
-    const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
-
-    function formatearFecha(fechaStr) {
-      try {
-        const fecha = new Date(fechaStr.seconds * 1000);
-        return fecha.toLocaleDateString("es-MX", { year: 'numeric', month: '2-digit', day: '2-digit' });
-      } catch {
-        return "-";
-      }
-    }
-
-    function formatearHora(fechaStr) {
-      try {
-        const fecha = new Date(fechaStr.seconds * 1000);
-        return fecha.toLocaleTimeString("es-MX", { hour12: false });
-      } catch {
-        return "-";
-      }
+    function formatearFechaHora(timestamp) {
+      const fecha = new Date(timestamp.seconds * 1000);
+      const f = fecha.toLocaleDateString("es-MX");
+      const h = fecha.toLocaleTimeString("es-MX", { hour12: false });
+      return [f, h];
     }
 
     async function cargarRegistros() {
@@ -154,57 +89,49 @@
       tabla.innerHTML = "";
       snap.forEach(docSnap => {
         const r = docSnap.data();
-        const fila = `
-          <tr>
-            <td>${r.nombre}</td>
-            <td>${r.email}</td>
-            <td>${r.tipo}</td>
-            <td>${formatearFecha(r.timestamp)}</td>
-            <td>${formatearHora(r.timestamp)}</td>
-            <td>${r.tipoEvento}</td>
-            <td>${r.ubicacion?.lat ?? '-'}</td>
-            <td>${r.ubicacion?.lng ?? '-'}</td>
-          </tr>`;
-        tabla.insertAdjacentHTML("beforeend", fila);
+        const [f, h] = formatearFechaHora(r.timestamp);
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${r.nombre}</td>
+          <td>${r.email}</td>
+          <td>${r.tipo}</td>
+          <td>${f}</td>
+          <td>${h}</td>
+          <td>${r.tipoEvento}</td>
+          <td>${r.ubicacion?.lat ?? '-'}</td>
+          <td>${r.ubicacion?.lng ?? '-'}</td>
+          <td><button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}"><i class="bi bi-trash"></i></button></td>
+        `;
+        tabla.appendChild(fila);
       });
-      status.classList.add("d-none");
       tablaContainer.classList.remove("d-none");
     }
 
-    async function borrarRegistros() {
-      if (!confirm("¿Estás segura que quieres borrar TODOS los registros?")) return;
-      const snap = await getDocs(collection(db, "registros"));
-      for (const docSnap of snap.docs) {
-        await deleteDoc(doc(db, "registros", docSnap.id));
+    tabla.addEventListener("click", async (e) => {
+      if (e.target.closest("button")) {
+        const id = e.target.closest("button").dataset.id;
+        if (confirm("¿Eliminar este registro?")) {
+          await deleteDoc(doc(db, "registros", id));
+          cargarRegistros();
+        }
       }
-      alert("Registros eliminados correctamente.");
-      cargarRegistros();
-    }
+    });
+
+    loginBtn.addEventListener("click", () => signInWithPopup(auth, new GoogleAuthProvider()));
+    logoutBtn.addEventListener("click", () => signOut(auth).then(() => location.reload()));
 
     onAuthStateChanged(auth, (user) => {
       if (user && adminEmails.includes(user.email)) {
-        status.textContent = `Acceso autorizado para: ${user.email}`;
-        resetBtn.classList.remove("d-none");
-        resetBtn.addEventListener("click", borrarRegistros);
+        status.textContent = `Acceso autorizado: ${user.email}`;
         loginBtn.classList.add("d-none");
         logoutBtn.classList.remove("d-none");
         cargarRegistros();
       } else if (user) {
         loginBtn.classList.add("d-none");
-        errorMessage.classList.remove("d-none");
-        errorMessage.innerHTML = `⚠️ <strong>${user.email}</strong> no está autorizado para acceder a este panel.`;
+        errorBox.classList.remove("d-none");
+        errorBox.innerHTML = `🚫 <strong>${user.email}</strong> no está autorizado para acceder.`;
         signOut(auth);
       }
-    });
-
-    loginBtn.addEventListener("click", () => {
-      signInWithPopup(auth, new GoogleAuthProvider()).catch(() => {
-        status.textContent = "❌ Error al iniciar sesión.";
-      });
-    });
-
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => location.reload());
     });
   </script>
 </body>

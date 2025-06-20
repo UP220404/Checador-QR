@@ -1,10 +1,11 @@
+// script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
@@ -16,9 +17,6 @@ import {
   where,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// MODO PRUEBAS: true para desactivar validaciones, false para comportamiento real
-const modoPruebas = false;
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
@@ -33,13 +31,14 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const MODO_PRUEBAS = true; // Cambiar a true para desactivar validaciones
+
 function mostrarEstado(tipo, mensaje) {
   const statusBox = document.getElementById("status");
   const clases = { puntual: "verde", retardo: "ambar", salida: "azul", error: "rojo" };
-  statusBox.className = `status-box ${clases[tipo]}`;
+  statusBox.className = `status ${clases[tipo]}`;
   statusBox.textContent = mensaje;
   statusBox.classList.remove("d-none");
-  document.getElementById("log")?.classList.add("d-none");
 }
 
 function evaluarHoraEntrada() {
@@ -52,8 +51,7 @@ function evaluarHoraEntrada() {
 function horaPermitidaSalida(tipo) {
   const ahora = new Date();
   const limite = new Date();
-  if (tipo === "becario") limite.setHours(13, 0, 0);
-  else limite.setHours(16, 0, 0);
+  tipo === "becario" ? limite.setHours(13, 0, 0) : limite.setHours(16, 0, 0);
   return ahora >= limite;
 }
 
@@ -69,25 +67,56 @@ async function yaRegistradoHoy(uid, tipoEvento) {
   return !docs.empty;
 }
 
+function mensajeEspecial(dia, tipoEvento, nombre) {
+  if (dia === 1 && tipoEvento !== "salida") return `🎉 Feliz inicio de semana, ${nombre}!`;
+  if (dia === 5 && tipoEvento === "salida") return `🎉 Disfruta tu fin de semana, ${nombre}!`;
+  return null;
+}
+
+async function cargarHistorial(uid) {
+  const hoy = new Date();
+  const lista = document.getElementById("historial-lista");
+  lista.innerHTML = "";
+  const inicioSemana = new Date(hoy);
+  inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1);
+
+  const snap = await getDocs(
+    query(collection(db, "registros"), where("uid", "==", uid))
+  );
+  const registros = snap.docs.map(doc => doc.data());
+  const semana = registros.filter(r => {
+    const f = new Date(r.timestamp.seconds * 1000);
+    return f >= inicioSemana;
+  });
+
+  semana.sort((a, b) => new Date(a.timestamp.seconds * 1000) - new Date(b.timestamp.seconds * 1000));
+  semana.forEach(r => {
+    const item = document.createElement("li");
+    item.className = "list-group-item";
+    const fecha = new Date(r.timestamp.seconds * 1000).toLocaleDateString("es-MX");
+    const hora = new Date(r.timestamp.seconds * 1000).toLocaleTimeString("es-MX", { hour12: false });
+    item.textContent = `${fecha} - ${hora} - ${r.tipoEvento}`;
+    lista.appendChild(item);
+  });
+  document.getElementById("historial-container").classList.remove("d-none");
+}
+
 async function registrarAsistencia(user, datosUsuario, coords) {
   const now = new Date();
   const hora = now.toLocaleTimeString("es-MX", { hour12: false });
   const fecha = now.toLocaleDateString("es-MX");
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
+  const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
-  let permitido = true;
-  let duplicado = false;
+  if (!MODO_PRUEBAS && tipoEvento === "salida" && !permitido) {
+    mostrarEstado("error", `❌ Aún no es hora de salida, ${datosUsuario.nombre}`);
+    return;
+  }
 
-  if (!modoPruebas) {
-    permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
-    if (tipoEvento === "salida" && !permitido) {
-      mostrarEstado("error", "❌ Aún no es hora de salida para " + datosUsuario.tipo);
-      return;
-    }
-
-    duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
+  if (!MODO_PRUEBAS) {
+    const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
     if (duplicado) {
-      mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
+      mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy, ${datosUsuario.nombre}`);
       return;
     }
   }
@@ -112,29 +141,33 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   document.getElementById("tipoEvento").textContent = tipoEvento;
   document.getElementById("info").classList.remove("d-none");
 
+  const dia = now.getDay();
+  const saludo = mensajeEspecial(dia, tipoEvento, datosUsuario.nombre);
   mostrarEstado(tipoEvento,
-    tipoEvento === "salida"
+    saludo ? saludo : tipoEvento === "salida"
       ? `📤 Salida registrada a las ${hora}`
       : tipoEvento === "puntual"
       ? `✅ Entrada puntual a las ${hora}`
       : `⚠️ Entrada con retardo a las ${hora}`
   );
+
+  cargarHistorial(user.uid);
 }
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("btn-google")?.classList.add("d-none");
+    document.getElementById("btn-logout")?.classList.remove("d-none");
+    document.getElementById("user-name").textContent = `Hola, ${user.displayName}`;
 
     const userRef = doc(db, "usuarios", user.uid);
     const docSnap = await getDoc(userRef);
-
     if (!docSnap.exists()) {
-      mostrarEstado("error", "❌ Usuario no encontrado en Firestore.");
+      mostrarEstado("error", `❌ El correo ${user.email} no está autorizado.`);
       return;
     }
 
     const datos = docSnap.data();
-
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = {
@@ -143,9 +176,7 @@ onAuthStateChanged(auth, async (user) => {
         };
         registrarAsistencia(user, datos, coords);
       },
-      () => {
-        mostrarEstado("error", "❌ No se pudo obtener la ubicación.");
-      }
+      () => mostrarEstado("error", "❌ No se pudo obtener la ubicación.")
     );
   }
 });
@@ -155,6 +186,11 @@ document.getElementById("btn-google")?.addEventListener("click", async () => {
   try {
     await signInWithPopup(auth, provider);
   } catch (err) {
-    signInWithRedirect(auth, provider);
+    console.error(err);
   }
+});
+
+document.getElementById("btn-logout")?.addEventListener("click", async () => {
+  await signOut(auth);
+  location.reload();
 });
