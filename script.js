@@ -18,7 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // MODO PRUEBAS: true para desactivar validaciones, false para comportamiento real
-const modoPruebas = true;
+const modoPruebas = false;
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
