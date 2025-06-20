@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Registros QR | Cielito Home</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f1f3f5;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .container {
+      max-width: 1000px;
+      margin-top: 2rem;
+    }
+    h2 {
+      color: #155d27;
+      font-weight: 600;
+    }
+    table {
+      font-size: 0.9rem;
+    }
+    thead {
+      background-color: #155d27;
+      color: white;
+    }
+    tbody tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="mb-4">📋 Registros de Asistencia - Cielito Home</h2>
+    <p id="auth-status">Verificando acceso...</p>
+    <table class="table table-bordered table-hover d-none" id="tabla-container">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Tipo</th>
+          <th>Fecha</th>
+          <th>Hora</th>
+          <th>Evento</th>
+          <th>Lat</th>
+          <th>Lng</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-registros"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      GoogleAuthProvider,
+      signInWithPopup
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
+      authDomain: "qr-acceso-cielito-home.firebaseapp.com",
+      projectId: "qr-acceso-cielito-home",
+      storageBucket: "qr-acceso-cielito-home.appspot.com",
+      messagingSenderId: "229634415256",
+      appId: "1:229634415256:web:c576ba8879e58e441c4eed"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const tabla = document.getElementById("tabla-registros");
+    const tablaContainer = document.getElementById("tabla-container");
+    const status = document.getElementById("auth-status");
+
+    const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
+
+    function cargarRegistros() {
+      getDocs(collection(db, "registros"))
+        .then((snap) => {
+          tabla.innerHTML = "";
+          snap.forEach(doc => {
+            const r = doc.data();
+            const fila = `
+              <tr>
+                <td>${r.nombre}</td>
+                <td>${r.email}</td>
+                <td>${r.tipo}</td>
+                <td>${r.fecha}</td>
+                <td>${r.hora}</td>
+                <td>${r.tipoEvento}</td>
+                <td>${r.ubicacion?.lat ?? '-'}</td>
+                <td>${r.ubicacion?.lng ?? '-'}</td>
+              </tr>`;
+            tabla.insertAdjacentHTML("beforeend", fila);
+          });
+          status.classList.add("d-none");
+          tablaContainer.classList.remove("d-none");
+        });
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (user && adminEmails.includes(user.email)) {
+        status.textContent = `Acceso autorizado para: ${user.email}`;
+        cargarRegistros();
+      } else {
+        signInWithPopup(auth, new GoogleAuthProvider()).catch(() => {
+          status.textContent = "❌ Acceso denegado. No eres un administrador autorizado.";
+        });
+      }
+    });
+  </script>
+</body>
+</html>
