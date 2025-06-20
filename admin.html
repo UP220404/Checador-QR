@@ -54,6 +54,12 @@
   <div class="container">
     <h2 class="mb-3"><i class="bi bi-shield-check"></i> Registros de Asistencia - Cielito Home</h2>
     <p id="auth-status">Verificando acceso...</p>
+    <button id="btn-login" class="btn btn-success mb-2">
+      <i class="bi bi-google"></i> Iniciar sesión con Google
+    </button>
+    <button id="btn-logout" class="btn btn-secondary mb-2 d-none">
+      <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+    </button>
     <button id="btn-reset" class="btn btn-danger mb-3 d-none">
       <i class="bi bi-trash3"></i> Borrar todos los registros
     </button>
@@ -83,7 +89,8 @@
       getAuth,
       onAuthStateChanged,
       GoogleAuthProvider,
-      signInWithPopup
+      signInWithPopup,
+      signOut
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
@@ -109,6 +116,8 @@
     const tablaContainer = document.getElementById("tabla-container");
     const status = document.getElementById("auth-status");
     const resetBtn = document.getElementById("btn-reset");
+    const loginBtn = document.getElementById("btn-login");
+    const logoutBtn = document.getElementById("btn-logout");
 
     const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
 
@@ -159,12 +168,21 @@
         status.textContent = `Acceso autorizado para: ${user.email}`;
         resetBtn.classList.remove("d-none");
         resetBtn.addEventListener("click", borrarRegistros);
+        loginBtn.classList.add("d-none");
+        logoutBtn.classList.remove("d-none");
         cargarRegistros();
-      } else {
-        signInWithPopup(auth, new GoogleAuthProvider()).catch(() => {
+      }
+    });
+
+    loginBtn.addEventListener("click", () => {
+      signInWithPopup(auth, new GoogleAuthProvider())
+        .catch(() => {
           status.textContent = "❌ Acceso denegado. No eres un administrador autorizado.";
         });
-      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => location.reload());
     });
   </script>
 </body>
