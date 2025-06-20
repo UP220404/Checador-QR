@@ -28,6 +28,14 @@
       color: #444;
       margin-bottom: 1rem;
     }
+    .alert-error {
+      background-color: #ffebee;
+      border-left: 5px solid #c62828;
+      padding: 1rem;
+      font-weight: bold;
+      color: #c62828;
+      border-radius: 8px;
+    }
     .btn-danger {
       font-weight: 500;
     }
@@ -54,6 +62,7 @@
   <div class="container">
     <h2 class="mb-3"><i class="bi bi-shield-check"></i> Registros de Asistencia - Cielito Home</h2>
     <p id="auth-status">Verificando acceso...</p>
+    <div id="error-message" class="alert-error d-none"></div>
     <button id="btn-login" class="btn btn-success mb-2">
       <i class="bi bi-google"></i> Iniciar sesión con Google
     </button>
@@ -115,6 +124,7 @@
     const tabla = document.getElementById("tabla-registros");
     const tablaContainer = document.getElementById("tabla-container");
     const status = document.getElementById("auth-status");
+    const errorMessage = document.getElementById("error-message");
     const resetBtn = document.getElementById("btn-reset");
     const loginBtn = document.getElementById("btn-login");
     const logoutBtn = document.getElementById("btn-logout");
@@ -122,13 +132,21 @@
     const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
 
     function formatearFecha(fechaStr) {
-      const fecha = new Date(fechaStr);
-      return fecha.toLocaleDateString("es-MX", { year: 'numeric', month: '2-digit', day: '2-digit' });
+      try {
+        const fecha = new Date(fechaStr.seconds * 1000);
+        return fecha.toLocaleDateString("es-MX", { year: 'numeric', month: '2-digit', day: '2-digit' });
+      } catch {
+        return "-";
+      }
     }
 
     function formatearHora(fechaStr) {
-      const fecha = new Date(fechaStr);
-      return fecha.toLocaleTimeString("es-MX", { hour12: false });
+      try {
+        const fecha = new Date(fechaStr.seconds * 1000);
+        return fecha.toLocaleTimeString("es-MX", { hour12: false });
+      } catch {
+        return "-";
+      }
     }
 
     async function cargarRegistros() {
@@ -171,14 +189,18 @@
         loginBtn.classList.add("d-none");
         logoutBtn.classList.remove("d-none");
         cargarRegistros();
+      } else if (user) {
+        loginBtn.classList.add("d-none");
+        errorMessage.classList.remove("d-none");
+        errorMessage.innerHTML = `⚠️ <strong>${user.email}</strong> no está autorizado para acceder a este panel.`;
+        signOut(auth);
       }
     });
 
     loginBtn.addEventListener("click", () => {
-      signInWithPopup(auth, new GoogleAuthProvider())
-        .catch(() => {
-          status.textContent = "❌ Acceso denegado. No eres un administrador autorizado.";
-        });
+      signInWithPopup(auth, new GoogleAuthProvider()).catch(() => {
+        status.textContent = "❌ Error al iniciar sesión.";
+      });
     });
 
     logoutBtn.addEventListener("click", () => {
