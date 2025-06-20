@@ -74,7 +74,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const hora = now.toLocaleTimeString();
   const fecha = now.toLocaleDateString();
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
-  const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
+  //const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
   /*if (tipoEvento === "salida" && !permitido) {
     mostrarEstado("error", "❌ Aún no es hora de salida.");
