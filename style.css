@@ -1,50 +1,94 @@
-/* Fondo general */
-body {
-  background-color: #f8f9fa;
-  font-family: 'Segoe UI', sans-serif;
-}
+:root {
+      --verde: #155d27;
+      --dorado: #c1a35f;
+      --gris: #6c757d;
+      --fondo: #f9f9f9;
+    }
 
-/* Encabezado principal */
-h2 {
-  font-weight: 600;
-  color: #198754;
-}
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
 
-/* Contenedor del video */
-.video-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
+    body {
+      background-color: var(--fondo);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 1rem;
+    }
 
-video {
-  border: 3px solid #198754;
-  border-radius: 10px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
 
-/* Estilo del log de registro */
-#log {
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 12px;
-}
+    h1 {
+      font-size: 1.8rem;
+      color: var(--verde);
+      margin-bottom: 0.2rem;
+    }
 
-/* Lista de registros */
-#history .list-group-item {
-  font-size: 0.95rem;
-  padding: 10px 15px;
-  border-left: 4px solid #198754;
-}
+    .divider {
+      width: 60px;
+      height: 4px;
+      background-color: var(--dorado);
+      margin: 0.5rem auto 1rem auto;
+      border-radius: 10px;
+    }
 
-/* Animación ligera para nuevo registro */
-@keyframes flash {
-  0% { background-color: #d1e7dd; }
-  100% { background-color: white; }
-}
+    .subtitle {
+      color: var(--gris);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
 
-#history .list-group-item:first-child {
-  animation: flash 0.5s ease-in-out;
-}
+    .time {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--gris);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .info-card {
+      background-color: #f1f1f1;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .info-card p {
+      margin: 0.3rem 0;
+    }
+
+    .status {
+      font-weight: 600;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+
+    .verde { background-color: #d1e7dd; color: #0f5132; }
+    .ambar { background-color: #fff3cd; color: #664d03; }
+    .azul  { background-color: #cfe2ff; color: #084298; }
+    .rojo  { background-color: #f8d7da; color: #842029; }
+
+    .footer {
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-top: 2rem;
+    }
