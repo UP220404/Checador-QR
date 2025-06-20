@@ -114,17 +114,33 @@
     </p>
 
     <div class="footer">
-      Sistema interno exclusivo para colaboradores registrados
+      Sistema interno exclusivo para colaboradores registrados<br>
+      Si no inicia sesión, <a href="javascript:firebaseRedirect()">haz clic aquí</a>
     </div>
   </div>
 
   <script>
-    // Mostrar hora en tiempo real
     setInterval(() => {
       const ahora = new Date();
       document.getElementById("hora").textContent = ahora.toLocaleTimeString();
     }, 1000);
+
+    function firebaseRedirect() {
+      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js').then(module => {
+        const firebase = module.initializeApp({
+          apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
+          authDomain: "qr-acceso-cielito-home.firebaseapp.com"
+        });
+        import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js').then(authModule => {
+          const { getAuth, GoogleAuthProvider, signInWithRedirect } = authModule;
+          const auth = getAuth(firebase);
+          const provider = new GoogleAuthProvider();
+          signInWithRedirect(auth, provider);
+        });
+      });
+    }
   </script>
+
   <script type="module" src="script.js"></script>
 </body>
 </html>
