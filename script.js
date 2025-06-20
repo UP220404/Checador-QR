@@ -31,12 +31,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const MODO_PRUEBAS = true; // Cambiar a true para desactivar validaciones
+const MODO_PRUEBAS = false;
 
 function mostrarEstado(tipo, mensaje) {
   const statusBox = document.getElementById("status");
-  const clases = { puntual: "verde", retardo: "ambar", salida: "azul", error: "rojo" };
-  statusBox.className = `status ${clases[tipo]}`;
+  const clases = { puntual: "alert-success", retardo: "alert-warning", salida: "alert-primary", error: "alert-danger" };
+  statusBox.className = `alert ${clases[tipo]} mt-3`;
   statusBox.textContent = mensaje;
   statusBox.classList.remove("d-none");
 }
