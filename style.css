@@ -1,0 +1,50 @@
+/* Fondo general */
+body {
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Encabezado principal */
+h2 {
+  font-weight: 600;
+  color: #198754;
+}
+
+/* Contenedor del video */
+.video-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+video {
+  border: 3px solid #198754;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo del log de registro */
+#log {
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 12px;
+}
+
+/* Lista de registros */
+#history .list-group-item {
+  font-size: 0.95rem;
+  padding: 10px 15px;
+  border-left: 4px solid #198754;
+}
+
+/* Animación ligera para nuevo registro */
+@keyframes flash {
+  0% { background-color: #d1e7dd; }
+  100% { background-color: white; }
+}
+
+#history .list-group-item:first-child {
+  animation: flash 0.5s ease-in-out;
+}
