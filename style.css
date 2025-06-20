@@ -11,14 +11,12 @@
     }
 
     body {
-      background-color: var(--fondo);
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      padding: 1rem;
+    background-color: var(--fondo);
+    margin: 0;
+    padding: 2rem 1rem;
+    font-family: 'Inter', sans-serif;
     }
+
 
     .card {
       background: white;
