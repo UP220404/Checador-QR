@@ -23,6 +23,16 @@
           <i class="bi bi-box-arrow-right"></i> Cerrar sesión
         </button>
 
+        <script>
+        function actualizarReloj() {
+        const ahora = new Date();
+        const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
+        document.getElementById("reloj").textContent = `⏰ ${hora}`;
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+        </script>
+
         <div id="status" class="alert d-none" role="alert"></div>
 
         <div id="info" class="info-card d-none">
@@ -45,14 +55,6 @@
   </div>
 
   <script type="module" src="script.js"></script>
-<script>
-  function actualizarReloj() {
-    const ahora = new Date();
-    const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
-    document.getElementById("reloj").textContent = `⏰ ${hora}`;
-  }
-  setInterval(actualizarReloj, 1000);
-  actualizarReloj();
-</script>
+
 </body>
 </html>
