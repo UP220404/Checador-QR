@@ -1,4 +1,3 @@
-// script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -12,14 +11,8 @@ import {
   doc,
   getDoc,
   collection,
-  addDoc,
-  query,
-  where,
-  getDocs
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// ✅ Bandera para modo pruebas
-const modoPrueba = true;
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -38,61 +31,20 @@ const db = getFirestore(app);
 function mostrarEstado(tipo, mensaje) {
   const statusBox = document.getElementById("status");
   const clases = { puntual: "verde", retardo: "ambar", salida: "azul", error: "rojo" };
-  statusBox.className = `status ${clases[tipo]}`;
+  statusBox.className = `status-box ${clases[tipo]}`;
   statusBox.textContent = mensaje;
   statusBox.classList.remove("d-none");
-  document.getElementById("log").classList.add("d-none");
-}
-
-function evaluarHoraEntrada() {
-  const ahora = new Date();
-  const limite = new Date();
-  limite.setHours(8, 10, 0);
-  return ahora <= limite ? "puntual" : "retardo";
-}
-
-function horaPermitidaSalida(tipo) {
-  const ahora = new Date();
-  const limite = new Date();
-  if (tipo === "becario") limite.setHours(13, 0, 0);
-  else limite.setHours(16, 0, 0);
-  return ahora >= limite;
-}
-
-async function yaRegistradoHoy(uid, tipoEvento) {
-  const hoy = new Date().toLocaleDateString();
-  const q = query(
-    collection(db, "registros"),
-    where("uid", "==", uid),
-    where("fecha", "==", hoy),
-    where("tipoEvento", "==", tipoEvento)
-  );
-  const docs = await getDocs(q);
-  return !docs.empty;
+  document.getElementById("log")?.classList.add("d-none");
 }
 
 async function registrarAsistencia(user, datosUsuario, coords) {
   const now = new Date();
   const hora = now.toLocaleTimeString();
   const fecha = now.toLocaleDateString();
-  const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
 
-  // 🔓 Validaciones controladas por modoPrueba
-  if (!modoPrueba) {
-    const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
-    if (tipoEvento === "salida" && !permitido) {
-      mostrarEstado("error", "❌ Aún no es hora de salida.");
-      return;
-    }
-
-    const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
-    if (duplicado) {
-      mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
-      return;
-    }
-  } else {
-    console.warn("⚠️ MODO PRUEBA ACTIVADO: Validaciones desactivadas.");
-  }
+  // ⚠️ Modo pruebas: sin validación de horario ni duplicados
+  const tipoEvento = now.getHours() < 12 ? "puntual" : "salida";
+  const permitido = true;
 
   await addDoc(collection(db, "registros"), {
     uid: user.uid,
@@ -116,10 +68,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
   mostrarEstado(tipoEvento, tipoEvento === "salida"
     ? `📤 Salida registrada a las ${hora}`
-    : tipoEvento === "puntual"
-    ? `✅ Entrada puntual a las ${hora}`
-    : `⚠️ Entrada con retardo a las ${hora}`
-  );
+    : `✅ Entrada registrada a las ${hora}`);
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -146,12 +95,14 @@ onAuthStateChanged(auth, async (user) => {
         mostrarEstado("error", "❌ No se pudo obtener la ubicación.");
       }
     );
-  } else {
-    const provider = new GoogleAuthProvider();
-    if (navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome")) {
-      signInWithRedirect(auth, provider);
-    } else {
-      signInWithPopup(auth, provider).catch(() => signInWithRedirect(auth, provider));
-    }
+  }
+});
+
+document.getElementById("btn-google")?.addEventListener("click", async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    signInWithRedirect(auth, provider);
   }
 });
