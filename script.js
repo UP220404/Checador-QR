@@ -198,7 +198,7 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
 function actualizarReloj() {
   const ahora = new Date();
   const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
-  document.getElementById("reloj").textContent = `⏰ ${hora}`;
+  document.getElementById("reloj").textContent = ` ${hora}`;
 }
 setInterval(actualizarReloj, 1000);
 actualizarReloj();
