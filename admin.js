@@ -1,6 +1,13 @@
 // admin.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
+  getAuth,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
   getFirestore,
   collection,
   getDocs,
@@ -19,49 +26,77 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
+
 const tabla = document.getElementById("tabla-registros");
-const entradasHoyEl = document.getElementById("entradas-hoy");
-const salidasHoyEl = document.getElementById("salidas-hoy");
+const tipoFiltro = document.getElementById("filtroTipo");
+const fechaFiltro = document.getElementById("filtroFecha");
 
 function formatearFechaHora(timestamp) {
   const fecha = new Date(timestamp.seconds * 1000);
-  const f = fecha.toLocaleDateString("es-MX");
-  const h = fecha.toLocaleTimeString("es-MX", { hour12: false });
-  return [f, h];
+  return {
+    fecha: fecha.toLocaleDateString("es-MX"),
+    hora: fecha.toLocaleTimeString("es-MX", { hour12: false })
+  };
+}
+
+function exportarCSV() {
+  let csv = "Nombre,Email,Tipo,Fecha,Hora,Evento\n";
+  document.querySelectorAll("#tabla-registros tr").forEach(row => {
+    const cols = Array.from(row.querySelectorAll("td")).map(td => td.innerText);
+    csv += cols.join(",") + "\n";
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "registros.csv");
+  link.click();
+}
+
+function descargarJSON() {
+  const data = [];
+  document.querySelectorAll("#tabla-registros tr").forEach(row => {
+    const [nombre, email, tipo, fecha, hora, evento] = Array.from(row.querySelectorAll("td")).map(td => td.innerText);
+    data.push({ nombre, email, tipo, fecha, hora, evento });
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "registros.json");
+  link.click();
 }
 
 async function cargarRegistros() {
   const snap = await getDocs(collection(db, "registros"));
-  const hoy = new Date().toLocaleDateString("es-MX");
-  let entradas = 0, salidas = 0;
-  const datos = [];
+  let registros = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+  // Filtros
+  const tipo = tipoFiltro.value;
+  const fecha = fechaFiltro.value;
+  if (tipo) registros = registros.filter(r => r.tipo === tipo);
+  if (fecha) registros = registros.filter(r => r.fecha === fecha);
+
+  // Orden por fecha/hora
+  registros.sort((a, b) => new Date(a.timestamp.seconds * 1000) - new Date(b.timestamp.seconds * 1000));
 
   tabla.innerHTML = "";
-
-  snap.forEach(docSnap => {
-    const r = docSnap.data();
-    const [f, h] = formatearFechaHora(r.timestamp);
-    if (f === hoy && r.tipoEvento === "puntual") entradas++;
-    if (f === hoy && r.tipoEvento === "salida") salidas++;
-    datos.push({ ...r, fecha: f, hora: h });
+  registros.forEach(r => {
+    const { fecha, hora } = formatearFechaHora(r.timestamp);
     const fila = document.createElement("tr");
     fila.innerHTML = `
       <td>${r.nombre}</td>
       <td>${r.email}</td>
       <td>${r.tipo}</td>
-      <td>${f}</td>
-      <td>${h}</td>
+      <td>${fecha}</td>
+      <td>${hora}</td>
       <td>${r.tipoEvento}</td>
-      <td><button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}"><i class="bi bi-trash"></i></button></td>
+      <td><button class="btn btn-sm btn-danger" data-id="${r.id}"><i class="bi bi-trash"></i></button></td>
     `;
     tabla.appendChild(fila);
   });
-
-  entradasHoyEl.textContent = entradas;
-  salidasHoyEl.textContent = salidas;
-
-  dibujarGraficaDiaria(entradas, salidas);
-  dibujarGraficaSemanal(datos);
 }
 
 tabla.addEventListener("click", async (e) => {
@@ -74,63 +109,67 @@ tabla.addEventListener("click", async (e) => {
   }
 });
 
-function dibujarGraficaDiaria(entradas, salidas) {
-  const ctx = document.getElementById("graficaAsistencias").getContext("2d");
-  new Chart(ctx, {
-    type: "bar",
+tipoFiltro.addEventListener("change", cargarRegistros);
+fechaFiltro.addEventListener("change", cargarRegistros);
+
+document.getElementById("btn-logout").addEventListener("click", () => signOut(auth).then(() => location.reload()));
+
+onAuthStateChanged(auth, (user) => {
+  if (!user || !adminEmails.includes(user.email)) {
+    alert("No tienes acceso autorizado.");
+    window.location.href = "index.html";
+  } else {
+    cargarRegistros();
+    contarHoy();
+    graficarResumen();
+  }
+});
+
+async function contarHoy() {
+  const hoy = new Date().toLocaleDateString("es-MX");
+  const snap = await getDocs(collection(db, "registros"));
+  let entradas = 0;
+  let salidas = 0;
+  snap.forEach(doc => {
+    const r = doc.data();
+    if (r.fecha === hoy) {
+      r.tipoEvento === "salida" ? salidas++ : entradas++;
+    }
+  });
+  document.getElementById("entradas-hoy").textContent = entradas;
+  document.getElementById("salidas-hoy").textContent = salidas;
+}
+
+async function graficarResumen() {
+  const snap = await getDocs(collection(db, "registros"));
+  const data = {};
+  snap.forEach(doc => {
+    const r = doc.data();
+    const fecha = r.fecha;
+    if (!data[fecha]) data[fecha] = { entradas: 0, salidas: 0 };
+    if (r.tipoEvento === "salida") data[fecha].salidas++;
+    else data[fecha].entradas++;
+  });
+
+  const labels = Object.keys(data).sort();
+  const entradas = labels.map(l => data[l].entradas);
+  const salidas = labels.map(l => data[l].salidas);
+
+  new Chart(document.getElementById("graficaSemanal"), {
+    type: "line",
     data: {
-      labels: ["Entradas", "Salidas"],
-      datasets: [{
-        label: "Hoy",
-        data: [entradas, salidas],
-        backgroundColor: ["#198754", "#0d6efd"]
-      }]
+      labels,
+      datasets: [
+        { label: "Entradas", data: entradas, borderColor: "#198754", fill: false },
+        { label: "Salidas", data: salidas, borderColor: "#0d6efd", fill: false }
+      ]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } }
+      plugins: {
+        legend: { position: "top" },
+        title: { display: false }
+      }
     }
   });
 }
-
-function dibujarGraficaSemanal(datos) {
-  const conteo = { Lunes: 0, Martes: 0, Miércoles: 0, Jueves: 0, Viernes: 0 };
-  const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-  datos.forEach(r => {
-    const d = new Date(r.timestamp.seconds * 1000);
-    const dia = dias[d.getDay()];
-    if (conteo[dia] !== undefined) conteo[dia]++;
-  });
-
-  const ctx = document.getElementById("graficaSemanal").getContext("2d");
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: Object.keys(conteo),
-      datasets: [{
-        label: "Registros por día",
-        data: Object.values(conteo),
-        fill: false,
-        borderColor: "#198754",
-        tension: 0.1
-      }]
-    }
-  });
-}
-
-window.exportarCSV = async function () {
-  const snap = await getDocs(collection(db, "registros"));
-  let csv = "Nombre,Email,Tipo,Fecha,Hora,Evento\n";
-  snap.forEach(docSnap => {
-    const r = docSnap.data();
-    const [f, h] = formatearFechaHora(r.timestamp);
-    csv += `${r.nombre},${r.email},${r.tipo},${f},${h},${r.tipoEvento}\n`;
-  });
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "registros.csv";
-  link.click();
-};
-
-cargarRegistros();

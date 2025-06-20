@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background-color: #f9fafc;
+      background-color: #f4f6f9;
       font-family: 'Inter', sans-serif;
       scroll-behavior: smooth;
     }
@@ -20,40 +20,42 @@
       bottom: 0;
       left: 0;
       width: 260px;
-      background: linear-gradient(to bottom, #0b3d1d, #1c7c4e);
+      background: linear-gradient(to bottom, #1c1c1e, #2c2c2e);
       color: white;
       padding: 2rem 1rem;
       overflow-y: auto;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      box-shadow: 2px 0 10px rgba(0,0,0,0.15);
     }
     .sidebar h4 {
       margin-bottom: 2rem;
       font-weight: 700;
+      color: #d0d0d2;
     }
     .sidebar a {
       font-weight: 500;
       padding: 0.6rem 1rem;
       display: block;
       text-decoration: none;
-      color: white;
-      border-radius: 8px;
+      color: #dcdcdc;
+      border-radius: 10px;
       margin-bottom: 0.5rem;
       transition: all 0.3s;
     }
     .sidebar a:hover, .sidebar a.active {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
     }
     .main-content {
       margin-left: 260px;
-      padding: 2.5rem 3rem;
+      padding: 3rem;
     }
     .card {
       border: none;
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      border-radius: 18px;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+      transition: 0.3s ease-in-out;
     }
     .card:hover {
-      transform: translateY(-3px);
+      transform: translateY(-4px);
     }
     .card h6 {
       font-size: 0.9rem;
@@ -61,8 +63,9 @@
       font-weight: 500;
     }
     .card h3 {
-      color: #198754;
+      color: #1c7c4e;
       font-weight: 700;
+      font-size: 2rem;
     }
     .fade-section {
       opacity: 0;
@@ -73,19 +76,24 @@
       opacity: 1;
       transform: translateY(0);
     }
-    .btn-outline-light {
-      border-radius: 10px;
-    }
-    .table thead th {
-      background-color: #198754;
-      color: white;
-    }
-    .table tbody tr:hover {
-      background-color: #eef8f1;
-    }
     .section-title {
       font-weight: 700;
+      font-size: 1.3rem;
+      color: #1c1c1e;
       margin-bottom: 1.25rem;
+    }
+    .btn-outline-light {
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .table thead th {
+      background-color: #1c7c4e;
+      color: white;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+    .table tbody tr:hover {
+      background-color: #f0fdf4;
     }
   </style>
 </head>
@@ -106,25 +114,25 @@
 
     <!-- Main Content -->
     <div class="main-content">
-      <h2 class="text-success fw-bold mb-4">Bienvenido, Administrador</h2>
+      <h2 class="text-dark fw-bold mb-4">Bienvenido, Administrador</h2>
 
       <!-- Dashboard KPIs -->
       <section id="dashboard" class="fade-section">
         <div class="row g-4">
           <div class="col-md-3">
-            <div class="card text-center p-3">
+            <div class="card text-center p-4">
               <h6>Entradas Hoy</h6>
               <h3 id="entradas-hoy">0</h3>
             </div>
           </div>
           <div class="col-md-3">
-            <div class="card text-center p-3">
+            <div class="card text-center p-4">
               <h6>Salidas Hoy</h6>
               <h3 id="salidas-hoy">0</h3>
             </div>
           </div>
           <div class="col-md-6">
-            <div class="card p-3">
+            <div class="card p-4">
               <canvas id="graficaAsistencias" height="90"></canvas>
             </div>
           </div>
@@ -134,9 +142,13 @@
       <!-- Registros -->
       <section id="registros" class="fade-section mt-5">
         <h4 class="section-title">📋 Tabla de Registros</h4>
-        <div class="mb-3">
-          <label for="filtroFecha" class="form-label">Filtrar por fecha:</label>
-          <input type="date" id="filtroFecha" class="form-control" style="max-width: 280px;">
+        <div class="mb-3 d-flex flex-wrap gap-3">
+          <input type="date" id="filtroFecha" class="form-control" style="max-width: 240px;">
+          <select id="filtroTipo" class="form-select" style="max-width: 240px;">
+            <option value="">Todos</option>
+            <option value="becario">Becario</option>
+            <option value="tiempo completo">Tiempo Completo</option>
+          </select>
         </div>
         <div class="table-responsive">
           <table class="table table-hover table-bordered align-middle">
