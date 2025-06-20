@@ -7,12 +7,62 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f5f7fa;
+      font-family: 'Segoe UI', sans-serif;
+      scroll-behavior: smooth;
+    }
+    .sidebar {
+      min-width: 250px;
+      height: 100vh;
+      background: linear-gradient(to bottom, #155d27, #198754);
+      color: white;
+    }
+    .sidebar h4 {
+      margin-bottom: 2rem;
+    }
+    .sidebar a {
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+    .sidebar a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+    }
+    .card {
+      border: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+    }
+    .card h6 {
+      color: #6c757d;
+    }
+    .card h3 {
+      color: #198754;
+    }
+    #reportes button {
+      min-width: 180px;
+    }
+    .fade-section {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease-out;
+    }
+    .fade-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
 </head>
 <body>
   <div class="d-flex">
     <!-- Sidebar -->
-    <div class="bg-success text-white p-3" style="min-width: 250px; height: 100vh;">
-      <h4 class="text-white mb-4">CH Panel</h4>
+    <div class="sidebar p-4">
+      <h4 class="text-white"><i class="bi bi-shield-lock-fill me-2"></i>CH Panel</h4>
       <ul class="nav flex-column">
         <li class="nav-item mb-2"><a href="#dashboard" class="nav-link text-white">📊 Dashboard</a></li>
         <li class="nav-item mb-2"><a href="#registros" class="nav-link text-white">📋 Registros</a></li>
@@ -26,10 +76,10 @@
       <h2 class="text-success mb-4">Bienvenido, Administrador</h2>
 
       <!-- Dashboard KPIs -->
-      <section id="dashboard">
+      <section id="dashboard" class="fade-section">
         <div class="row mb-4">
           <div class="col-md-3">
-            <div class="card border-success">
+            <div class="card text-center">
               <div class="card-body">
                 <h6>Entradas Hoy</h6>
                 <h3 id="entradas-hoy">0</h3>
@@ -37,7 +87,7 @@
             </div>
           </div>
           <div class="col-md-3">
-            <div class="card border-success">
+            <div class="card text-center">
               <div class="card-body">
                 <h6>Salidas Hoy</h6>
                 <h3 id="salidas-hoy">0</h3>
@@ -47,7 +97,7 @@
           <div class="col-md-6">
             <div class="card">
               <div class="card-body">
-                <canvas id="graficaAsistencias" height="100"></canvas>
+                <canvas id="graficaAsistencias" height="90"></canvas>
               </div>
             </div>
           </div>
@@ -55,10 +105,14 @@
       </section>
 
       <!-- Registros -->
-      <section id="registros">
+      <section id="registros" class="fade-section">
         <h4 class="mb-3">Tabla de Registros</h4>
+        <div class="mb-3">
+          <label for="filtroFecha" class="form-label">Filtrar por fecha:</label>
+          <input type="date" id="filtroFecha" class="form-control" style="max-width: 250px;">
+        </div>
         <div class="table-responsive">
-          <table class="table table-bordered">
+          <table class="table table-striped table-hover table-bordered">
             <thead class="table-success">
               <tr>
                 <th>Nombre</th>
@@ -76,20 +130,45 @@
       </section>
 
       <!-- Análisis -->
-      <section id="analisis" class="mt-5">
+      <section id="analisis" class="mt-5 fade-section">
         <h4 class="mb-3">Resumen Semanal</h4>
-        <canvas id="graficaSemanal" height="100"></canvas>
+        <div class="card">
+          <div class="card-body">
+            <canvas id="graficaSemanal" height="100"></canvas>
+          </div>
+        </div>
       </section>
 
       <!-- Reportes -->
-      <section id="reportes" class="mt-5">
+      <section id="reportes" class="mt-5 fade-section">
         <h4 class="mb-3">Exportar Datos</h4>
-        <button class="btn btn-outline-primary me-2" onclick="exportarCSV()"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
-        <button class="btn btn-outline-danger" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir Reporte</button>
+        <div class="d-flex flex-wrap gap-3">
+          <button class="btn btn-outline-primary" onclick="exportarCSV()">
+            <i class="bi bi-filetype-csv"></i> Exportar CSV
+          </button>
+          <button class="btn btn-outline-danger" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimir Reporte
+          </button>
+          <button class="btn btn-outline-success" onclick="descargarJSON()">
+            <i class="bi bi-code-slash"></i> Descargar JSON
+          </button>
+        </div>
       </section>
     </div>
   </div>
 
   <script type="module" src="admin.js"></script>
+  <script>
+    const secciones = document.querySelectorAll('.fade-section');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    secciones.forEach(sec => observer.observe(sec));
+  </script>
 </body>
 </html>
