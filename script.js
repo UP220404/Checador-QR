@@ -31,7 +31,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const MODO_PRUEBAS = false;
+const MODO_PRUEBAS = true;
 
 function mostrarEstado(tipo, mensaje) {
   const statusBox = document.getElementById("status");
@@ -194,3 +194,11 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
   await signOut(auth);
   location.reload();
 });
+
+function actualizarReloj() {
+  const ahora = new Date();
+  const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
+  document.getElementById("reloj").textContent = `⏰ ${hora}`;
+}
+setInterval(actualizarReloj, 1000);
+actualizarReloj();
