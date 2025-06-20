@@ -2,166 +2,135 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Admin - CH QR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Cielito Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #f4f6f9; }
+    .sidebar {
+      height: 100vh;
+      background-color: #155d27;
+      color: white;
+    }
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      display: block;
+      padding: 1rem;
+    }
+    .sidebar a:hover {
+      background-color: #10451d;
+    }
+    .content {
+      padding: 2rem;
+    }
+    .card-kpi {
+      border-left: 5px solid #155d27;
+    }
+  </style>
 </head>
-<body class="bg-light">
-  <div class="container py-4">
-    <h2 class="text-success mb-3"><i class="bi bi-person-badge"></i> Panel de Administración</h2>
-    <div id="auth-status" class="mb-3">Verificando acceso...</div>
-    <div id="error-message" class="alert alert-danger d-none"></div>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 d-none d-md-block sidebar">
+        <h4 class="text-center py-3">Admin QR</h4>
+        <a href="#" onclick="mostrarSeccion('dashboard')"><i class="bi bi-speedometer"></i> Dashboard</a>
+        <a href="#" onclick="mostrarSeccion('registros')"><i class="bi bi-table"></i> Registros</a>
+        <a href="#" onclick="mostrarSeccion('analiticos')"><i class="bi bi-bar-chart"></i> Analíticos</a>
+        <a href="#" onclick="mostrarSeccion('reportes')"><i class="bi bi-file-earmark"></i> Reportes</a>
+      </nav>
+      <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 content">
 
-    <button id="btn-login" class="btn btn-success mb-2">
-      <i class="bi bi-google"></i> Iniciar sesión con Google
-    </button>
-    <button id="btn-logout" class="btn btn-secondary mb-2 d-none">
-      <i class="bi bi-box-arrow-right"></i> Cerrar sesión
-    </button>
+        <!-- Dashboard -->
+        <div id="dashboard">
+          <h2 class="mb-4">Panel de resumen</h2>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="card card-kpi p-3 mb-3">
+                <h5>Total registros hoy</h5>
+                <p id="kpi-registros" class="fs-4">--</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-kpi p-3 mb-3">
+                <h5>Entradas tarde</h5>
+                <p id="kpi-retardos" class="fs-4">--</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-kpi p-3 mb-3">
+                <h5>Tipo de usuarios</h5>
+                <canvas id="graficoTipos"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <div id="seccion-tablas" class="d-none">
-      <h4 class="mt-4">👨‍💻 Tiempo completo</h4>
-      <table id="tabla-completo" class="table table-striped table-hover">
-        <thead class="table-success">
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Evento</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+        <!-- Registros -->
+        <div id="registros" style="display: none;">
+          <h2 class="mb-4">Registros</h2>
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Nombre</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Evento</th></tr>
+              </thead>
+              <tbody id="tabla-registros">
+                <!-- Datos dinámicos -->
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-      <h4 class="mt-4">👨‍🎓 Becarios</h4>
-      <table id="tabla-becario" class="table table-striped table-hover">
-        <thead class="table-success">
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Evento</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+        <!-- Analíticos -->
+        <div id="analiticos" style="display: none;">
+          <h2 class="mb-4">Análisis</h2>
+          <canvas id="graficoAsistencia"></canvas>
+        </div>
+
+        <!-- Reportes -->
+        <div id="reportes" style="display: none;">
+          <h2 class="mb-4">Reportes</h2>
+          <button class="btn btn-outline-primary">Exportar a CSV</button>
+          <button class="btn btn-outline-danger">Generar PDF</button>
+        </div>
+
+      </main>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      GoogleAuthProvider,
-      signInWithPopup,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      getDocs,
-      deleteDoc,
-      doc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
-      authDomain: "qr-acceso-cielito-home.firebaseapp.com",
-      projectId: "qr-acceso-cielito-home",
-      storageBucket: "qr-acceso-cielito-home.appspot.com",
-      messagingSenderId: "229634415256",
-      appId: "1:229634415256:web:c576ba8879e58e441c4eed"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
-    const status = document.getElementById("auth-status");
-    const errorBox = document.getElementById("error-message");
-    const loginBtn = document.getElementById("btn-login");
-    const logoutBtn = document.getElementById("btn-logout");
-    const seccionTablas = document.getElementById("seccion-tablas");
-    const tablaBecario = document.querySelector("#tabla-becario tbody");
-    const tablaCompleto = document.querySelector("#tabla-completo tbody");
-
-    function formatear(timestamp) {
-      const fecha = new Date(timestamp.seconds * 1000);
-      const f = fecha.toLocaleDateString("es-MX");
-      const h = fecha.toLocaleTimeString("es-MX", { hour12: false });
-      return [f, h, fecha];
+  <script>
+    function mostrarSeccion(id) {
+      document.querySelectorAll('main > div').forEach(div => div.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
     }
+    // Inicializar con dashboard
+    mostrarSeccion('dashboard');
 
-    async function cargarRegistros() {
-      const snap = await getDocs(collection(db, "registros"));
-      const registros = [];
-
-      snap.forEach(docSnap => {
-        const data = docSnap.data();
-        const [fecha, hora, rawDate] = formatear(data.timestamp);
-        registros.push({
-          ...data,
-          fecha, hora,
-          fechaObj: rawDate,
-          id: docSnap.id
-        });
-      });
-
-      // Ordenar por hora ascendente
-      registros.sort((a, b) => a.fechaObj - b.fechaObj);
-
-      // Vaciar tablas
-      tablaBecario.innerHTML = "";
-      tablaCompleto.innerHTML = "";
-
-      for (const r of registros) {
-        const fila = document.createElement("tr");
-        fila.innerHTML = `
-          <td>${r.nombre}</td>
-          <td>${r.email}</td>
-          <td>${r.fecha}</td>
-          <td>${r.hora}</td>
-          <td>${r.tipoEvento}</td>
-          <td><button class="btn btn-sm btn-outline-danger" data-id="${r.id}"><i class="bi bi-trash"></i></button></td>
-        `;
-        fila.querySelector("button").addEventListener("click", async () => {
-          if (confirm("¿Eliminar este registro?")) {
-            await deleteDoc(doc(db, "registros", r.id));
-            cargarRegistros();
-          }
-        });
-
-        if (r.tipo === "becario") {
-          tablaBecario.appendChild(fila);
-        } else {
-          tablaCompleto.appendChild(fila);
-        }
+    // Ejemplo de gráfica de torta
+    new Chart(document.getElementById("graficoTipos"), {
+      type: 'doughnut',
+      data: {
+        labels: ["Becario", "Tiempo completo"],
+        datasets: [{
+          label: "Usuarios",
+          data: [6, 4],
+          backgroundColor: ["#28a745", "#ffc107"]
+        }]
       }
+    });
 
-      seccionTablas.classList.remove("d-none");
-    }
-
-    loginBtn.addEventListener("click", () => signInWithPopup(auth, new GoogleAuthProvider()));
-    logoutBtn.addEventListener("click", () => signOut(auth).then(() => location.reload()));
-
-    onAuthStateChanged(auth, (user) => {
-      if (user && adminEmails.includes(user.email)) {
-        status.textContent = `Acceso autorizado: ${user.email}`;
-        loginBtn.classList.add("d-none");
-        logoutBtn.classList.remove("d-none");
-        cargarRegistros();
-      } else if (user) {
-        loginBtn.classList.add("d-none");
-        errorBox.classList.remove("d-none");
-        errorBox.innerHTML = `🚫 <strong>${user.email}</strong> no está autorizado para acceder.`;
-        signOut(auth);
+    // Gráfico de asistencia
+    new Chart(document.getElementById("graficoAsistencia"), {
+      type: 'bar',
+      data: {
+        labels: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+        datasets: [{
+          label: "Registros",
+          data: [12, 15, 10, 18, 20],
+          backgroundColor: "#198754"
+        }]
       }
     });
   </script>
