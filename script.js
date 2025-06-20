@@ -5,8 +5,7 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult
+  signInWithRedirect
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
@@ -18,6 +17,9 @@ import {
   where,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ✅ Bandera para modo pruebas
+const modoPrueba = true;
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -74,18 +76,23 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const hora = now.toLocaleTimeString();
   const fecha = now.toLocaleDateString();
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
-  //const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
-  /*if (tipoEvento === "salida" && !permitido) {
-    mostrarEstado("error", "❌ Aún no es hora de salida.");
-    return;
+  // 🔓 Validaciones controladas por modoPrueba
+  if (!modoPrueba) {
+    const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
+    if (tipoEvento === "salida" && !permitido) {
+      mostrarEstado("error", "❌ Aún no es hora de salida.");
+      return;
+    }
+
+    const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
+    if (duplicado) {
+      mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
+      return;
+    }
+  } else {
+    console.warn("⚠️ MODO PRUEBA ACTIVADO: Validaciones desactivadas.");
   }
-
-  const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
-  if (duplicado) {
-    mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
-    return;
-  }*/
 
   await addDoc(collection(db, "registros"), {
     uid: user.uid,
