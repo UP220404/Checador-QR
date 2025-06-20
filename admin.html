@@ -6,11 +6,12 @@
   <title>Admin QR - Cielito Home</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background-color: #f5f7fa;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background-color: #f9fafc;
+      font-family: 'Inter', sans-serif;
       scroll-behavior: smooth;
     }
     .sidebar {
@@ -23,46 +24,50 @@
       color: white;
       padding: 2rem 1rem;
       overflow-y: auto;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     }
     .sidebar h4 {
       margin-bottom: 2rem;
-      font-weight: 600;
+      font-weight: 700;
     }
     .sidebar a {
       font-weight: 500;
-      padding: 0.5rem 0.75rem;
+      padding: 0.6rem 1rem;
       display: block;
       text-decoration: none;
       color: white;
-      border-radius: 6px;
-      transition: background 0.3s;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s;
     }
-    .sidebar a:hover {
-      background: rgba(255, 255, 255, 0.15);
+    .sidebar a:hover, .sidebar a.active {
+      background: rgba(255, 255, 255, 0.2);
     }
     .main-content {
       margin-left: 260px;
-      padding: 2rem;
+      padding: 2.5rem 3rem;
     }
     .card {
       border: none;
-      border-radius: 16px;
+      border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-      transition: transform 0.2s;
     }
     .card:hover {
-      transform: translateY(-4px);
+      transform: translateY(-3px);
     }
     .card h6 {
+      font-size: 0.9rem;
       color: #6c757d;
+      font-weight: 500;
     }
     .card h3 {
       color: #198754;
+      font-weight: 700;
     }
     .fade-section {
       opacity: 0;
       transform: translateY(20px);
-      transition: all 0.5s ease-out;
+      transition: all 0.6s ease-out;
     }
     .fade-section.visible {
       opacity: 1;
@@ -71,13 +76,16 @@
     .btn-outline-light {
       border-radius: 10px;
     }
-    .table thead {
-      position: sticky;
-      top: 0;
-      z-index: 1;
+    .table thead th {
+      background-color: #198754;
+      color: white;
     }
     .table tbody tr:hover {
-      background-color: #e9f5ee;
+      background-color: #eef8f1;
+    }
+    .section-title {
+      font-weight: 700;
+      margin-bottom: 1.25rem;
     }
   </style>
 </head>
@@ -98,47 +106,41 @@
 
     <!-- Main Content -->
     <div class="main-content">
-      <h2 class="text-success mb-4">Bienvenido, Administrador</h2>
+      <h2 class="text-success fw-bold mb-4">Bienvenido, Administrador</h2>
 
       <!-- Dashboard KPIs -->
       <section id="dashboard" class="fade-section">
-        <div class="row mb-4">
+        <div class="row g-4">
           <div class="col-md-3">
-            <div class="card text-center">
-              <div class="card-body">
-                <h6>Entradas Hoy</h6>
-                <h3 id="entradas-hoy">0</h3>
-              </div>
+            <div class="card text-center p-3">
+              <h6>Entradas Hoy</h6>
+              <h3 id="entradas-hoy">0</h3>
             </div>
           </div>
           <div class="col-md-3">
-            <div class="card text-center">
-              <div class="card-body">
-                <h6>Salidas Hoy</h6>
-                <h3 id="salidas-hoy">0</h3>
-              </div>
+            <div class="card text-center p-3">
+              <h6>Salidas Hoy</h6>
+              <h3 id="salidas-hoy">0</h3>
             </div>
           </div>
           <div class="col-md-6">
-            <div class="card">
-              <div class="card-body">
-                <canvas id="graficaAsistencias" height="90"></canvas>
-              </div>
+            <div class="card p-3">
+              <canvas id="graficaAsistencias" height="90"></canvas>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Registros -->
-      <section id="registros" class="fade-section">
-        <h4 class="mb-3">Tabla de Registros</h4>
+      <section id="registros" class="fade-section mt-5">
+        <h4 class="section-title">📋 Tabla de Registros</h4>
         <div class="mb-3">
           <label for="filtroFecha" class="form-label">Filtrar por fecha:</label>
-          <input type="date" id="filtroFecha" class="form-control" style="max-width: 250px;">
+          <input type="date" id="filtroFecha" class="form-control" style="max-width: 280px;">
         </div>
         <div class="table-responsive">
-          <table class="table table-striped table-hover table-bordered">
-            <thead class="table-success">
+          <table class="table table-hover table-bordered align-middle">
+            <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Email</th>
@@ -155,18 +157,16 @@
       </section>
 
       <!-- Análisis -->
-      <section id="analisis" class="mt-5 fade-section">
-        <h4 class="mb-3">Resumen Semanal</h4>
-        <div class="card">
-          <div class="card-body">
-            <canvas id="graficaSemanal" height="100"></canvas>
-          </div>
+      <section id="analisis" class="fade-section mt-5">
+        <h4 class="section-title">📈 Resumen Semanal</h4>
+        <div class="card p-4">
+          <canvas id="graficaSemanal" height="110"></canvas>
         </div>
       </section>
 
       <!-- Reportes -->
-      <section id="reportes" class="mt-5 fade-section">
-        <h4 class="mb-3">Exportar Datos</h4>
+      <section id="reportes" class="fade-section mt-5">
+        <h4 class="section-title">📄 Exportar Datos</h4>
         <div class="d-flex flex-wrap gap-3">
           <button class="btn btn-outline-primary" onclick="exportarCSV()">
             <i class="bi bi-filetype-csv"></i> Exportar CSV
