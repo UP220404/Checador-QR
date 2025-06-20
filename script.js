@@ -1,8 +1,10 @@
+// script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -11,25 +13,26 @@ import {
   doc,
   getDoc,
   collection,
-  addDoc
+  addDoc,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Configuración Firebase
+// Configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
   authDomain: "qr-acceso-cielito-home.firebaseapp.com",
   projectId: "qr-acceso-cielito-home",
   storageBucket: "qr-acceso-cielito-home.appspot.com",
   messagingSenderId: "229634415256",
-  appId: "1:229634415256:web:c576ba8879e58e441c4eed",
-  measurementId: "G-H9DZQM4QPX"
+  appId: "1:229634415256:web:c576ba8879e58e441c4eed"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Mostrar mensaje visual
 function mostrarEstado(tipo, mensaje) {
   const statusBox = document.getElementById("status");
   const clases = { puntual: "verde", retardo: "ambar", salida: "azul", error: "rojo" };
@@ -39,7 +42,6 @@ function mostrarEstado(tipo, mensaje) {
   document.getElementById("log").classList.add("d-none");
 }
 
-// Evaluar entrada vs retardo
 function evaluarHoraEntrada() {
   const ahora = new Date();
   const limite = new Date();
@@ -47,7 +49,6 @@ function evaluarHoraEntrada() {
   return ahora <= limite ? "puntual" : "retardo";
 }
 
-// Verificar si ya es hora de salida
 function horaPermitidaSalida(tipo) {
   const ahora = new Date();
   const limite = new Date();
@@ -56,12 +57,22 @@ function horaPermitidaSalida(tipo) {
   return ahora >= limite;
 }
 
-// Registrar entrada o salida
+async function yaRegistradoHoy(uid, tipoEvento) {
+  const hoy = new Date().toLocaleDateString();
+  const q = query(
+    collection(db, "registros"),
+    where("uid", "==", uid),
+    where("fecha", "==", hoy),
+    where("tipoEvento", "==", tipoEvento)
+  );
+  const docs = await getDocs(q);
+  return !docs.empty;
+}
+
 async function registrarAsistencia(user, datosUsuario, coords) {
   const now = new Date();
   const hora = now.toLocaleTimeString();
   const fecha = now.toLocaleDateString();
-
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
   const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
@@ -70,7 +81,12 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     return;
   }
 
-  // Registrar en Firestore
+  const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
+  if (duplicado) {
+    mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
+    return;
+  }
+
   await addDoc(collection(db, "registros"), {
     uid: user.uid,
     nombre: datosUsuario.nombre,
@@ -83,14 +99,12 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     timestamp: now
   });
 
-  // Mostrar datos en pantalla
   document.getElementById("nombreUsuario").textContent = datosUsuario.nombre;
   document.getElementById("correoUsuario").textContent = user.email;
   document.getElementById("tipoUsuario").textContent = datosUsuario.tipo;
   document.getElementById("fechaHoy").textContent = fecha;
   document.getElementById("horaRegistro").textContent = hora;
-  document.getElementById("tipoEvento").textContent = tipoEvento.charAt(0).toUpperCase() + tipoEvento.slice(1);
-
+  document.getElementById("tipoEvento").textContent = tipoEvento;
   document.getElementById("info").classList.remove("d-none");
 
   mostrarEstado(tipoEvento, tipoEvento === "salida"
@@ -101,7 +115,6 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   );
 }
 
-// Iniciar redirección si no está autenticado
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     const userRef = doc(db, "usuarios", user.uid);
@@ -114,7 +127,6 @@ onAuthStateChanged(auth, async (user) => {
 
     const datos = docSnap.data();
 
-    // Obtener geolocalización
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = {
@@ -129,6 +141,10 @@ onAuthStateChanged(auth, async (user) => {
     );
   } else {
     const provider = new GoogleAuthProvider();
-    signInWithRedirect(auth, provider);
+    if (navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome")) {
+      signInWithRedirect(auth, provider);
+    } else {
+      signInWithPopup(auth, provider).catch(() => signInWithRedirect(auth, provider));
+    }
   }
 });
