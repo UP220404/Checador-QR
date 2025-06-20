@@ -17,7 +17,9 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Firebase Config
+// MODO PRUEBAS: true para desactivar validaciones, false para comportamiento real
+const modoPruebas = true;
+
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
   authDomain: "qr-acceso-cielito-home.firebaseapp.com",
@@ -50,11 +52,8 @@ function evaluarHoraEntrada() {
 function horaPermitidaSalida(tipo) {
   const ahora = new Date();
   const limite = new Date();
-  if (tipo === "becario") {
-    limite.setHours(13, 0, 0);
-  } else {
-    limite.setHours(16, 0, 0);
-  }
+  if (tipo === "becario") limite.setHours(13, 0, 0);
+  else limite.setHours(16, 0, 0);
   return ahora >= limite;
 }
 
@@ -75,17 +74,22 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const hora = now.toLocaleTimeString("es-MX", { hour12: false });
   const fecha = now.toLocaleDateString("es-MX");
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
-  const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
-  if (tipoEvento === "salida" && !permitido) {
-    mostrarEstado("error", "❌ Aún no es hora de salida para " + datosUsuario.tipo);
-    return;
-  }
+  let permitido = true;
+  let duplicado = false;
 
-  const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
-  if (duplicado) {
-    mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
-    return;
+  if (!modoPruebas) {
+    permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
+    if (tipoEvento === "salida" && !permitido) {
+      mostrarEstado("error", "❌ Aún no es hora de salida para " + datosUsuario.tipo);
+      return;
+    }
+
+    duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
+    if (duplicado) {
+      mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
+      return;
+    }
   }
 
   await addDoc(collection(db, "registros"), {
