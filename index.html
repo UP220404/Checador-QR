@@ -23,15 +23,8 @@
           <i class="bi bi-box-arrow-right"></i> Cerrar sesión
         </button>
 
-        <script>
-        function actualizarReloj() {
-        const ahora = new Date();
-        const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
-        document.getElementById("reloj").textContent = `⏰ ${hora}`;
-        }
-        setInterval(actualizarReloj, 1000);
-        actualizarReloj();
-        </script>
+        <!-- ⏰ Reloj justo debajo del botón de cerrar sesión -->
+        <div class="time mb-3" id="reloj">⏰ --:--:--</div>
 
         <div id="status" class="alert d-none" role="alert"></div>
 
@@ -47,14 +40,22 @@
         <div id="historial-container" class="mt-4 d-none">
           <h6 class="text-start mb-2">🗓️ Historial semanal:</h6>
           <ul id="historial-lista" class="list-group small"></ul>
-        <div class="time mb-3" id="reloj"></div>
         </div>
+
         <div class="footer text-muted mt-4">&copy; 2025 Cielito Home</div>
       </div>
     </div>
   </div>
 
   <script type="module" src="script.js"></script>
-
+  <script>
+    function actualizarReloj() {
+      const ahora = new Date();
+      const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
+      document.getElementById("reloj").textContent = `⏰ ${hora}`;
+    }
+    setInterval(actualizarReloj, 1000);
+    actualizarReloj();
+  </script>
 </body>
 </html>
