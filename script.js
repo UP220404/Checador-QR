@@ -11,10 +11,13 @@ import {
   doc,
   getDoc,
   collection,
-  addDoc
+  addDoc,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Configuración de Firebase
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
   authDomain: "qr-acceso-cielito-home.firebaseapp.com",
@@ -37,14 +40,53 @@ function mostrarEstado(tipo, mensaje) {
   document.getElementById("log")?.classList.add("d-none");
 }
 
+function evaluarHoraEntrada() {
+  const ahora = new Date();
+  const limite = new Date();
+  limite.setHours(8, 10, 0);
+  return ahora <= limite ? "puntual" : "retardo";
+}
+
+function horaPermitidaSalida(tipo) {
+  const ahora = new Date();
+  const limite = new Date();
+  if (tipo === "becario") {
+    limite.setHours(13, 0, 0);
+  } else {
+    limite.setHours(16, 0, 0);
+  }
+  return ahora >= limite;
+}
+
+async function yaRegistradoHoy(uid, tipoEvento) {
+  const hoy = new Date().toLocaleDateString("es-MX");
+  const q = query(
+    collection(db, "registros"),
+    where("uid", "==", uid),
+    where("fecha", "==", hoy),
+    where("tipoEvento", "==", tipoEvento)
+  );
+  const docs = await getDocs(q);
+  return !docs.empty;
+}
+
 async function registrarAsistencia(user, datosUsuario, coords) {
   const now = new Date();
-  const hora = now.toLocaleTimeString();
-  const fecha = now.toLocaleDateString();
+  const hora = now.toLocaleTimeString("es-MX", { hour12: false });
+  const fecha = now.toLocaleDateString("es-MX");
+  const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
+  const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
-  // ⚠️ Modo pruebas: sin validación de horario ni duplicados
-  const tipoEvento = now.getHours() < 12 ? "puntual" : "salida";
-  const permitido = true;
+  if (tipoEvento === "salida" && !permitido) {
+    mostrarEstado("error", "❌ Aún no es hora de salida para " + datosUsuario.tipo);
+    return;
+  }
+
+  const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
+  if (duplicado) {
+    mostrarEstado("error", `⚠️ Ya se registró ${tipoEvento} hoy.`);
+    return;
+  }
 
   await addDoc(collection(db, "registros"), {
     uid: user.uid,
@@ -66,13 +108,19 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   document.getElementById("tipoEvento").textContent = tipoEvento;
   document.getElementById("info").classList.remove("d-none");
 
-  mostrarEstado(tipoEvento, tipoEvento === "salida"
-    ? `📤 Salida registrada a las ${hora}`
-    : `✅ Entrada registrada a las ${hora}`);
+  mostrarEstado(tipoEvento,
+    tipoEvento === "salida"
+      ? `📤 Salida registrada a las ${hora}`
+      : tipoEvento === "puntual"
+      ? `✅ Entrada puntual a las ${hora}`
+      : `⚠️ Entrada con retardo a las ${hora}`
+  );
 }
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
+    document.getElementById("btn-google")?.classList.add("d-none");
+
     const userRef = doc(db, "usuarios", user.uid);
     const docSnap = await getDoc(userRef);
 

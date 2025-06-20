@@ -112,6 +112,16 @@
 
     const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com"];
 
+    function formatearFecha(fechaStr) {
+      const fecha = new Date(fechaStr);
+      return fecha.toLocaleDateString("es-MX", { year: 'numeric', month: '2-digit', day: '2-digit' });
+    }
+
+    function formatearHora(fechaStr) {
+      const fecha = new Date(fechaStr);
+      return fecha.toLocaleTimeString("es-MX", { hour12: false });
+    }
+
     async function cargarRegistros() {
       const snap = await getDocs(collection(db, "registros"));
       tabla.innerHTML = "";
@@ -122,8 +132,8 @@
             <td>${r.nombre}</td>
             <td>${r.email}</td>
             <td>${r.tipo}</td>
-            <td>${r.fecha}</td>
-            <td>${r.hora}</td>
+            <td>${formatearFecha(r.timestamp)}</td>
+            <td>${formatearHora(r.timestamp)}</td>
             <td>${r.tipoEvento}</td>
             <td>${r.ubicacion?.lat ?? '-'}</td>
             <td>${r.ubicacion?.lng ?? '-'}</td>

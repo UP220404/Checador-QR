@@ -101,12 +101,30 @@
   <script>
     setInterval(() => {
       const ahora = new Date();
-      document.getElementById("hora").textContent = ahora.toLocaleTimeString();
+      document.getElementById("hora").textContent = ahora.toLocaleTimeString('es-MX', { hour12: false });
     }, 1000);
 
-    document.getElementById("btn-google").addEventListener("click", () => {
-      // Firebase login será gestionado por script.js (no aquí)
-      import('./script.js');
+    document.getElementById("btn-google").addEventListener("click", async () => {
+      const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+      const firebaseConfig = {
+        apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
+        authDomain: "qr-acceso-cielito-home.firebaseapp.com",
+        projectId: "qr-acceso-cielito-home"
+      };
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const provider = new GoogleAuthProvider();
+
+      try {
+        await signInWithPopup(auth, provider);
+        document.getElementById("btn-google").classList.add("d-none");
+        document.getElementById("log").classList.remove("d-none");
+        document.getElementById("log").textContent = "✔️ Sesión iniciada correctamente. Esperando validación...";
+      } catch (err) {
+        document.getElementById("log").classList.remove("d-none");
+        document.getElementById("log").textContent = "❌ No se pudo iniciar sesión. Intenta de nuevo.";
+      }
     });
   </script>
 
