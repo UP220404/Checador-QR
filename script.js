@@ -1,11 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  onAuthStateChanged,
   GoogleAuthProvider,
-  onAuthStateChanged
+  signInWithRedirect,
+  getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
@@ -30,21 +29,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const googleBtn = document.getElementById("google-btn");
-const emailBtn = document.getElementById("email-btn");
-const log = document.getElementById("log");
-const statusBox = document.getElementById("status");
-const loginSection = document.getElementById("login-section");
-
-// Mensaje visual por tipo
+// Mostrar mensaje visual
 function mostrarEstado(tipo, mensaje) {
+  const statusBox = document.getElementById("status");
   const clases = { puntual: "verde", retardo: "ambar", salida: "azul", error: "rojo" };
   statusBox.className = `status ${clases[tipo]}`;
+  statusBox.textContent = mensaje;
   statusBox.classList.remove("d-none");
-  statusBox.innerText = mensaje;
+  document.getElementById("log").classList.add("d-none");
 }
 
-// Determinar si fue puntual o retardo
+// Evaluar entrada vs retardo
 function evaluarHoraEntrada() {
   const ahora = new Date();
   const limite = new Date();
@@ -52,7 +47,7 @@ function evaluarHoraEntrada() {
   return ahora <= limite ? "puntual" : "retardo";
 }
 
-// Validar si ya es hora de salida
+// Verificar si ya es hora de salida
 function horaPermitidaSalida(tipo) {
   const ahora = new Date();
   const limite = new Date();
@@ -61,115 +56,79 @@ function horaPermitidaSalida(tipo) {
   return ahora >= limite;
 }
 
-// Registrar asistencia en Firestore
-async function registrar(usuario, tipoUsuario, coords) {
+// Registrar entrada o salida
+async function registrarAsistencia(user, datosUsuario, coords) {
   const now = new Date();
   const hora = now.toLocaleTimeString();
   const fecha = now.toLocaleDateString();
+
   const tipoEvento = now.getHours() < 12 ? evaluarHoraEntrada() : "salida";
-  const validoSalida = tipoEvento === "salida" ? horaPermitidaSalida(tipoUsuario) : true;
+  const permitido = tipoEvento === "salida" ? horaPermitidaSalida(datosUsuario.tipo) : true;
 
-  if (tipoEvento === "salida" && !validoSalida) {
-    mostrarEstado("error", `❌ Aún no es hora de salida para ${tipoUsuario}`);
+  if (tipoEvento === "salida" && !permitido) {
+    mostrarEstado("error", "❌ Aún no es hora de salida.");
     return;
   }
 
-  try {
-    await addDoc(collection(db, "registros"), {
-      uid: usuario.uid,
-      nombre: usuario.nombre,
-      email: usuario.email,
-      tipo: tipoUsuario,
-      fecha,
-      hora,
-      tipoEvento,
-      ubicacion: coords || null,
-      timestamp: now
-    });
+  // Registrar en Firestore
+  await addDoc(collection(db, "registros"), {
+    uid: user.uid,
+    nombre: datosUsuario.nombre,
+    email: user.email,
+    tipo: datosUsuario.tipo,
+    fecha,
+    hora,
+    tipoEvento,
+    ubicacion: coords || null,
+    timestamp: now
+  });
 
-    const mensaje = tipoEvento === "puntual"
-      ? `✅ Entrada puntual registrada a las ${hora}`
-      : tipoEvento === "retardo"
-      ? `⚠️ Entrada con retardo a las ${hora}`
-      : `📤 Salida registrada a las ${hora}`;
+  // Mostrar datos en pantalla
+  document.getElementById("nombreUsuario").textContent = datosUsuario.nombre;
+  document.getElementById("correoUsuario").textContent = user.email;
+  document.getElementById("tipoUsuario").textContent = datosUsuario.tipo;
+  document.getElementById("fechaHoy").textContent = fecha;
+  document.getElementById("horaRegistro").textContent = hora;
+  document.getElementById("tipoEvento").textContent = tipoEvento.charAt(0).toUpperCase() + tipoEvento.slice(1);
 
-    mostrarEstado(tipoEvento, mensaje);
-  } catch (e) {
-    console.error(e);
-    mostrarEstado("error", "❌ Error al guardar en Firestore");
-  }
-}
+  document.getElementById("info").classList.remove("d-none");
 
-// Cargar usuario y lógica después del login
-async function procesarUsuario(user) {
-  log.innerText = `Bienvenido, ${user.email}`;
-  loginSection.style.display = "none";
-
-  const docRef = doc(db, "usuarios", user.uid);
-  const snap = await getDoc(docRef);
-  if (!snap.exists()) {
-    mostrarEstado("error", "Usuario no registrado en Firestore");
-    return;
-  }
-
-  const datos = snap.data();
-
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      const coords = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
-      };
-      registrar({ uid: user.uid, email: user.email, nombre: datos.nombre }, datos.tipo, coords);
-    },
-    err => {
-      mostrarEstado("error", "❌ Permiso de ubicación denegado");
-    }
+  mostrarEstado(tipoEvento, tipoEvento === "salida"
+    ? `📤 Salida registrada a las ${hora}`
+    : tipoEvento === "puntual"
+    ? `✅ Entrada puntual a las ${hora}`
+    : `⚠️ Entrada con retardo a las ${hora}`
   );
 }
 
-// Login con Google
-googleBtn.addEventListener("click", async () => {
-  const provider = new GoogleAuthProvider();
-  try {
-    const result = await signInWithPopup(auth, provider);
-    await procesarUsuario(result.user);
-  } catch (err) {
-    console.error(err);
-    mostrarEstado("error", "❌ Error al iniciar sesión con Google");
-  }
-});
+// Iniciar redirección si no está autenticado
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const userRef = doc(db, "usuarios", user.uid);
+    const docSnap = await getDoc(userRef);
 
-// Login con correo/contraseña (desde prompt)
-emailBtn.addEventListener("click", async () => {
-  const email = prompt("Correo electrónico:");
-  if (!email) return;
-
-  const password = prompt("Contraseña:");
-  if (!password) return;
-
-  try {
-    // Intentar login
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    await procesarUsuario(userCredential.user);
-  } catch (err) {
-    if (err.code === "auth/user-not-found") {
-      // Si no existe, registrar
-      try {
-        const newUser = await createUserWithEmailAndPassword(auth, email, password);
-        mostrarEstado("azul", "Usuario registrado. Contacta a TI para activarlo.");
-      } catch (err2) {
-        console.error(err2);
-        mostrarEstado("error", "❌ Error al registrar usuario.");
-      }
-    } else {
-      console.error(err);
-      mostrarEstado("error", "❌ Error al iniciar sesión.");
+    if (!docSnap.exists()) {
+      mostrarEstado("error", "❌ Usuario no encontrado en Firestore.");
+      return;
     }
-  }
-});
 
-// Detectar login automático
-onAuthStateChanged(auth, user => {
-  if (user) procesarUsuario(user);
+    const datos = docSnap.data();
+
+    // Obtener geolocalización
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+        registrarAsistencia(user, datos, coords);
+      },
+      () => {
+        mostrarEstado("error", "❌ No se pudo obtener la ubicación.");
+      }
+    );
+  } else {
+    const provider = new GoogleAuthProvider();
+    signInWithRedirect(auth, provider);
+  }
 });
