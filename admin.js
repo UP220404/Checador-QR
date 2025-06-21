@@ -586,9 +586,34 @@ window.generarReportePDF = async () => {
   doc.text("Reporte Diario - Cielito Home", 10, 10);
   doc.text("Resumen de actividades del día.", 10, 20);
 
-  // Puedes agregar más contenido aquí...
+  // Filtrar registros del día
+  const hoyStr = getFechaHoyMX();
+  const registrosHoy = registros.filter(r => formatearFecha(r.timestamp) === hoyStr);
 
-  doc.save(`reporte_diario_${new Date().toISOString().slice(0,10)}.pdf`);
+  let y = 35;
+  doc.setFontSize(12);
+  doc.text("Nombre", 10, y);
+  doc.text("Email", 55, y);
+  doc.text("Hora", 120, y);
+  doc.text("Evento", 150, y);
+
+  y += 7;
+  doc.setLineWidth(0.1);
+  doc.line(10, y, 200, y);
+
+  registrosHoy.forEach(r => {
+    y += 8;
+    doc.text(r.nombre, 10, y);
+    doc.text(r.email, 55, y);
+    doc.text(formatearHora(r.timestamp), 120, y);
+    doc.text(r.tipoEvento === "entrada" ? "Entrada" : "Salida", 150, y);
+    if (y > 270) { // Salto de página si es necesario
+      doc.addPage();
+      y = 20;
+    }
+  });
+
+  doc.save(`reporte_diario_${hoyStr}.pdf`);
 
   mostrarNotificacion("Reporte PDF generado con éxito", "success");
 };
