@@ -13,21 +13,21 @@
 </head>
 <body>
 <div class="d-flex">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h5><i class="bi bi-shield-lock-fill"></i>CH Panel Admin</h5>
+  <div class="sidebar bg-success">
+    <div class="sidebar-header bg-dark bg-opacity-25">
+      <h5 class="text-white"><i class="bi bi-shield-lock-fill"></i> CH Panel Admin</h5>
     </div>
-    <a href="#dashboard" class="active" onclick="mostrarSeccion('dashboard')">
-      <i class="bi bi-speedometer2"></i>Dashboard
+    <a href="#dashboard" class="active text-white" onclick="mostrarSeccion('dashboard')">
+      <i class="bi bi-speedometer2"></i> Dashboard
     </a>
-    <a href="#registros" onclick="mostrarSeccion('registros')">
-      <i class="bi bi-table"></i>Registros
+    <a href="#registros" class="text-white" onclick="mostrarSeccion('registros')">
+      <i class="bi bi-table"></i> Registros
     </a>
-    <a href="#analisis" onclick="mostrarSeccion('analisis')">
-      <i class="bi bi-graph-up-arrow"></i>Análisis
+    <a href="#analisis" class="text-white" onclick="mostrarSeccion('analisis')">
+      <i class="bi bi-graph-up-arrow"></i> Análisis
     </a>
-    <a href="#reportes" onclick="mostrarSeccion('reportes')">
-      <i class="bi bi-file-earmark-bar-graph"></i>Reportes
+    <a href="#reportes" class="text-white" onclick="mostrarSeccion('reportes')">
+      <i class="bi bi-file-earmark-bar-graph"></i> Reportes
     </a>
     <div class="sidebar-footer">
       <button id="btn-logout" class="btn btn-outline-light w-100">
@@ -40,58 +40,64 @@
     <!-- Dashboard -->
     <div id="dashboard" class="seccion">
       <div class="section-header">
-        <h2><i class="bi bi-speedometer2"></i>Panel de Control</h2>
-        <div class="text-muted">Bienvenido, <span id="admin-name">Administrador</span></div>
+        <h2 class="text-success"><i class="bi bi-speedometer2"></i> Panel de Control</h2>
+        <div class="text-muted">Bienvenido, <span id="admin-name" class="fw-bold text-success">Administrador</span></div>
       </div>
       
       <div class="row mb-4 g-4">
         <div class="col-md-4">
-          <div class="card card-metric p-4">
-            <div class="icon-wrapper">
-              <i class="bi bi-door-open"></i>
+          <div class="card card-metric border-success">
+            <div class="card-body p-4">
+              <div class="icon-wrapper bg-success bg-opacity-10 text-success">
+                <i class="bi bi-door-open"></i>
+              </div>
+              <h3 class="text-success">Entradas Hoy</h3>
+              <p id="entradas-hoy" class="display-6 text-success">0</p>
+              <small class="text-muted">vs. ayer: <span id="entradas-comparacion" class="text-success">+0%</span></small>
             </div>
-            <h3>Entradas Hoy</h3>
-            <p id="entradas-hoy">0</p>
-            <small class="text-muted">vs. ayer: <span id="entradas-comparacion" class="text-success">+0%</span></small>
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card card-metric p-4">
-            <div class="icon-wrapper">
-              <i class="bi bi-door-closed"></i>
+          <div class="card card-metric border-success">
+            <div class="card-body p-4">
+              <div class="icon-wrapper bg-success bg-opacity-10 text-success">
+                <i class="bi bi-door-closed"></i>
+              </div>
+              <h3 class="text-success">Salidas Hoy</h3>
+              <p id="salidas-hoy" class="display-6 text-success">0</p>
+              <small class="text-muted">vs. ayer: <span id="salidas-comparacion" class="text-success">+0%</span></small>
             </div>
-            <h3>Salidas Hoy</h3>
-            <p id="salidas-hoy">0</p>
-            <small class="text-muted">vs. ayer: <span id="salidas-comparacion" class="text-success">+0%</span></small>
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card card-metric p-4">
-            <div class="icon-wrapper">
-              <i class="bi bi-people"></i>
+          <div class="card card-metric border-success">
+            <div class="card-body p-4">
+              <div class="icon-wrapper bg-success bg-opacity-10 text-success">
+                <i class="bi bi-people"></i>
+              </div>
+              <h3 class="text-success">Usuarios Activos</h3>
+              <p id="usuarios-totales" class="display-6 text-success">-</p>
+              <small class="text-muted">Últimos 7 días</small>
             </div>
-            <h3>Usuarios Activos</h3>
-            <p id="usuarios-totales">-</p>
-            <small class="text-muted">Últimos 7 días</small>
           </div>
         </div>
       </div>
       
-      <div class="chart-container">
-        <h4 class="mb-4"><i class="bi bi-calendar-week"></i> Actividad Semanal</h4>
+      <div class="chart-container border border-success rounded-3">
+        <h4 class="mb-4 text-success"><i class="bi bi-calendar-week"></i> Actividad Semanal</h4>
         <canvas id="graficaSemanal" height="120"></canvas>
       </div>
       
       <div class="row mt-4 g-4">
         <div class="col-md-6">
-          <div class="chart-container">
-            <h4><i class="bi bi-pie-chart"></i> Distribución por Tipo</h4>
+          <div class="chart-container border border-success rounded-3">
+            <h4 class="text-success"><i class="bi bi-pie-chart"></i> Distribución por Tipo</h4>
             <canvas id="graficaTipo" height="200"></canvas>
           </div>
         </div>
         <div class="col-md-6">
-          <div class="chart-container">
-            <h4><i class="bi bi-clock-history"></i> Horarios más Activos</h4>
+          <div class="chart-container border border-success rounded-3">
+            <h4 class="text-success"><i class="bi bi-clock-history"></i> Horarios más Activos</h4>
             <canvas id="graficaHorarios" height="200"></canvas>
           </div>
         </div>
@@ -101,18 +107,18 @@
     <!-- Registros -->
     <div id="registros" class="seccion d-none">
       <div class="section-header">
-        <h2><i class="bi bi-table"></i> Registros de Acceso</h2>
+        <h2 class="text-success"><i class="bi bi-table"></i> Registros de Acceso</h2>
         <div class="btn-group">
-          <button class="btn btn-outline-success" onclick="exportarCSV()">
+          <button class="btn btn-success" onclick="exportarCSV()">
             <i class="bi bi-file-earmark-excel"></i> Exportar CSV
           </button>
-          <button class="btn btn-outline-primary" onclick="descargarJSON()">
+          <button class="btn btn-success" onclick="descargarJSON()">
             <i class="bi bi-file-earmark-code"></i> Exportar JSON
           </button>
         </div>
       </div>
       
-      <div class="filter-bar mb-3 p-3 rounded-3 shadow-sm">
+      <div class="filter-bar mb-3 p-3 rounded-3 shadow-sm bg-light">
         <div class="row g-2">
           <div class="col-md-4">
             <input type="text" class="form-control" id="filtroBusqueda" placeholder="Buscar...">
@@ -139,7 +145,7 @@
       
       <div class="table-responsive rounded-3 shadow-sm">
         <table class="table table-hover align-middle">
-          <thead>
+          <thead class="table-success">
             <tr>
               <th>Nombre</th>
               <th>Email</th>
@@ -159,7 +165,7 @@
           <li class="page-item disabled">
             <a class="page-link" href="#" tabindex="-1">Anterior</a>
           </li>
-          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+          <li class="page-item active"><a class="page-link bg-success border-success" href="#">1</a></li>
           <li class="page-item"><a class="page-link" href="#">2</a></li>
           <li class="page-item"><a class="page-link" href="#">3</a></li>
           <li class="page-item">
@@ -172,7 +178,7 @@
     <!-- Análisis -->
     <div id="analisis" class="seccion d-none">
       <div class="section-header">
-        <h2><i class="bi bi-graph-up-arrow"></i> Análisis Avanzados</h2>
+        <h2 class="text-success"><i class="bi bi-graph-up-arrow"></i> Análisis Avanzados</h2>
       </div>
       
       <div class="alert alert-info">
@@ -181,14 +187,14 @@
       
       <div class="row">
         <div class="col-md-6">
-          <div class="chart-container">
-            <h4><i class="bi bi-calendar-month"></i> Tendencia Mensual</h4>
+          <div class="chart-container border border-success rounded-3">
+            <h4 class="text-success"><i class="bi bi-calendar-month"></i> Tendencia Mensual</h4>
             <canvas id="graficaMensual" height="250"></canvas>
           </div>
         </div>
         <div class="col-md-6">
-          <div class="chart-container">
-            <h4><i class="bi bi-person-lines-fill"></i> Usuarios Más Activos</h4>
+          <div class="chart-container border border-success rounded-3">
+            <h4 class="text-success"><i class="bi bi-person-lines-fill"></i> Usuarios Más Activos</h4>
             <canvas id="graficaUsuarios" height="250"></canvas>
           </div>
         </div>
@@ -198,31 +204,31 @@
     <!-- Reportes -->
     <div id="reportes" class="seccion d-none">
       <div class="section-header">
-        <h2><i class="bi bi-file-earmark-bar-graph"></i> Generar Reportes</h2>
+        <h2 class="text-success"><i class="bi bi-file-earmark-bar-graph"></i> Generar Reportes</h2>
       </div>
       
       <div class="row">
         <div class="col-md-4">
-          <div class="card h-100">
+          <div class="card h-100 border-success">
             <div class="card-body text-center">
-              <div class="icon-wrapper-lg mb-3">
-                <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 2.5rem;"></i>
+              <div class="icon-wrapper-lg mb-3 bg-success bg-opacity-10 text-success">
+                <i class="bi bi-file-earmark-pdf" style="font-size: 2.5rem;"></i>
               </div>
-              <h4>Reporte Diario</h4>
+              <h4 class="text-success">Reporte Diario</h4>
               <p class="text-muted">Genera un reporte PDF con el resumen de actividades del día.</p>
-              <button class="btn btn-danger" onclick="generarReportePDF()">
+              <button class="btn btn-success" onclick="generarReportePDF()">
                 <i class="bi bi-download me-2"></i>Generar PDF
               </button>
             </div>
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card h-100">
+          <div class="card h-100 border-success">
             <div class="card-body text-center">
-              <div class="icon-wrapper-lg mb-3">
-                <i class="bi bi-file-earmark-excel text-success" style="font-size: 2.5rem;"></i>
+              <div class="icon-wrapper-lg mb-3 bg-success bg-opacity-10 text-success">
+                <i class="bi bi-file-earmark-excel" style="font-size: 2.5rem;"></i>
               </div>
-              <h4>Reporte Semanal</h4>
+              <h4 class="text-success">Reporte Semanal</h4>
               <p class="text-muted">Exporta a Excel todos los registros de la semana actual.</p>
               <button class="btn btn-success" onclick="generarReporteExcel()">
                 <i class="bi bi-download me-2"></i>Generar Excel
@@ -231,14 +237,14 @@
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card h-100">
+          <div class="card h-100 border-success">
             <div class="card-body text-center">
-              <div class="icon-wrapper-lg mb-3">
-                <i class="bi bi-file-earmark-text text-primary" style="font-size: 2.5rem;"></i>
+              <div class="icon-wrapper-lg mb-3 bg-success bg-opacity-10 text-success">
+                <i class="bi bi-file-earmark-text" style="font-size: 2.5rem;"></i>
               </div>
-              <h4>Reporte Personalizado</h4>
+              <h4 class="text-success">Reporte Personalizado</h4>
               <p class="text-muted">Crea un reporte con filtros específicos de fecha y tipo.</p>
-              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalReporte">
+              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalReporte">
                 <i class="bi bi-gear me-2"></i>Personalizar
               </button>
             </div>
@@ -253,9 +259,9 @@
 <div class="modal fade" id="modalReporte" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
+      <div class="modal-header bg-success text-white">
         <h5 class="modal-title">Reporte Personalizado</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="formReporte">
@@ -293,7 +299,7 @@
             <label class="form-label">Vista previa de registros</label>
             <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
               <table class="table table-sm table-hover">
-                <thead>
+                <thead class="table-success">
                   <tr>
                     <th>Nombre</th>
                     <th>Fecha</th>
@@ -313,7 +319,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="generarReportePersonalizado()">
+        <button type="button" class="btn btn-success" onclick="generarReportePersonalizado()">
           <i class="bi bi-download me-2"></i>Generar Reporte
         </button>
       </div>
@@ -322,7 +328,7 @@
 </div>
 
 <!-- Botón de modo oscuro -->
-<button class="theme-toggle" id="themeToggle">
+<button class="theme-toggle btn-success" id="themeToggle">
   <i class="bi bi-moon-fill"></i>
 </button>
 

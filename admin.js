@@ -37,7 +37,50 @@ const eventoFiltro = document.getElementById("filtroEvento");
 let registros = [];
 let graficaSemanal, graficaTipo, graficaHorarios, graficaMensual, graficaUsuarios;
 
-// Verificar autenticación
+// ==================== FUNCIONES CORREGIDAS PARA TIMESTAMP ====================
+
+function formatearFecha(timestamp) {
+  if (!timestamp || typeof timestamp.toDate !== "function") {
+    console.error("Timestamp inválido:", timestamp);
+    return "Fecha inválida";
+  }
+  
+  try {
+    const fecha = timestamp.toDate();
+    return fecha.toLocaleDateString("es-MX", {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'America/Mexico_City'
+    });
+  } catch (error) {
+    console.error("Error al formatear fecha:", error);
+    return "Error fecha";
+  }
+}
+
+function formatearHora(timestamp) {
+  if (!timestamp || typeof timestamp.toDate !== "function") {
+    console.error("Timestamp inválido:", timestamp);
+    return "Hora inválida";
+  }
+  
+  try {
+    const fecha = timestamp.toDate();
+    return fecha.toLocaleTimeString("es-MX", {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/Mexico_City'
+    });
+  } catch (error) {
+    console.error("Error al formatear hora:", error);
+    return "Error hora";
+  }
+}
+
+// ==================== FUNCIONES ORIGINALES (MANTENIDAS SIN CAMBIOS) ====================
+
 onAuthStateChanged(auth, (user) => {
   if (user) {
     if (!adminEmails.includes(user.email)) {
@@ -57,27 +100,28 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Formateo de fechas
-function formatearFecha(timestamp) {
-  if (!timestamp || typeof timestamp.toDate !== "function") return "-";
-  const fecha = timestamp.toDate();
-  return fecha.toLocaleDateString("es-MX", {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
+async function cargarRegistros() {
+  try {
+    const q = query(collection(db, "registros"), orderBy("timestamp", "desc"));
+    const snap = await getDocs(q);
+    registros = snap.docs.map(doc => ({
+      id: doc.id,
+      nombre: doc.data().nombre || "Sin nombre",
+      email: doc.data().email || "Sin email",
+      tipo: doc.data().tipo || "desconocido",
+      tipoEvento: doc.data().tipoEvento || "entrada",
+      estado: doc.data().estado || "puntual",
+      timestamp: doc.data().timestamp || null
+    }));
+    renderTabla();
+    renderGraficas();
+    mostrarNotificacion("Registros cargados correctamente", "success");
+  } catch (error) {
+    console.error("Error al cargar registros:", error);
+    mostrarNotificacion("Error al cargar registros", "danger");
+  }
 }
 
-function formatearHora(timestamp) {
-  if (!timestamp || typeof timestamp.toDate !== "function") return "-";
-  const fecha = timestamp.toDate();
-  return fecha.toLocaleTimeString("es-MX", {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-// Renderizar tabla
 function renderTabla() {
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
@@ -136,31 +180,18 @@ function renderTabla() {
   });
 }
 
-// Cargar registros desde Firebase
-async function cargarRegistros() {
-  try {
-    const q = query(collection(db, "registros"), orderBy("timestamp", "desc"));
-    const snap = await getDocs(q);
-    registros = snap.docs.map(doc => ({
-      id: doc.id,
-      nombre: doc.data().nombre || "Sin nombre",
-      email: doc.data().email || "Sin email",
-      tipo: doc.data().tipo || "desconocido",
-      tipoEvento: doc.data().tipoEvento || "entrada",
-      estado: doc.data().estado || "puntual",
-      timestamp: doc.data().timestamp || null
-    }));
-    
-    renderTabla();
-    renderGraficas();
-    mostrarNotificacion(`${registros.length} registros cargados`, "success");
-  } catch (error) {
-    console.error("Error al cargar registros:", error);
-    mostrarNotificacion("Error al cargar registros", "danger");
-  }
+function mostrarNotificacion(mensaje, tipo = "info") {
+  const notificacion = document.createElement("div");
+  notificacion.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+  notificacion.style = "top:20px;right:20px;z-index:9999;max-width:400px";
+  notificacion.innerHTML = `
+    ${mensaje}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(notificacion);
+  setTimeout(() => notificacion.remove(), 5000);
 }
 
-// Funciones globales
 window.verDetalle = (id) => {
   const reg = registros.find(r => r.id === id);
   if (!reg) return;
@@ -189,19 +220,6 @@ window.eliminarRegistro = async (id) => {
   }
 };
 
-function mostrarNotificacion(mensaje, tipo = "info") {
-  const notificacion = document.createElement("div");
-  notificacion.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-  notificacion.style = "top:20px;right:20px;z-index:9999;max-width:400px";
-  notificacion.innerHTML = `
-    ${mensaje}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-  document.body.appendChild(notificacion);
-  setTimeout(() => notificacion.remove(), 5000);
-}
-
-// Exportación de datos
 window.exportarCSV = () => {
   const headers = "Nombre,Email,Tipo,Fecha,Hora,Evento,Estado\n";
   const csvContent = registros
@@ -238,11 +256,223 @@ window.descargarJSON = () => {
   link.click();
 };
 
-// Event listeners
+function renderGraficas() {
+  renderGraficaSemanal();
+  renderGraficaTipo();
+  renderGraficaHorarios();
+  renderGraficaMensual();
+  renderGraficaUsuarios();
+}
+
+function renderGraficaSemanal() {
+  const ctx = document.getElementById("graficaSemanal").getContext("2d");
+  if (graficaSemanal) graficaSemanal.destroy();
+  
+  const dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const conteo = Array(7).fill(0);
+  
+  registros.forEach(r => {
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
+    const fecha = r.timestamp.toDate();
+    const dia = fecha.getDay();
+    conteo[dia === 0 ? 6 : dia - 1]++;
+  });
+  
+  graficaSemanal = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: dias,
+      datasets: [{
+        data: conteo,
+        backgroundColor: 'rgba(25, 135, 84, 0.7)',
+        borderColor: 'rgba(25, 135, 84, 1)',
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderGraficaTipo() {
+  const ctx = document.getElementById("graficaTipo").getContext("2d");
+  if (graficaTipo) graficaTipo.destroy();
+  
+  const tipos = {
+    becario: registros.filter(r => r.tipo === 'becario').length,
+    tiempo_completo: registros.filter(r => r.tipo === 'tiempo_completo').length
+  };
+  
+  graficaTipo = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: ["Becarios", "Tiempo completo"],
+      datasets: [{
+        data: [tipos.becario, tipos.tiempo_completo],
+        backgroundColor: [
+          'rgba(13, 110, 253, 0.7)',
+          'rgba(25, 135, 84, 0.7)'
+        ],
+        borderColor: [
+          'rgba(13, 110, 253, 1)',
+          'rgba(25, 135, 84, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+}
+
+function renderGraficaHorarios() {
+  const ctx = document.getElementById("graficaHorarios").getContext("2d");
+  if (graficaHorarios) graficaHorarios.destroy();
+  
+  const horas = Array(24).fill(0);
+  registros.forEach(r => {
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
+    const fecha = r.timestamp.toDate();
+    const hora = fecha.getHours();
+    horas[hora]++;
+  });
+  
+  graficaHorarios = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+      datasets: [{
+        label: "Accesos por hora",
+        data: horas,
+        fill: true,
+        backgroundColor: 'rgba(25, 135, 84, 0.2)',
+        borderColor: 'rgba(25, 135, 84, 1)',
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderGraficaMensual() {
+  const ctx = document.getElementById("graficaMensual").getContext("2d");
+  if (graficaMensual) graficaMensual.destroy();
+  
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const conteo = Array(12).fill(0);
+  
+  registros.forEach(r => {
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
+    const fecha = r.timestamp.toDate();
+    const mes = fecha.getMonth();
+    conteo[mes]++;
+  });
+  
+  graficaMensual = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: meses,
+      datasets: [{
+        label: "Accesos por mes",
+        data: conteo,
+        backgroundColor: 'rgba(25, 135, 84, 0.7)',
+        borderColor: 'rgba(25, 135, 84, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderGraficaUsuarios() {
+  const ctx = document.getElementById("graficaUsuarios").getContext("2d");
+  if (graficaUsuarios) graficaUsuarios.destroy();
+  
+  const usuarios = {};
+  registros.forEach(r => {
+    if (!r.email) return;
+    usuarios[r.email] = (usuarios[r.email] || 0) + 1;
+  });
+  
+  const topUsuarios = Object.entries(usuarios)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  
+  const nombres = topUsuarios.map(u => u[0].split('@')[0]);
+  const conteo = topUsuarios.map(u => u[1]);
+  
+  graficaUsuarios = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: nombres,
+      datasets: [{
+        data: conteo,
+        backgroundColor: [
+          'rgba(25, 135, 84, 0.7)',
+          'rgba(13, 110, 253, 0.7)',
+          'rgba(255, 193, 7, 0.7)',
+          'rgba(220, 53, 69, 0.7)',
+          'rgba(111, 66, 193, 0.7)'
+        ],
+        borderColor: [
+          'rgba(25, 135, 84, 1)',
+          'rgba(13, 110, 253, 1)',
+          'rgba(255, 193, 7, 1)',
+          'rgba(220, 53, 69, 1)',
+          'rgba(111, 66, 193, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+}
+
 document.getElementById("filtroBusqueda").addEventListener("input", renderTabla);
 document.getElementById("filtroFecha").addEventListener("change", renderTabla);
 document.getElementById("filtroTipo").addEventListener("change", renderTabla);
 document.getElementById("filtroEvento").addEventListener("change", renderTabla);
 
-// Inicialización
-document.getElementById("filtroFecha").valueAsDate = new Date();
+document.getElementById("themeToggle").addEventListener("click", () => {
+  document.body.classList.toggle("dark-mode");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+  renderGraficas();
+});
+
+if (localStorage.getItem("darkMode") === "true") {
+  document.body.classList.add("dark-mode");
+}
