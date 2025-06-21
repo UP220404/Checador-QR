@@ -242,7 +242,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
   // Crear registro en Firestore
   try {
-    await addDoc(collection(db, "registros"), {
+    const docRef = await addDoc(collection(db, "registros"), {
       uid: user.uid,
       nombre: datosUsuario.nombre,
       email: user.email,
@@ -254,6 +254,11 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       timestamp: serverTimestamp()
     });
 
+    // Esperar a que Firestore asigne el timestamp antes de recargar historial
+    setTimeout(async () => {
+      await cargarHistorial(user.uid);
+    }, 1200);
+
     // Actualizar UI
     actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento });
     
@@ -263,7 +268,6 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       getMensajeDefault(tipoEvento, hora);
     
     mostrarEstado(tipoEvento, mensaje);
-    await cargarHistorial(user.uid);
     
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
