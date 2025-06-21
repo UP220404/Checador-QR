@@ -576,18 +576,20 @@ function renderGraficaUsuarios() {
 // Generar reporte PDF (simulado)
 window.generarReportePDF = async () => {
   mostrarNotificacion("Generando reporte PDF...", "info");
-  
+
   // Simulamos un retraso de generación
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // Crear contenido del PDF (en una implementación real usarías una librería como jsPDF)
-  const blob = new Blob(["Contenido del reporte PDF"], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reporte_diario_${new Date().toISOString().slice(0,10)}.pdf`;
-  link.click();
-  
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Usar jsPDF para crear un PDF real
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("Reporte Diario - Cielito Home", 10, 10);
+  doc.text("Resumen de actividades del día.", 10, 20);
+
+  // Puedes agregar más contenido aquí...
+
+  doc.save(`reporte_diario_${new Date().toISOString().slice(0,10)}.pdf`);
+
   mostrarNotificacion("Reporte PDF generado con éxito", "success");
 };
 
