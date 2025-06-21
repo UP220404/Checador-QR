@@ -695,18 +695,63 @@ window.generarReportePersonalizado = async () => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   
   let blob, extension;
-  if (formato === 'pdf') {
-    // Simulamos PDF
-    blob = new Blob(["Reporte personalizado PDF"], { type: 'application/pdf' });
-    extension = 'pdf';
-  } else if (formato === 'excel') {
-    // Creamos CSV (simulando Excel)
-    const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
-    registrosFiltrados.forEach(r => {
-      filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
-    });
-    blob = new Blob([filas.join("\n")], { type: 'text/csv' });
-    extension = 'xlsx';
+ if (formato === 'pdf') {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text("Reporte Personalizado - Cielito Home", 10, 15);
+  doc.setFontSize(12);
+  doc.text(`Rango: ${fechaInicio} a ${fechaFin}`, 10, 23);
+
+  const rows = registrosFiltrados.map(r => [
+    r.nombre,
+    r.email,
+    r.tipo,
+    formatearFecha(r.timestamp),
+    formatearHora(r.timestamp),
+    r.tipoEvento === "entrada" ? "Entrada" : "Salida"
+  ]);
+
+  doc.autoTable({
+    head: [['Nombre', 'Email', 'Tipo', 'Fecha', 'Hora', 'Evento']],
+    body: rows,
+    startY: 30,
+    styles: { fontSize: 10, cellPadding: 3 },
+    headStyles: {
+      fillColor: [25, 135, 84],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    bodyStyles: {
+      fillColor: [240, 240, 240],
+      textColor: 30
+    },
+    alternateRowStyles: {
+      fillColor: [220, 255, 220]
+    },
+    margin: { left: 10, right: 10 }
+  });
+
+  doc.save(`reporte_personalizado_${fechaInicio}_a_${fechaFin}.pdf`);
+  mostrarNotificacion(`Reporte PDF generado con éxito`, "success");
+  bootstrap.Modal.getInstance(document.getElementById('modalReporte')).hide();
+  return;
+
+  }else if (formato === 'excel') {
+  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
+  registrosFiltrados.forEach(r => {
+    filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
+  });
+  const blob = new Blob([filas.join("\n")], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `reporte_personalizado_${fechaInicio}_a_${fechaFin}.csv`;
+  link.click();
+  mostrarNotificacion(`Reporte Excel generado con éxito`, "success");
+  bootstrap.Modal.getInstance(document.getElementById('modalReporte')).hide();
+  return;
   } else {
     // JSON
     const datos = registrosFiltrados.map(r => ({
