@@ -9,7 +9,9 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc
+  doc,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -60,21 +62,23 @@ onAuthStateChanged(auth, (user) => {
 // ==================== FORMATEO DE FECHAS ====================
 
 function formatearFecha(timestamp) {
-  if (!timestamp || typeof timestamp.seconds !== "number") return "-";
-  const fecha = new Date(timestamp.seconds * 1000);
-  // Ajustar a zona horaria local
-  const offset = fecha.getTimezoneOffset() * 60000;
-  const fechaLocal = new Date(fecha.getTime() - offset);
-  return fechaLocal.toISOString().split('T')[0];
+  if (!timestamp || typeof timestamp.toDate !== "function") return "-";
+  const fecha = timestamp.toDate();
+  return fecha.toLocaleDateString("es-MX", {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'America/Mexico_City'
+  });
 }
 
 function formatearHora(timestamp) {
-  if (!timestamp || typeof timestamp.seconds !== "number") return "-";
-  const fecha = new Date(timestamp.seconds * 1000);
+  if (!timestamp || typeof timestamp.toDate !== "function") return "-";
+  const fecha = timestamp.toDate();
   return fecha.toLocaleTimeString("es-MX", {
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    timeZone: 'America/Mexico_City'
   });
 }
 
@@ -88,13 +92,14 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
-    // Solo registros con timestamp válido
-    if (!r.timestamp || typeof r.timestamp.seconds !== "number") return false;
-    return (!fecha || formatearFecha(r.timestamp) === fecha) &&
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return false;
+    
+    const fechaRegistro = formatearFecha(r.timestamp);
+    return (!fecha || fechaRegistro === fecha) &&
            (!tipo || r.tipo === tipo) &&
            (!busqueda || r.nombre.toLowerCase().includes(busqueda) || r.email.toLowerCase().includes(busqueda)) &&
            (!evento || r.tipoEvento === evento);
-  }).sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+  }).sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
   if (filtrados.length === 0) {
     tabla.innerHTML = `
@@ -143,7 +148,8 @@ function renderTabla() {
 
 async function cargarRegistros() {
   try {
-    const snap = await getDocs(collection(db, "registros"));
+    const q = query(collection(db, "registros"), orderBy("timestamp", "desc"));
+    const snap = await getDocs(q);
     registros = snap.docs.map(doc => ({
       id: doc.id,
       nombre: doc.data().nombre || "Sin nombre",
@@ -153,12 +159,69 @@ async function cargarRegistros() {
       estado: doc.data().estado || "puntual",
       timestamp: doc.data().timestamp || null
     }));
+    
+    // Actualizar métricas
+    actualizarMetricas();
     renderTabla();
     renderGraficas();
+    mostrarNotificacion(`${registros.length} registros cargados correctamente`, "success");
   } catch (error) {
     console.error("Error al cargar registros:", error);
     mostrarNotificacion("Error al cargar registros", "danger");
   }
+}
+
+function actualizarMetricas() {
+  const hoy = new Date().toLocaleDateString("es-MX");
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
+  const ayerStr = ayer.toLocaleDateString("es-MX");
+
+  const entradasHoy = registros.filter(r => 
+    r.tipoEvento === 'entrada' && formatearFecha(r.timestamp) === hoy
+  ).length;
+  
+  const entradasAyer = registros.filter(r => 
+    r.tipoEvento === 'entrada' && formatearFecha(r.timestamp) === ayerStr
+  ).length;
+  
+  const salidasHoy = registros.filter(r => 
+    r.tipoEvento === 'salida' && formatearFecha(r.timestamp) === hoy
+  ).length;
+  
+  const salidasAyer = registros.filter(r => 
+    r.tipoEvento === 'salida' && formatearFecha(r.timestamp) === ayerStr
+  ).length;
+
+  document.getElementById("entradas-hoy").textContent = entradasHoy;
+  document.getElementById("salidas-hoy").textContent = salidasHoy;
+  
+  // Calcular comparación con ayer
+  const comparacionEntradas = entradasAyer > 0 ? 
+    Math.round(((entradasHoy - entradasAyer) / entradasAyer) * 100) : 0;
+  const comparacionSalidas = salidasAyer > 0 ? 
+    Math.round(((salidasHoy - salidasAyer) / salidasAyer) * 100) : 0;
+  
+  const entradasComparacion = document.getElementById("entradas-comparacion");
+  const salidasComparacion = document.getElementById("salidas-comparacion");
+  
+  entradasComparacion.textContent = `${comparacionEntradas >= 0 ? '+' : ''}${comparacionEntradas}%`;
+  entradasComparacion.className = comparacionEntradas >= 0 ? 'text-success' : 'text-danger';
+  
+  salidasComparacion.textContent = `${comparacionSalidas >= 0 ? '+' : ''}${comparacionSalidas}%`;
+  salidasComparacion.className = comparacionSalidas >= 0 ? 'text-success' : 'text-danger';
+  
+  // Usuarios activos (únicos) en los últimos 7 días
+  const sieteDiasAtras = new Date();
+  sieteDiasAtras.setDate(sieteDiasAtras.getDate() - 7);
+  
+  const usuariosActivos = new Set(
+    registros
+      .filter(r => r.timestamp && r.timestamp.toDate() > sieteDiasAtras)
+      .map(r => r.email)
+  ).size;
+  
+  document.getElementById("usuarios-totales").textContent = usuariosActivos;
 }
 
 // ==================== FUNCIONES SECUNDARIAS ====================
@@ -171,7 +234,7 @@ window.verDetalle = (id) => {
   const detalle = `
     Nombre: ${reg.nombre}
     Email: ${reg.email}
-    Tipo: ${reg.tipo}
+    Tipo: ${reg.tipo === 'becario' ? 'Becario' : 'Tiempo completo'}
     Fecha: ${formatearFecha(reg.timestamp)}
     Hora: ${formatearHora(reg.timestamp)}
     Evento: ${reg.tipoEvento === 'entrada' 
@@ -211,7 +274,7 @@ function mostrarNotificacion(mensaje, tipo = "info") {
 window.exportarCSV = () => {
   const headers = "Nombre,Email,Tipo,Fecha,Hora,Evento,Estado\n";
   const csvContent = registros
-    .filter(r => r.timestamp && typeof r.timestamp.seconds === "number")
+    .filter(r => r.timestamp && typeof r.timestamp.toDate === "function")
     .map(r => 
       `"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}",` +
       `"${formatearHora(r.timestamp)}","${r.tipoEvento}","${r.estado}"`
@@ -227,7 +290,7 @@ window.exportarCSV = () => {
 
 window.descargarJSON = () => {
   const data = registros
-    .filter(r => r.timestamp && typeof r.timestamp.seconds === "number")
+    .filter(r => r.timestamp && typeof r.timestamp.toDate === "function")
     .map(r => ({
       nombre: r.nombre,
       email: r.email,
@@ -236,7 +299,7 @@ window.descargarJSON = () => {
       hora: formatearHora(r.timestamp),
       evento: r.tipoEvento,
       estado: r.estado,
-      timestamp: r.timestamp.seconds
+      timestamp: r.timestamp.toMillis()
     }));
   
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -265,8 +328,8 @@ function renderGraficaSemanal() {
   const conteo = Array(7).fill(0);
   
   registros.forEach(r => {
-    if (!r.timestamp || typeof r.timestamp.seconds !== "number") return;
-    const fecha = new Date(r.timestamp.seconds * 1000);
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
+    const fecha = r.timestamp.toDate();
     const dia = fecha.getDay(); // 0 (Dom) a 6 (Sáb)
     conteo[dia === 0 ? 6 : dia - 1]++;
   });
@@ -291,21 +354,177 @@ function renderGraficaSemanal() {
   });
 }
 
-// Gráficas vacías para evitar errores
-function renderGraficaTipo() {}
-function renderGraficaHorarios() {}
-function renderGraficaMensual() {}
-function renderGraficaUsuarios() {}
+function renderGraficaTipo() {
+  const ctx = document.getElementById("graficaTipo").getContext("2d");
+  if (graficaTipo) graficaTipo.destroy();
+  
+  const tipos = {
+    becario: registros.filter(r => r.tipo === 'becario').length,
+    tiempo_completo: registros.filter(r => r.tipo === 'tiempo_completo').length
+  };
+  
+  graficaTipo = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: ["Becarios", "Tiempo completo"],
+      datasets: [{
+        data: [tipos.becario, tipos.tiempo_completo],
+        backgroundColor: [
+          'rgba(13, 110, 253, 0.7)',
+          'rgba(102, 16, 242, 0.7)'
+        ],
+        borderColor: [
+          'rgba(13, 110, 253, 1)',
+          'rgba(102, 16, 242, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+}
+
+function renderGraficaHorarios() {
+  const ctx = document.getElementById("graficaHorarios").getContext("2d");
+  if (graficaHorarios) graficaHorarios.destroy();
+  
+  const horas = Array(24).fill(0);
+  registros.forEach(r => {
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
+    const fecha = r.timestamp.toDate();
+    const hora = fecha.getHours();
+    horas[hora]++;
+  });
+  
+  graficaHorarios = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+      datasets: [{
+        label: "Accesos por hora",
+        data: horas,
+        fill: true,
+        backgroundColor: 'rgba(13, 110, 253, 0.2)',
+        borderColor: 'rgba(13, 110, 253, 1)',
+        tension: 0.4
+      }]
+    },
+    options: getChartOptions("Accesos por hora del día")
+  });
+}
+
+function renderGraficaMensual() {
+  const ctx = document.getElementById("graficaMensual").getContext("2d");
+  if (graficaMensual) graficaMensual.destroy();
+  
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const conteo = Array(12).fill(0);
+  
+  registros.forEach(r => {
+    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
+    const fecha = r.timestamp.toDate();
+    const mes = fecha.getMonth();
+    conteo[mes]++;
+  });
+  
+  graficaMensual = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: meses,
+      datasets: [{
+        label: "Accesos por mes",
+        data: conteo,
+        backgroundColor: 'rgba(111, 66, 193, 0.7)',
+        borderColor: 'rgba(111, 66, 193, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: getChartOptions("Accesos mensuales")
+  });
+}
+
+function renderGraficaUsuarios() {
+  const ctx = document.getElementById("graficaUsuarios").getContext("2d");
+  if (graficaUsuarios) graficaUsuarios.destroy();
+  
+  // Obtener los 5 usuarios con más registros
+  const usuarios = {};
+  registros.forEach(r => {
+    if (!r.email) return;
+    usuarios[r.email] = (usuarios[r.email] || 0) + 1;
+  });
+  
+  const topUsuarios = Object.entries(usuarios)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  
+  const nombres = topUsuarios.map(u => u[0].split('@')[0]);
+  const conteo = topUsuarios.map(u => u[1]);
+  
+  graficaUsuarios = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: nombres,
+      datasets: [{
+        data: conteo,
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.7)',
+          'rgba(54, 162, 235, 0.7)',
+          'rgba(255, 206, 86, 0.7)',
+          'rgba(75, 192, 192, 0.7)',
+          'rgba(153, 102, 255, 0.7)'
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)',
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+}
 
 // Configuración común para gráficas
 function getChartOptions(title) {
   const isDarkMode = document.body.classList.contains('dark-mode');
   return {
     responsive: true,
-    plugins: { legend: { display: false } },
+    plugins: { 
+      legend: { display: false },
+      title: {
+        display: true,
+        text: title,
+        color: isDarkMode ? '#fff' : '#333'
+      }
+    },
     scales: {
-      y: { beginAtZero: true, grid: { color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' } },
-      x: { grid: { display: false } }
+      y: { 
+        beginAtZero: true, 
+        grid: { color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
+        ticks: { color: isDarkMode ? '#fff' : '#333' }
+      },
+      x: { 
+        grid: { display: false },
+        ticks: { color: isDarkMode ? '#fff' : '#333' }
+      }
     }
   };
 }
@@ -326,108 +545,7 @@ document.getElementById("themeToggle").addEventListener("click", () => {
 // Inicializar modo oscuro si estaba activo
 if (localStorage.getItem("darkMode") === "true") {
   document.body.classList.add("dark-mode");
-
-  // Re-renderizar gráficas para aplicar colores oscuros
-  renderGraficaSemanal();                     
-  renderGraficaTipo();
-  renderGraficaHorarios();
-  renderGraficaMensual();
-  renderGraficaUsuarios();
 }
-// Cargar registros al inicio
-cargarRegistros();  
-// Renderizar gráficas al cargar
-renderGraficas();
-// Inicializar tabla
-renderTabla();
-// Inicializar filtros
-document.getElementById("filtroTipo").value = "todos";
-document.getElementById("filtroFecha").value = "";  
-document.getElementById("filtroBusqueda").value = "";
-document.getElementById("filtroEvento").value = "todos";      
-// Renderizar tabla inicial
-renderTabla();
-// Renderizar gráficas iniciales    
-renderGraficas();
-// Mostrar notificación de bienvenida
-mostrarNotificacion("Bienvenido al panel de administración", "info");
-// Mostrar notificación de modo oscuro
-if (document.body.classList.contains("dark-mode")) {
-  mostrarNotificacion("Modo oscuro activado", "info");
-} else {
-  mostrarNotificacion("Modo claro activado", "info");
-}     
-// Mostrar notificación de carga de registros
-mostrarNotificacion("Registros cargados correctamente", "success");
 
-// Mostrar notificación de exportación
-mostrarNotificacion("Puedes exportar registros a CSV o JSON", "info");      
-// Mostrar notificación de filtros
-mostrarNotificacion("Utiliza los filtros para buscar registros específicos", "info");   
-// Mostrar notificación de gráficos       
-
-mostrarNotificacion("Gráficas actualizadas con los últimos datos", "info");
-// Mostrar notificación de autenticación        
-mostrarNotificacion("Autenticación verificada correctamente", "success");   
-// Mostrar notificación de permisos
-mostrarNotificacion("Permisos de administrador verificados", "success");  
-// Mostrar notificación de cierre de sesión     
-mostrarNotificacion("Puedes cerrar sesión en cualquier momento", "info");
-// Mostrar notificación de detalles de registro 
-mostrarNotificacion("Haz clic en el icono de ojo para ver detalles del registro", "info");    
-// Mostrar notificación de eliminación de registro    
-mostrarNotificacion("Haz clic en el icono de papelera para eliminar un registro", "info");
-// Mostrar notificación de exportación de CSV 
-mostrarNotificacion("Haz clic en el botón de CSV para exportar registros", "info");   
-// Mostrar notificación de exportación de JSON    
-mostrarNotificacion("Haz clic en el botón de JSON para exportar registros", "info");
-// Mostrar notificación de gráficos semanales 
-mostrarNotificacion("Gráfica semanal de accesos cargada", "info");
-// Mostrar notificación de gráficos por tipo
-mostrarNotificacion("Gráfica por tipo de acceso cargada", "info");    
-// Mostrar notificación de gráficos por horarios  
-mostrarNotificacion("Gráfica por horarios de acceso cargada", "info");
-// Mostrar notificación de gráficos mensuales 
-mostrarNotificacion("Gráfica mensual de accesos cargada", "info");
-// Mostrar notificación de gráficos por usuarios  
-mostrarNotificacion("Gráfica por usuarios de acceso cargada", "info");    
-// Mostrar notificación de filtros aplicados
-mostrarNotificacion("Filtros aplicados correctamente", "info"); 
-// Mostrar notificación de tabla actualizada  
-mostrarNotificacion("Tabla de registros actualizada", "success");
-// Mostrar notificación de carga de gráficas
-mostrarNotificacion("Gráficas cargadas correctamente", "success");
-// Mostrar notificación de modo oscuro activado
-mostrarNotificacion("Modo oscuro activado", "info");    
-// Mostrar notificación de modo claro activado    
-mostrarNotificacion("Modo claro activado", "info");
-// Mostrar notificación de bienvenida al panel
-mostrarNotificacion("Bienvenido al panel de administración", "info");
-// Mostrar notificación de autenticación exitosa
-mostrarNotificacion("Autenticación exitosa", "success");
-// Mostrar notificación de permisos de administrador  
-mostrarNotificacion("Permisos de administrador verificados", "success");
-// Mostrar notificación de cierre de sesión exitoso
-mostrarNotificacion("Cierre de sesión exitoso", "success");
-// Mostrar notificación de carga de registros exitosa
-mostrarNotificacion("Registros cargados correctamente", "success");
-// Mostrar notificación de exportación de registros 
-mostrarNotificacion("Registros exportados correctamente", "success");
-// Mostrar notificación de filtros aplicados correctamente
-mostrarNotificacion("Filtros aplicados correctamente", "info");
-// Mostrar notificación de tabla actualizada correctamente    
-mostrarNotificacion("Tabla de registros actualizada correctamente", "success");
-// Mostrar notificación de gráficas actualizadas correctamente
-mostrarNotificacion("Gráficas actualizadas correctamente", "success");
-// Mostrar notificación de modo oscuro activado correctamente
-mostrarNotificacion("Modo oscuro activado correctamente", "info");
-// Mostrar notificación de modo claro activado correctamente
-mostrarNotificacion("Modo claro activado correctamente", "info");
-// Mostrar notificación de bienvenida al panel de administración
-mostrarNotificacion("Bienvenido al panel de administración", "info");
-// Mostrar notificación de autenticación verificada correctamente
-mostrarNotificacion("Autenticación verificada correctamente", "success");
-// Mostrar notificación de permisos de administrador verificados  
-mostrarNotificacion("Permisos de administrador verificados", "success");
-// Mostrar notificación de cierre de sesión disponible  
-mostrarNotificacion("Puedes cerrar sesión en cualquier momento", "info");
+// Inicializar filtros con la fecha de hoy
+document.getElementById("filtroFecha").valueAsDate = new Date();
