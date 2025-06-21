@@ -206,6 +206,15 @@ body.dark-mode table td {
   border-color: #444;
 }
 
+body.dark-mode table {
+  background-color: #181818;
+  color: #e0e0e0;
+}
+body.dark-mode table td {
+  background-color: #181818;
+  color: #e0e0e0;
+}
+
 table tr:last-child td {
   border-bottom: none;
 }
@@ -247,6 +256,12 @@ body.dark-mode .form-select {
   background-color: #2d2d2d;
   border-color: #444;
   color: #e0e0e0;
+}
+
+body.dark-mode .form-control::placeholder,
+body.dark-mode input[type="search"]::placeholder {
+  color: #bbb !important;
+  opacity: 1;
 }
 
 body.dark-mode .input-group-text {
