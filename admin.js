@@ -35,13 +35,16 @@ const eventoFiltro = document.getElementById("filtroEvento");
 let registros = [];
 let graficaSemanal, graficaTipo, graficaHorarios, graficaMensual, graficaUsuarios;
 
-// Formateadores de fecha corregidos para zona horaria
 function formatearFecha(timestamp) {
+  if (!timestamp || typeof timestamp.seconds !== "number") return "-";
   const fecha = new Date(timestamp.seconds * 1000);
-  // Ajustar a zona horaria local
-  const offset = fecha.getTimezoneOffset() * 60000;
-  const fechaLocal = new Date(fecha.getTime() - offset);
-  return fechaLocal.toISOString().split('T')[0];
+  // Usar la zona horaria de México
+  return fecha.toLocaleDateString("es-MX", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).split('/').reverse().join('-'); // yyyy-mm-dd
 }
 
 function formatearHora(timestamp) {
@@ -190,35 +193,54 @@ async function cargarRegistros() {
   }
 }
 
-// Calcular KPIs y comparaciones
-async function calcularKPIs() {
-  const hoy = new Date();
-  const hoyStr = formatearFecha({ seconds: Math.floor(hoy.getTime() / 1000) });
-  const ayer = new Date(hoy);
-  ayer.setDate(hoy.getDate() - 1);
-  const ayerStr = formatearFecha({ seconds: Math.floor(ayer.getTime() / 1000) });
-  
- // Entradas hoy
-const entradasHoy = registros.filter(r => 
-  formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "entrada"
-).length;
+function getFechaHoyMX() {
+  const now = new Date();
+  return now.toLocaleDateString("es-MX", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).split('/').reverse().join('-');
+}
 
-// Salidas hoy
-const salidasHoy = registros.filter(r => 
-  formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "salida"
-).length;
+function getFechaAyerMX() {
+  const now = new Date();
+  now.setDate(now.getDate() - 1);
+  return now.toLocaleDateString("es-MX", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).split('/').reverse().join('-');
+}
 
-// Entradas ayer
-const entradasAyer = registros.filter(r => 
-  formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "entrada"
-).length;
+ async function calcularKPIs() {
+  // Usar la fecha de CDMX para hoy y ayer
+  const hoyStr = getFechaHoyMX();
+  const ayerStr = getFechaAyerMX();
 
-// Salidas ayer
-const salidasAyer = registros.filter(r => 
-  formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "salida"
-).length;
-  
+  // Entradas hoy
+  const entradasHoy = registros.filter(r =>
+    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "entrada"
+  ).length;
+
+  // Salidas hoy
+  const salidasHoy = registros.filter(r =>
+    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "salida"
+  ).length;
+
+  // Entradas ayer
+  const entradasAyer = registros.filter(r =>
+    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "entrada"
+  ).length;
+
+  // Salidas ayer
+  const salidasAyer = registros.filter(r =>
+    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "salida"
+  ).length;
+
   // Usuarios únicos (últimos 7 días)
+  const hoy = new Date();
   const sieteDiasAtras = new Date(hoy);
   sieteDiasAtras.setDate(hoy.getDate() - 7);
   const usuariosUnicos = new Set(
@@ -226,27 +248,27 @@ const salidasAyer = registros.filter(r =>
       .filter(r => new Date(r.timestamp.seconds * 1000) >= sieteDiasAtras)
       .map(r => r.email)
   ).size;
-  
+
   // Calcular porcentajes de comparación
   const calcVariacion = (actual, anterior) => {
     if (anterior === 0) return actual === 0 ? 0 : 100;
     return Math.round(((actual - anterior) / anterior) * 100);
   };
-  
+
   const entradasVariacion = calcVariacion(entradasHoy, entradasAyer);
   const salidasVariacion = calcVariacion(salidasHoy, salidasAyer);
-  
+
   // Actualizar UI
   document.getElementById("entradas-hoy").textContent = entradasHoy;
   document.getElementById("salidas-hoy").textContent = salidasHoy;
   document.getElementById("usuarios-totales").textContent = usuariosUnicos;
-  
+
   const entradasComparacion = document.getElementById("entradas-comparacion");
   const salidasComparacion = document.getElementById("salidas-comparacion");
-  
+
   entradasComparacion.textContent = `${entradasVariacion >= 0 ? '+' : ''}${entradasVariacion}%`;
   entradasComparacion.className = entradasVariacion >= 0 ? "text-success" : "text-danger";
-  
+
   salidasComparacion.textContent = `${salidasVariacion >= 0 ? '+' : ''}${salidasVariacion}%`;
   salidasComparacion.className = salidasVariacion >= 0 ? "text-success" : "text-danger";
 }
