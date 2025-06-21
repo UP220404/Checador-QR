@@ -421,3 +421,23 @@ body.dark-mode .text-muted {
 .seccion {
   animation: fadeIn 0.4s ease-out;
 }
+
+/* Paginación personalizada en verde institucional */
+.page-item.active .page-link {
+  background-color: #198754 !important; /* Verde institucional */
+  border-color: #198754 !important;
+  color: #fff !important;
+}
+
+.page-link {
+  color: #198754;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  transition: background 0.2s, color 0.2s;
+}
+
+.page-link:hover {
+  background-color: #198754;
+  color: #fff;
+  border-color: #198754;
+}
