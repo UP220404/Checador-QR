@@ -198,25 +198,25 @@ async function calcularKPIs() {
   ayer.setDate(hoy.getDate() - 1);
   const ayerStr = formatearFecha({ seconds: Math.floor(ayer.getTime() / 1000) });
   
-  // Entradas hoy
-  const entradasHoy = registros.filter(r => 
-    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento !== "entrada"
-  ).length;
-  
-  // Salidas hoy
-  const salidasHoy = registros.filter(r => 
-    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "salida"
-  ).length;
-  
-  // Entradas ayer
-  const entradasAyer = registros.filter(r => 
-    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento !== "entrada"
-  ).length;
-  
-  // Salidas ayer
-  const salidasAyer = registros.filter(r => 
-    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "salida"
-  ).length;
+ // Entradas hoy
+const entradasHoy = registros.filter(r => 
+  formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "entrada"
+).length;
+
+// Salidas hoy
+const salidasHoy = registros.filter(r => 
+  formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "salida"
+).length;
+
+// Entradas ayer
+const entradasAyer = registros.filter(r => 
+  formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "entrada"
+).length;
+
+// Salidas ayer
+const salidasAyer = registros.filter(r => 
+  formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "salida"
+).length;
   
   // Usuarios únicos (últimos 7 días)
   const sieteDiasAtras = new Date(hoy);
