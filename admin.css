@@ -470,3 +470,21 @@ body.dark-mode .card .btn {
   /* Mantén los botones de color, pero puedes ajustar si lo deseas */
   box-shadow: none;
 }
+
+body.dark-mode .modal-content {
+  background-color: #232323 !important;
+  color: #e0e0e0 !important;
+  border-color: #333 !important;
+}
+body.dark-mode .modal-header,
+body.dark-mode .modal-footer {
+  background-color: #232323 !important;
+  color: #e0e0e0 !important;
+  border-color: #333 !important;
+}
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+  background-color: #2d2d2d !important;
+  color: #e0e0e0 !important;
+  border-color: #444 !important;
+}

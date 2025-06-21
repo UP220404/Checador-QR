@@ -674,14 +674,13 @@ window.generarReportePersonalizado = async () => {
     return;
   }
   
-  const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
-  fin.setHours(23, 59, 59);
-  
+  const inicio = new Date(fechaInicio + "T00:00:00");
+  const fin = new Date(fechaFin + "T23:59:59");
+
   const registrosFiltrados = registros.filter(r => {
-    const fechaReg = new Date(r.timestamp.seconds * 1000);
-    const tipoMatch = !tipo || r.tipo === tipo;
-    return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
+  const fechaReg = new Date(r.timestamp.seconds * 1000);
+  const tipoMatch = !tipo || r.tipo === tipo;
+  return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
   });
   
   if (registrosFiltrados.length === 0) {
