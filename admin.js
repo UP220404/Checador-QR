@@ -9,9 +9,7 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc,
-  query,
-  where
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -47,10 +45,9 @@ onAuthStateChanged(auth, (user) => {
       setTimeout(() => window.location.href = "index.html", 3000);
       return;
     }
-    
     document.getElementById("admin-name").textContent = user.email;
     cargarRegistros();
-    
+
     document.getElementById("btn-logout").addEventListener("click", () => {
       signOut(auth).then(() => window.location.href = "index.html")
         .catch(error => mostrarNotificacion("Error al cerrar sesión", "danger"));
@@ -60,8 +57,10 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Formateo de fechas
+// ==================== FORMATEO DE FECHAS ====================
+
 function formatearFecha(timestamp) {
+  if (!timestamp || typeof timestamp.seconds !== "number") return "-";
   const fecha = new Date(timestamp.seconds * 1000);
   // Ajustar a zona horaria local
   const offset = fecha.getTimezoneOffset() * 60000;
@@ -70,8 +69,8 @@ function formatearFecha(timestamp) {
 }
 
 function formatearHora(timestamp) {
+  if (!timestamp || typeof timestamp.seconds !== "number") return "-";
   const fecha = new Date(timestamp.seconds * 1000);
-  // Ajustar a zona horaria local
   return fecha.toLocaleTimeString("es-MX", {
     hour: '2-digit',
     minute: '2-digit',
@@ -79,7 +78,8 @@ function formatearHora(timestamp) {
   });
 }
 
-// Renderizar tabla
+// ==================== TABLA ====================
+
 function renderTabla() {
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
@@ -88,6 +88,8 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
+    // Solo registros con timestamp válido
+    if (!r.timestamp || typeof r.timestamp.seconds !== "number") return false;
     return (!fecha || formatearFecha(r.timestamp) === fecha) &&
            (!tipo || r.tipo === tipo) &&
            (!busqueda || r.nombre.toLowerCase().includes(busqueda) || r.email.toLowerCase().includes(busqueda)) &&
@@ -137,7 +139,8 @@ function renderTabla() {
   });
 }
 
-// Cargar registros
+// ==================== CARGA DE REGISTROS ====================
+
 async function cargarRegistros() {
   try {
     const snap = await getDocs(collection(db, "registros"));
@@ -148,7 +151,7 @@ async function cargarRegistros() {
       tipo: doc.data().tipo || "desconocido",
       tipoEvento: doc.data().tipoEvento || "entrada",
       estado: doc.data().estado || "puntual",
-      timestamp: doc.data().timestamp || { seconds: Math.floor(Date.now() / 1000) }
+      timestamp: doc.data().timestamp || null
     }));
     renderTabla();
     renderGraficas();
@@ -207,10 +210,12 @@ function mostrarNotificacion(mensaje, tipo = "info") {
 
 window.exportarCSV = () => {
   const headers = "Nombre,Email,Tipo,Fecha,Hora,Evento,Estado\n";
-  const csvContent = registros.map(r => 
-    `"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}",` +
-    `"${formatearHora(r.timestamp)}","${r.tipoEvento}","${r.estado}"`
-  ).join("\n");
+  const csvContent = registros
+    .filter(r => r.timestamp && typeof r.timestamp.seconds === "number")
+    .map(r => 
+      `"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}",` +
+      `"${formatearHora(r.timestamp)}","${r.tipoEvento}","${r.estado}"`
+    ).join("\n");
   
   const blob = new Blob([headers + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -221,16 +226,18 @@ window.exportarCSV = () => {
 };
 
 window.descargarJSON = () => {
-  const data = registros.map(r => ({
-    nombre: r.nombre,
-    email: r.email,
-    tipo: r.tipo,
-    fecha: formatearFecha(r.timestamp),
-    hora: formatearHora(r.timestamp),
-    evento: r.tipoEvento,
-    estado: r.estado,
-    timestamp: r.timestamp.seconds
-  }));
+  const data = registros
+    .filter(r => r.timestamp && typeof r.timestamp.seconds === "number")
+    .map(r => ({
+      nombre: r.nombre,
+      email: r.email,
+      tipo: r.tipo,
+      fecha: formatearFecha(r.timestamp),
+      hora: formatearHora(r.timestamp),
+      evento: r.tipoEvento,
+      estado: r.estado,
+      timestamp: r.timestamp.seconds
+    }));
   
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -258,6 +265,7 @@ function renderGraficaSemanal() {
   const conteo = Array(7).fill(0);
   
   registros.forEach(r => {
+    if (!r.timestamp || typeof r.timestamp.seconds !== "number") return;
     const fecha = new Date(r.timestamp.seconds * 1000);
     const dia = fecha.getDay(); // 0 (Dom) a 6 (Sáb)
     conteo[dia === 0 ? 6 : dia - 1]++;
