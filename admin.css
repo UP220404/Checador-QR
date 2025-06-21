@@ -421,3 +421,98 @@ body.dark-mode .text-muted {
 .seccion {
   animation: fadeIn 0.4s ease-out;
 }
+
+/* Añade esto al final de tu archivo admin.css */
+
+/* Mejoras para el modo oscuro */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+/* Buscador y campos de texto */
+body.dark-mode .form-control,
+body.dark-mode .form-select,
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+  background-color: #2d2d2d;
+  border-color: #444;
+  color: #ffffff !important;
+}
+
+/* Placeholder en modo oscuro */
+body.dark-mode .form-control::placeholder {
+  color: #a0a0a0 !important;
+  opacity: 1;
+}
+
+/* Tabla en modo oscuro */
+body.dark-mode .table {
+  --bs-table-bg: #1e1e1e;
+  --bs-table-striped-bg: #252525;
+  --bs-table-hover-bg: #2d2d2d;
+  --bs-table-color: #e0e0e0;
+  --bs-table-border-color: #444;
+}
+
+body.dark-mode .table th {
+  background-color: #0a3622;
+  color: white;
+}
+
+body.dark-mode .table td {
+  border-color: #444;
+}
+
+/* Tarjetas de reportes en modo oscuro */
+body.dark-mode .card {
+  background-color: #1e1e1e;
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+body.dark-mode .card .text-muted {
+  color: #a0a0a0 !important;
+}
+
+/* Modal de reporte personalizado */
+body.dark-mode .modal-content {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+body.dark-mode .modal-header {
+  border-bottom-color: #444;
+}
+
+body.dark-mode .modal-footer {
+  border-top-color: #444;
+}
+
+/* Paginación mejorada */
+body.dark-mode .page-item:not(.active):not(.disabled) .page-link {
+  background-color: #2d2d2d;
+  color: #e0e0e0;
+}
+
+body.dark-mode .page-item.active .page-link {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+/* Corrección para el texto en inputs */
+body.dark-mode input,
+body.dark-mode select {
+  color: #ffffff !important;
+}
+
+/* Botones en modo oscuro */
+body.dark-mode .btn-outline-secondary {
+  color: #e0e0e0;
+  border-color: #6c757d;
+}
+
+body.dark-mode .btn-outline-secondary:hover {
+  background-color: #6c757d;
+  color: white;
+}

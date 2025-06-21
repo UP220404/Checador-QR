@@ -249,9 +249,9 @@
   </div>
 </div>
 
-<!-- Modal para reporte personalizado -->
+<!-- Reemplaza el modal de reporte personalizado con este código -->
 <div class="modal fade" id="modalReporte" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Reporte Personalizado</h5>
@@ -259,35 +259,63 @@
       </div>
       <div class="modal-body">
         <form id="formReporte">
-          <div class="mb-3">
-            <label class="form-label">Rango de fechas</label>
-            <div class="input-group">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Fecha inicial</label>
               <input type="date" class="form-control" id="fechaInicio">
-              <span class="input-group-text">a</span>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Fecha final</label>
               <input type="date" class="form-control" id="fechaFin">
             </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Tipo de usuario</label>
-            <select class="form-select" id="reporteTipo">
-              <option value="">Todos</option>
-              <option value="becario">Becarios</option>
-              <option value="tiempo_completo">Tiempo completo</option>
-            </select>
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de usuario</label>
+              <select class="form-select" id="reporteTipo">
+                <option value="">Todos los usuarios</option>
+                <option value="becario">Becarios</option>
+                <option value="tiempo_completo">Tiempo completo</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Formato de reporte</label>
+              <select class="form-select" id="reporteFormato">
+                <option value="pdf">PDF</option>
+                <option value="excel">Excel</option>
+                <option value="json">JSON</option>
+              </select>
+            </div>
           </div>
+          
           <div class="mb-3">
-            <label class="form-label">Formato</label>
-            <select class="form-select" id="reporteFormato">
-              <option value="pdf">PDF</option>
-              <option value="excel">Excel</option>
-              <option value="csv">CSV</option>
-            </select>
+            <label class="form-label">Vista previa de registros</label>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+              <table class="table table-sm table-hover">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Evento</th>
+                  </tr>
+                </thead>
+                <tbody id="previewRegistros">
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">Seleccione un rango de fechas</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="generarReportePersonalizado()">Generar Reporte</button>
+        <button type="button" class="btn btn-primary" onclick="generarReportePersonalizado()">
+          <i class="bi bi-download me-2"></i>Generar Reporte
+        </button>
       </div>
     </div>
   </div>
@@ -297,6 +325,9 @@
 <button class="theme-toggle" id="themeToggle">
   <i class="bi bi-moon-fill"></i>
 </button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="admin.js"></script>

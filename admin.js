@@ -551,22 +551,72 @@ function renderGraficaUsuarios() {
   });
 }
 
-// Generar reporte PDF (simulado)
+// Reemplaza la función generarReportePDF con esta versión mejorada
 window.generarReportePDF = async () => {
   mostrarNotificacion("Generando reporte PDF...", "info");
   
-  // Simulamos un retraso de generación
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // Crear contenido del PDF (en una implementación real usarías una librería como jsPDF)
-  const blob = new Blob(["Contenido del reporte PDF"], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reporte_diario_${new Date().toISOString().slice(0,10)}.pdf`;
-  link.click();
-  
-  mostrarNotificacion("Reporte PDF generado con éxito", "success");
+  try {
+    // Usamos html2pdf para un PDF real (necesitarás incluir la librería)
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Título
+    doc.setFontSize(18);
+    doc.text('Reporte de Accesos', 105, 15, { align: 'center' });
+    
+    // Fecha
+    doc.setFontSize(12);
+    doc.text(`Generado el: ${new Date().toLocaleDateString('es-MX')}`, 105, 25, { align: 'center' });
+    
+    // Tabla de datos
+    const hoy = new Date();
+    const registrosHoy = registros.filter(r => 
+      formatearFecha(r.timestamp) === formatearFecha({ seconds: Math.floor(hoy.getTime() / 1000) })
+    );
+    
+    if (registrosHoy.length === 0) {
+      doc.text('No hay registros para hoy', 105, 40, { align: 'center' });
+    } else {
+      const headers = [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']];
+      const data = registrosHoy.map(r => [
+        r.nombre,
+        r.email,
+        r.tipo,
+        formatearHora(r.timestamp),
+        r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'
+      ]);
+      
+      doc.autoTable({
+        head: headers,
+        body: data,
+        startY: 30,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [10, 54, 34], // Verde oscuro
+          textColor: 255
+        },
+        styles: {
+          textColor: isDarkMode ? 200 : 0, // Cambia según modo oscuro
+          fillColor: isDarkMode ? 30 : 255 // Cambia según modo oscuro
+        }
+      });
+    }
+    
+    // Guardar el PDF
+    doc.save(`reporte_accesos_${new Date().toISOString().slice(0,10)}.pdf`);
+    mostrarNotificacion("PDF generado correctamente", "success");
+    
+  } catch (error) {
+    console.error("Error al generar PDF:", error);
+    mostrarNotificacion("Error al generar PDF", "danger");
+    // Versión de respaldo si falla html2pdf
+    const blob = new Blob(["Reporte de accesos"], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reporte_accesos_${new Date().toISOString().slice(0,10)}.pdf`;
+    link.click();
+  }
 };
 
 // Generar reporte Excel
@@ -603,108 +653,152 @@ window.generarReporteExcel = async () => {
   mostrarNotificacion("Reporte Excel generado con éxito", "success");
 };
 
-// Generar reporte personalizado
+// Generar reporte personalizado (versión mejorada)
 window.generarReportePersonalizado = async () => {
   const fechaInicio = document.getElementById("fechaInicio").value;
   const fechaFin = document.getElementById("fechaFin").value;
   const tipo = document.getElementById("reporteTipo").value;
   const formato = document.getElementById("reporteFormato").value;
   
+  // Validar fechas
   if (!fechaInicio || !fechaFin) {
-    mostrarNotificacion("Selecciona un rango de fechas", "warning");
+    mostrarNotificacion("Debes seleccionar un rango de fechas válido", "warning");
     return;
   }
   
   const inicio = new Date(fechaInicio);
   const fin = new Date(fechaFin);
-  fin.setHours(23, 59, 59);
-  
+  fin.setHours(23, 59, 59); // Ajustar para incluir todo el día
+
+  // Filtrar registros
   const registrosFiltrados = registros.filter(r => {
     const fechaReg = new Date(r.timestamp.seconds * 1000);
     const tipoMatch = !tipo || r.tipo === tipo;
     return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
   });
-  
+
   if (registrosFiltrados.length === 0) {
-    mostrarNotificacion("No hay registros en el rango seleccionado", "warning");
+    mostrarNotificacion("No hay registros con los filtros seleccionados", "warning");
     return;
   }
-  
+
   mostrarNotificacion(`Generando reporte en formato ${formato.toUpperCase()}...`, "info");
-  
-  // Simulamos generación según formato
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  let blob, extension;
-  if (formato === 'pdf') {
-    // Simulamos PDF
-    blob = new Blob(["Reporte personalizado PDF"], { type: 'application/pdf' });
-    extension = 'pdf';
-  } else if (formato === 'excel') {
-    // Creamos CSV (simulando Excel)
-    const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
-    registrosFiltrados.forEach(r => {
-      filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
-    });
-    blob = new Blob([filas.join("\n")], { type: 'text/csv' });
-    extension = 'xlsx';
-  } else {
-    // JSON
-    const datos = registrosFiltrados.map(r => ({
-      nombre: r.nombre,
-      email: r.email,
-      tipo: r.tipo,
-      fecha: formatearFecha(r.timestamp),
-      hora: formatearHora(r.timestamp),
-      evento: r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'
-    }));
-    blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
-    extension = 'json';
+
+  try {
+    // Generar según formato seleccionado
+    switch(formato) {
+      case 'pdf':
+        await generarPDF(registrosFiltrados, inicio, fin);
+        break;
+      case 'excel':
+        await generarExcel(registrosFiltrados, inicio, fin);
+        break;
+      case 'json':
+        await generarJSON(registrosFiltrados, inicio, fin);
+        break;
+      default:
+        throw new Error("Formato no soportado");
+    }
+    
+    mostrarNotificacion(`Reporte ${formato.toUpperCase()} generado con éxito`, "success");
+  } catch (error) {
+    console.error("Error al generar reporte:", error);
+    mostrarNotificacion(`Error al generar reporte: ${error.message}`, "danger");
+  } finally {
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporte'));
+    if (modal) modal.hide();
   }
-  
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reporte_personalizado_${new Date().toISOString().slice(0,10)}.${extension}`;
-  link.click();
-  
-  mostrarNotificacion(`Reporte ${formato.toUpperCase()} generado con éxito`, "success");
-  
-  // Cerrar modal
-  bootstrap.Modal.getInstance(document.getElementById('modalReporte')).hide();
 };
 
-// Exportar a CSV
-window.exportarCSV = () => {
-  if (registros.length === 0) {
-    mostrarNotificacion("No hay datos para exportar", "warning");
-    return;
-  }
+// Función para generar PDF real
+async function generarPDF(registros, inicio, fin) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
   
-  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
-  registros.forEach(r => {
-    filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
+  // Configuración
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  
+  // Encabezado
+  doc.setFontSize(18);
+  doc.setTextColor(isDarkMode ? 200 : 0);
+  doc.text('Reporte de Accesos - Cielito Home', 105, 20, { align: 'center' });
+  
+  // Información del reporte
+  doc.setFontSize(12);
+  doc.text(`Del ${inicio.toLocaleDateString('es-MX')} al ${fin.toLocaleDateString('es-MX')}`, 105, 30, { align: 'center' });
+  
+  // Datos de la tabla
+  const headers = [['Nombre', 'Email', 'Tipo', 'Fecha', 'Hora', 'Evento']];
+  const data = registros.map(r => [
+    r.nombre,
+    r.email,
+    r.tipo,
+    formatearFecha(r.timestamp),
+    formatearHora(r.timestamp),
+    r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'
+  ]);
+  
+  // Generar tabla
+  doc.autoTable({
+    head: headers,
+    body: data,
+    startY: 40,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [15, 81, 50], // Verde Cielito Home
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    bodyStyles: {
+      textColor: isDarkMode ? 200 : 0,
+      fillColor: isDarkMode ? [30, 30, 30] : [255, 255, 255]
+    },
+    alternateRowStyles: {
+      fillColor: isDarkMode ? [40, 40, 40] : [245, 245, 245]
+    },
+    margin: { top: 40 }
   });
   
-  const blob = new Blob([filas.join("\n")], { type: 'text/csv;charset=utf-8;' });
+  // Pie de página
+  const pageCount = doc.internal.getNumberOfPages();
+  for(let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 10, { align: 'right' });
+    doc.text(`Generado el ${new Date().toLocaleDateString('es-MX')}`, 20, doc.internal.pageSize.height - 10);
+  }
+  
+  // Guardar PDF
+  doc.save(`reporte_accesos_${inicio.toISOString().slice(0,10)}_a_${fin.toISOString().slice(0,10)}.pdf`);
+}
+
+// Función para generar Excel (CSV)
+async function generarExcel(registros, inicio, fin) {
+  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
+  
+  registros.forEach(r => {
+    filas.push([
+      `"${r.nombre}"`,
+      `"${r.email}"`,
+      `"${r.tipo}"`,
+      `"${formatearFecha(r.timestamp)}"`,
+      `"${formatearHora(r.timestamp)}"`,
+      `"${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`
+    ].join(','));
+  });
+  
+  const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `registros_acceso_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(link);
+  link.download = `reporte_accesos_${inicio.toISOString().slice(0,10)}_a_${fin.toISOString().slice(0,10)}.csv`;
   link.click();
-  document.body.removeChild(link);
-  
-  mostrarNotificacion("Archivo CSV exportado correctamente", "success");
-};
+}
 
-// Exportar a JSON
-window.descargarJSON = () => {
-  if (registros.length === 0) {
-    mostrarNotificacion("No hay datos para exportar", "warning");
-    return;
-  }
-  
+// Función para generar JSON
+async function generarJSON(registros, inicio, fin) {
   const datos = registros.map(r => ({
     nombre: r.nombre,
     email: r.email,
@@ -719,87 +813,52 @@ window.descargarJSON = () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `registros_acceso_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(link);
+  link.download = `reporte_accesos_${inicio.toISOString().slice(0,10)}_a_${fin.toISOString().slice(0,10)}.json`;
   link.click();
-  document.body.removeChild(link);
-  
-  mostrarNotificacion("Archivo JSON exportado correctamente", "success");
-};
-
-// Event listeners
-tipoFiltro.addEventListener("change", renderTabla);
-fechaFiltro.addEventListener("change", renderTabla);
-busquedaFiltro.addEventListener("input", renderTabla);
-eventoFiltro.addEventListener("change", renderTabla);
-
-// Configurar fecha por defecto en el filtro
-fechaFiltro.valueAsDate = new Date();
-
-// Modo oscuro
-const themeToggle = document.getElementById('themeToggle');
-const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-
-// Verificar preferencias del sistema o almacenamiento local
-if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && prefersDarkScheme.matches)) {
-  document.body.classList.add('dark-mode');
-  themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
 }
 
-// Alternar modo oscuro
-themeToggle.addEventListener('click', () => {
-  if (document.body.classList.contains('dark-mode')) {
-    document.body.classList.remove('dark-mode');
-    localStorage.setItem('theme', 'light');
-    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
-  } else {
-    document.body.classList.add('dark-mode');
-    localStorage.setItem('theme', 'dark');
-    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
-  }
+// Función para actualizar vista previa en el modal
+function actualizarVistaPrevia() {
+  const fechaInicio = document.getElementById("fechaInicio").value;
+  const fechaFin = document.getElementById("fechaFin").value;
+  const tipo = document.getElementById("reporteTipo").value;
+  const preview = document.getElementById("previewRegistros");
   
-  // Re-renderizar gráficas para que se adapten al nuevo tema
-  if (graficaSemanal) renderGraficaSemanal();
-  if (graficaTipo) renderGraficaTipo();
-  if (graficaHorarios) renderGraficaHorarios();
-  if (graficaMensual) renderGraficaMensual();
-  if (graficaUsuarios) renderGraficaUsuarios();
-});
-
-// Cerrar sesión
-document.getElementById("btn-logout").addEventListener("click", () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  }).catch(error => {
-    console.error("Error al cerrar sesión:", error);
-    mostrarNotificacion("Error al cerrar sesión", "danger");
-  });
-});
-
-// Verificar autenticación
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "index.html";
+  if (!fechaInicio || !fechaFin) {
+    preview.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Seleccione un rango de fechas</td></tr>';
     return;
   }
   
-  if (!adminEmails.includes(user.email)) {
-    mostrarNotificacion("No tienes permisos para acceder a esta página", "danger");
-    setTimeout(() => signOut(auth).then(() => window.location.href = "index.html"), 2000);
+  const inicio = new Date(fechaInicio);
+  const fin = new Date(fechaFin);
+  fin.setHours(23, 59, 59);
+  
+  const registrosFiltrados = registros.filter(r => {
+    const fechaReg = new Date(r.timestamp.seconds * 1000);
+    const tipoMatch = !tipo || r.tipo === tipo;
+    return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
+  });
+  
+  if (registrosFiltrados.length === 0) {
+    preview.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay registros con estos filtros</td></tr>';
     return;
   }
   
-  // Mostrar nombre del administrador
-  document.getElementById("admin-name").textContent = user.displayName || user.email.split('@')[0];
+  preview.innerHTML = registrosFiltrados.slice(0, 5).map(r => `
+    <tr>
+      <td>${r.nombre}</td>
+      <td>${formatearFecha(r.timestamp)}</td>
+      <td>${formatearHora(r.timestamp)}</td>
+      <td><span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning'}">${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}</span></td>
+    </tr>
+  `).join('');
   
-  // Cargar datos
-  cargarRegistros();
-});
+  if (registrosFiltrados.length > 5) {
+    preview.innerHTML += `<tr><td colspan="4" class="text-center text-muted">+ ${registrosFiltrados.length - 5} registros más...</td></tr>`;
+  }
+}
 
-// Inicializar tooltips
-document.addEventListener('DOMContentLoaded', () => {
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(tooltipTriggerEl => {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-});
+// Event listeners para vista previa
+document.getElementById("fechaInicio").addEventListener("change", actualizarVistaPrevia);
+document.getElementById("fechaFin").addEventListener("change", actualizarVistaPrevia);
+document.getElementById("reporteTipo").addEventListener("change", actualizarVistaPrevia);
