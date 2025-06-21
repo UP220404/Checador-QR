@@ -457,3 +457,16 @@ body.dark-mode .text-muted {
   color: #fff;
   border-color: #198754;
 }
+
+/* Tarjetas de reportes en modo oscuro */
+body.dark-mode .card,
+body.dark-mode .card-body {
+  background-color: #232323 !important;
+  color: #e0e0e0 !important;
+  border-color: #333 !important;
+}
+
+body.dark-mode .card .btn {
+  /* Mantén los botones de color, pero puedes ajustar si lo deseas */
+  box-shadow: none;
+}
