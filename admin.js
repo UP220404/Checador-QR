@@ -1,4 +1,3 @@
-// admin.js mejorado
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -10,10 +9,7 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc,
-  query,
-  where,
-  getCountFromServer
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -39,18 +35,26 @@ const eventoFiltro = document.getElementById("filtroEvento");
 let registros = [];
 let graficaSemanal, graficaTipo, graficaHorarios, graficaMensual, graficaUsuarios;
 
-// Formateadores
-const formatearFecha = (timestamp) => {
+// Formateadores de fecha corregidos para zona horaria
+function formatearFecha(timestamp) {
   const fecha = new Date(timestamp.seconds * 1000);
-  return fecha.toLocaleDateString("es-MX", { year: 'numeric', month: '2-digit', day: '2-digit' });
-};
+  // Ajustar a zona horaria local
+  const offset = fecha.getTimezoneOffset() * 60000;
+  const fechaLocal = new Date(fecha.getTime() - offset);
+  return fechaLocal.toISOString().split('T')[0];
+}
 
-const formatearHora = (timestamp) => {
+function formatearHora(timestamp) {
   const fecha = new Date(timestamp.seconds * 1000);
-  return fecha.toLocaleTimeString("es-MX", { hour: '2-digit', minute: '2-digit' });
-};
+  // Ajustar a zona horaria local
+  return fecha.toLocaleTimeString("es-MX", { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+}
 
-const formatearFechaHora = (timestamp) => {
+function formatearFechaHora(timestamp) {
   const fecha = new Date(timestamp.seconds * 1000);
   return fecha.toLocaleString("es-MX", {
     year: 'numeric',
@@ -59,10 +63,9 @@ const formatearFechaHora = (timestamp) => {
     hour: '2-digit',
     minute: '2-digit'
   });
-};
+}
 
-// ...existing code...
-
+// Renderizar tabla con filtros
 function renderTabla() {
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
@@ -71,24 +74,17 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
-    let fechaMatch = true;
-    if (fecha) {
-      const inicioDia = new Date(fecha + "T00:00:00");
-      const finDia = new Date(fecha + "T23:59:59.999");
-      const registroFecha = new Date(r.timestamp.seconds * 1000);
-      fechaMatch = registroFecha >= inicioDia && registroFecha <= finDia;
-    }
-
+    const fechaMatch = !fecha || formatearFecha(r.timestamp) === new Date(fecha).toLocaleDateString("es-MX");
     const tipoMatch = !tipo || r.tipo === tipo;
-    const busquedaMatch = !busqueda ||
-      r.nombre.toLowerCase().includes(busqueda) ||
+    const busquedaMatch = !busqueda || 
+      r.nombre.toLowerCase().includes(busqueda) || 
       r.email.toLowerCase().includes(busqueda);
     const eventoMatch = !evento || r.tipoEvento === evento;
-
+    
     return fechaMatch && tipoMatch && busquedaMatch && eventoMatch;
   });
 
-  // Ordenar por fecha más reciente
+  // Ordenar por fecha más reciente primero
   filtrados.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
 
   if (filtrados.length === 0) {
@@ -284,6 +280,12 @@ function renderGraficaSemanal() {
     }
   });
   
+  // Color según modo oscuro
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const bgColor = isDarkMode ? 'rgba(32, 201, 151, 0.7)' : 'rgba(25, 135, 84, 0.7)';
+  const borderColor = isDarkMode ? 'rgba(32, 201, 151, 1)' : 'rgba(25, 135, 84, 1)';
+  const textColor = isDarkMode ? '#e0e0e0' : '#666';
+  
   graficaSemanal = new Chart(ctx, {
     type: "bar",
     data: {
@@ -291,8 +293,8 @@ function renderGraficaSemanal() {
       datasets: [{
         label: "Accesos",
         data: conteo,
-        backgroundColor: "rgba(25, 135, 84, 0.7)",
-        borderColor: "rgba(25, 135, 84, 1)",
+        backgroundColor: bgColor,
+        borderColor: borderColor,
         borderWidth: 1,
         borderRadius: 4
       }]
@@ -308,12 +310,18 @@ function renderGraficaSemanal() {
         y: {
           beginAtZero: true,
           grid: {
-            color: "rgba(0,0,0,0.05)"
+            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          },
+          ticks: {
+            color: textColor
           }
         },
         x: {
           grid: {
             display: false
+          },
+          ticks: {
+            color: textColor
           }
         }
       }
@@ -333,6 +341,10 @@ function renderGraficaTipo() {
     becario: registros.filter(r => r.tipo === "becario").length,
     tiempo_completo: registros.filter(r => r.tipo === "tiempo_completo").length
   };
+  
+  // Color según modo oscuro
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const textColor = isDarkMode ? '#e0e0e0' : '#666';
   
   graficaTipo = new Chart(ctx, {
     type: "doughnut",
@@ -355,7 +367,10 @@ function renderGraficaTipo() {
       responsive: true,
       plugins: {
         legend: {
-          position: "bottom"
+          position: "bottom",
+          labels: {
+            color: textColor
+          }
         }
       },
       cutout: "70%"
@@ -379,6 +394,12 @@ function renderGraficaHorarios() {
     horas[hora]++;
   });
   
+  // Color según modo oscuro
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const bgColor = isDarkMode ? 'rgba(108, 117, 125, 0.1)' : 'rgba(108, 117, 125, 0.1)';
+  const borderColor = isDarkMode ? 'rgba(32, 201, 151, 1)' : 'rgba(108, 117, 125, 1)';
+  const textColor = isDarkMode ? '#e0e0e0' : '#666';
+  
   graficaHorarios = new Chart(ctx, {
     type: "line",
     data: {
@@ -386,8 +407,8 @@ function renderGraficaHorarios() {
       datasets: [{
         label: "Accesos por hora",
         data: horas,
-        backgroundColor: "rgba(108, 117, 125, 0.1)",
-        borderColor: "rgba(108, 117, 125, 1)",
+        backgroundColor: bgColor,
+        borderColor: borderColor,
         borderWidth: 2,
         tension: 0.3,
         fill: true
@@ -404,12 +425,18 @@ function renderGraficaHorarios() {
         y: {
           beginAtZero: true,
           grid: {
-            color: "rgba(0,0,0,0.05)"
+            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          },
+          ticks: {
+            color: textColor
           }
         },
         x: {
           grid: {
             display: false
+          },
+          ticks: {
+            color: textColor
           }
         }
       }
@@ -424,6 +451,10 @@ function renderGraficaMensual() {
   if (graficaMensual) {
     graficaMensual.destroy();
   }
+  
+  // Color según modo oscuro
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const textColor = isDarkMode ? '#e0e0e0' : '#666';
   
   // Implementación básica - puedes mejorarla con datos reales
   graficaMensual = new Chart(ctx, {
@@ -443,6 +474,25 @@ function renderGraficaMensual() {
         legend: {
           display: false
         }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          },
+          ticks: {
+            color: textColor
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: textColor
+          }
+        }
       }
     }
   });
@@ -455,6 +505,10 @@ function renderGraficaUsuarios() {
   if (graficaUsuarios) {
     graficaUsuarios.destroy();
   }
+  
+  // Color según modo oscuro
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const textColor = isDarkMode ? '#e0e0e0' : '#666';
   
   // Implementación básica - puedes mejorarla con datos reales
   graficaUsuarios = new Chart(ctx, {
@@ -475,10 +529,151 @@ function renderGraficaUsuarios() {
         legend: {
           display: false
         }
+      },
+      scales: {
+        y: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: textColor
+          }
+        },
+        x: {
+          grid: {
+            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          },
+          ticks: {
+            color: textColor
+          }
+        }
       }
     }
   });
 }
+
+// Generar reporte PDF (simulado)
+window.generarReportePDF = async () => {
+  mostrarNotificacion("Generando reporte PDF...", "info");
+  
+  // Simulamos un retraso de generación
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Crear contenido del PDF (en una implementación real usarías una librería como jsPDF)
+  const blob = new Blob(["Contenido del reporte PDF"], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `reporte_diario_${new Date().toISOString().slice(0,10)}.pdf`;
+  link.click();
+  
+  mostrarNotificacion("Reporte PDF generado con éxito", "success");
+};
+
+// Generar reporte Excel
+window.generarReporteExcel = async () => {
+  mostrarNotificacion("Generando reporte Excel...", "info");
+  
+  // Filtrar registros de la semana actual
+  const hoy = new Date();
+  const inicioSemana = new Date(hoy);
+  inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+  
+  const registrosSemana = registros.filter(r => 
+    new Date(r.timestamp.seconds * 1000) >= inicioSemana
+  );
+  
+  if (registrosSemana.length === 0) {
+    mostrarNotificacion("No hay registros esta semana", "warning");
+    return;
+  }
+  
+  // Crear CSV (simulando Excel)
+  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
+  registrosSemana.forEach(r => {
+    filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
+  });
+  
+  const blob = new Blob([filas.join("\n")], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `reporte_semanal_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  
+  mostrarNotificacion("Reporte Excel generado con éxito", "success");
+};
+
+// Generar reporte personalizado
+window.generarReportePersonalizado = async () => {
+  const fechaInicio = document.getElementById("fechaInicio").value;
+  const fechaFin = document.getElementById("fechaFin").value;
+  const tipo = document.getElementById("reporteTipo").value;
+  const formato = document.getElementById("reporteFormato").value;
+  
+  if (!fechaInicio || !fechaFin) {
+    mostrarNotificacion("Selecciona un rango de fechas", "warning");
+    return;
+  }
+  
+  const inicio = new Date(fechaInicio);
+  const fin = new Date(fechaFin);
+  fin.setHours(23, 59, 59);
+  
+  const registrosFiltrados = registros.filter(r => {
+    const fechaReg = new Date(r.timestamp.seconds * 1000);
+    const tipoMatch = !tipo || r.tipo === tipo;
+    return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
+  });
+  
+  if (registrosFiltrados.length === 0) {
+    mostrarNotificacion("No hay registros en el rango seleccionado", "warning");
+    return;
+  }
+  
+  mostrarNotificacion(`Generando reporte en formato ${formato.toUpperCase()}...`, "info");
+  
+  // Simulamos generación según formato
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  let blob, extension;
+  if (formato === 'pdf') {
+    // Simulamos PDF
+    blob = new Blob(["Reporte personalizado PDF"], { type: 'application/pdf' });
+    extension = 'pdf';
+  } else if (formato === 'excel') {
+    // Creamos CSV (simulando Excel)
+    const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
+    registrosFiltrados.forEach(r => {
+      filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
+    });
+    blob = new Blob([filas.join("\n")], { type: 'text/csv' });
+    extension = 'xlsx';
+  } else {
+    // JSON
+    const datos = registrosFiltrados.map(r => ({
+      nombre: r.nombre,
+      email: r.email,
+      tipo: r.tipo,
+      fecha: formatearFecha(r.timestamp),
+      hora: formatearHora(r.timestamp),
+      evento: r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'
+    }));
+    blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+    extension = 'json';
+  }
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `reporte_personalizado_${new Date().toISOString().slice(0,10)}.${extension}`;
+  link.click();
+  
+  mostrarNotificacion(`Reporte ${formato.toUpperCase()} generado con éxito`, "success");
+  
+  // Cerrar modal
+  bootstrap.Modal.getInstance(document.getElementById('modalReporte')).hide();
+};
 
 // Exportar a CSV
 window.exportarCSV = () => {
@@ -541,6 +736,36 @@ eventoFiltro.addEventListener("change", renderTabla);
 
 // Configurar fecha por defecto en el filtro
 fechaFiltro.valueAsDate = new Date();
+
+// Modo oscuro
+const themeToggle = document.getElementById('themeToggle');
+const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+// Verificar preferencias del sistema o almacenamiento local
+if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && prefersDarkScheme.matches)) {
+  document.body.classList.add('dark-mode');
+  themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
+}
+
+// Alternar modo oscuro
+themeToggle.addEventListener('click', () => {
+  if (document.body.classList.contains('dark-mode')) {
+    document.body.classList.remove('dark-mode');
+    localStorage.setItem('theme', 'light');
+    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
+  } else {
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('theme', 'dark');
+    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
+  }
+  
+  // Re-renderizar gráficas para que se adapten al nuevo tema
+  if (graficaSemanal) renderGraficaSemanal();
+  if (graficaTipo) renderGraficaTipo();
+  if (graficaHorarios) renderGraficaHorarios();
+  if (graficaMensual) renderGraficaMensual();
+  if (graficaUsuarios) renderGraficaUsuarios();
+});
 
 // Cerrar sesión
 document.getElementById("btn-logout").addEventListener("click", () => {

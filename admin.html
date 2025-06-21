@@ -8,9 +8,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-  <!-- Agrega Favicon -->
   <link rel="icon" href="https://cielitohome.com/favicon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="admin.css">
+  
 </head>
 <body>
 <div class="d-flex">
@@ -203,7 +202,7 @@
               </div>
               <h4>Reporte Diario</h4>
               <p class="text-muted">Genera un reporte PDF con el resumen de actividades del día.</p>
-              <button class="btn btn-danger">
+              <button class="btn btn-danger" onclick="generarReportePDF()">
                 <i class="bi bi-download me-2"></i>Generar PDF
               </button>
             </div>
@@ -217,7 +216,7 @@
               </div>
               <h4>Reporte Semanal</h4>
               <p class="text-muted">Exporta a Excel todos los registros de la semana actual.</p>
-              <button class="btn btn-success">
+              <button class="btn btn-success" onclick="generarReporteExcel()">
                 <i class="bi bi-download me-2"></i>Generar Excel
               </button>
             </div>
@@ -280,11 +279,16 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary">Generar Reporte</button>
+        <button type="button" class="btn btn-primary" onclick="generarReportePersonalizado()">Generar Reporte</button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Botón de modo oscuro -->
+<button class="theme-toggle" id="themeToggle">
+  <i class="bi bi-moon-fill"></i>
+</button>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="admin.js"></script>
