@@ -37,8 +37,6 @@ const eventoFiltro = document.getElementById("filtroEvento");
 let registros = [];
 let graficaSemanal, graficaTipo, graficaHorarios, graficaMensual, graficaUsuarios;
 
-// ==================== FUNCIONES PRINCIPALES ====================
-
 // Verificar autenticación
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -59,16 +57,14 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// ==================== FORMATEO DE FECHAS ====================
-
+// Formateo de fechas
 function formatearFecha(timestamp) {
   if (!timestamp || typeof timestamp.toDate !== "function") return "-";
   const fecha = timestamp.toDate();
   return fecha.toLocaleDateString("es-MX", {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-    timeZone: 'America/Mexico_City'
+    day: '2-digit'
   });
 }
 
@@ -77,13 +73,11 @@ function formatearHora(timestamp) {
   const fecha = timestamp.toDate();
   return fecha.toLocaleTimeString("es-MX", {
     hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Mexico_City'
+    minute: '2-digit'
   });
 }
 
-// ==================== TABLA ====================
-
+// Renderizar tabla
 function renderTabla() {
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
@@ -92,8 +86,6 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
-    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return false;
-    
     const fechaRegistro = formatearFecha(r.timestamp);
     return (!fecha || fechaRegistro === fecha) &&
            (!tipo || r.tipo === tipo) &&
@@ -144,8 +136,7 @@ function renderTabla() {
   });
 }
 
-// ==================== CARGA DE REGISTROS ====================
-
+// Cargar registros desde Firebase
 async function cargarRegistros() {
   try {
     const q = query(collection(db, "registros"), orderBy("timestamp", "desc"));
@@ -160,73 +151,16 @@ async function cargarRegistros() {
       timestamp: doc.data().timestamp || null
     }));
     
-    // Actualizar métricas
-    actualizarMetricas();
     renderTabla();
     renderGraficas();
-    mostrarNotificacion(`${registros.length} registros cargados correctamente`, "success");
+    mostrarNotificacion(`${registros.length} registros cargados`, "success");
   } catch (error) {
     console.error("Error al cargar registros:", error);
     mostrarNotificacion("Error al cargar registros", "danger");
   }
 }
 
-function actualizarMetricas() {
-  const hoy = new Date().toLocaleDateString("es-MX");
-  const ayer = new Date();
-  ayer.setDate(ayer.getDate() - 1);
-  const ayerStr = ayer.toLocaleDateString("es-MX");
-
-  const entradasHoy = registros.filter(r => 
-    r.tipoEvento === 'entrada' && formatearFecha(r.timestamp) === hoy
-  ).length;
-  
-  const entradasAyer = registros.filter(r => 
-    r.tipoEvento === 'entrada' && formatearFecha(r.timestamp) === ayerStr
-  ).length;
-  
-  const salidasHoy = registros.filter(r => 
-    r.tipoEvento === 'salida' && formatearFecha(r.timestamp) === hoy
-  ).length;
-  
-  const salidasAyer = registros.filter(r => 
-    r.tipoEvento === 'salida' && formatearFecha(r.timestamp) === ayerStr
-  ).length;
-
-  document.getElementById("entradas-hoy").textContent = entradasHoy;
-  document.getElementById("salidas-hoy").textContent = salidasHoy;
-  
-  // Calcular comparación con ayer
-  const comparacionEntradas = entradasAyer > 0 ? 
-    Math.round(((entradasHoy - entradasAyer) / entradasAyer) * 100) : 0;
-  const comparacionSalidas = salidasAyer > 0 ? 
-    Math.round(((salidasHoy - salidasAyer) / salidasAyer) * 100) : 0;
-  
-  const entradasComparacion = document.getElementById("entradas-comparacion");
-  const salidasComparacion = document.getElementById("salidas-comparacion");
-  
-  entradasComparacion.textContent = `${comparacionEntradas >= 0 ? '+' : ''}${comparacionEntradas}%`;
-  entradasComparacion.className = comparacionEntradas >= 0 ? 'text-success' : 'text-danger';
-  
-  salidasComparacion.textContent = `${comparacionSalidas >= 0 ? '+' : ''}${comparacionSalidas}%`;
-  salidasComparacion.className = comparacionSalidas >= 0 ? 'text-success' : 'text-danger';
-  
-  // Usuarios activos (únicos) en los últimos 7 días
-  const sieteDiasAtras = new Date();
-  sieteDiasAtras.setDate(sieteDiasAtras.getDate() - 7);
-  
-  const usuariosActivos = new Set(
-    registros
-      .filter(r => r.timestamp && r.timestamp.toDate() > sieteDiasAtras)
-      .map(r => r.email)
-  ).size;
-  
-  document.getElementById("usuarios-totales").textContent = usuariosActivos;
-}
-
-// ==================== FUNCIONES SECUNDARIAS ====================
-
-// Ver detalles
+// Funciones globales
 window.verDetalle = (id) => {
   const reg = registros.find(r => r.id === id);
   if (!reg) return;
@@ -244,7 +178,6 @@ window.verDetalle = (id) => {
   alert(detalle);
 };
 
-// Eliminar registro
 window.eliminarRegistro = async (id) => {
   if (!confirm("¿Eliminar este registro permanentemente?")) return;
   try {
@@ -256,7 +189,6 @@ window.eliminarRegistro = async (id) => {
   }
 };
 
-// Mostrar notificación
 function mostrarNotificacion(mensaje, tipo = "info") {
   const notificacion = document.createElement("div");
   notificacion.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
@@ -269,12 +201,10 @@ function mostrarNotificacion(mensaje, tipo = "info") {
   setTimeout(() => notificacion.remove(), 5000);
 }
 
-// ==================== REPORTES Y EXPORTACIÓN ====================
-
+// Exportación de datos
 window.exportarCSV = () => {
   const headers = "Nombre,Email,Tipo,Fecha,Hora,Evento,Estado\n";
   const csvContent = registros
-    .filter(r => r.timestamp && typeof r.timestamp.toDate === "function")
     .map(r => 
       `"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}",` +
       `"${formatearHora(r.timestamp)}","${r.tipoEvento}","${r.estado}"`
@@ -289,18 +219,16 @@ window.exportarCSV = () => {
 };
 
 window.descargarJSON = () => {
-  const data = registros
-    .filter(r => r.timestamp && typeof r.timestamp.toDate === "function")
-    .map(r => ({
-      nombre: r.nombre,
-      email: r.email,
-      tipo: r.tipo,
-      fecha: formatearFecha(r.timestamp),
-      hora: formatearHora(r.timestamp),
-      evento: r.tipoEvento,
-      estado: r.estado,
-      timestamp: r.timestamp.toMillis()
-    }));
+  const data = registros.map(r => ({
+    nombre: r.nombre,
+    email: r.email,
+    tipo: r.tipo,
+    fecha: formatearFecha(r.timestamp),
+    hora: formatearHora(r.timestamp),
+    evento: r.tipoEvento,
+    estado: r.estado,
+    timestamp: r.timestamp?.toMillis() || null
+  }));
   
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -310,242 +238,11 @@ window.descargarJSON = () => {
   link.click();
 };
 
-// ==================== GRÁFICAS ====================
-
-function renderGraficas() {
-  renderGraficaSemanal();
-  renderGraficaTipo();
-  renderGraficaHorarios();
-  renderGraficaMensual();
-  renderGraficaUsuarios();
-}
-
-function renderGraficaSemanal() {
-  const ctx = document.getElementById("graficaSemanal").getContext("2d");
-  if (graficaSemanal) graficaSemanal.destroy();
-  
-  const dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-  const conteo = Array(7).fill(0);
-  
-  registros.forEach(r => {
-    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
-    const fecha = r.timestamp.toDate();
-    const dia = fecha.getDay(); // 0 (Dom) a 6 (Sáb)
-    conteo[dia === 0 ? 6 : dia - 1]++;
-  });
-  
-  graficaSemanal = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: dias,
-      datasets: [{
-        data: conteo,
-        backgroundColor: document.body.classList.contains('dark-mode') 
-          ? 'rgba(32, 201, 151, 0.7)' 
-          : 'rgba(25, 135, 84, 0.7)',
-        borderColor: document.body.classList.contains('dark-mode') 
-          ? 'rgba(32, 201, 151, 1)' 
-          : 'rgba(25, 135, 84, 1)',
-        borderWidth: 1,
-        borderRadius: 4
-      }]
-    },
-    options: getChartOptions("Accesos semanales")
-  });
-}
-
-function renderGraficaTipo() {
-  const ctx = document.getElementById("graficaTipo").getContext("2d");
-  if (graficaTipo) graficaTipo.destroy();
-  
-  const tipos = {
-    becario: registros.filter(r => r.tipo === 'becario').length,
-    tiempo_completo: registros.filter(r => r.tipo === 'tiempo_completo').length
-  };
-  
-  graficaTipo = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: ["Becarios", "Tiempo completo"],
-      datasets: [{
-        data: [tipos.becario, tipos.tiempo_completo],
-        backgroundColor: [
-          'rgba(13, 110, 253, 0.7)',
-          'rgba(102, 16, 242, 0.7)'
-        ],
-        borderColor: [
-          'rgba(13, 110, 253, 1)',
-          'rgba(102, 16, 242, 1)'
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'bottom'
-        }
-      }
-    }
-  });
-}
-
-function renderGraficaHorarios() {
-  const ctx = document.getElementById("graficaHorarios").getContext("2d");
-  if (graficaHorarios) graficaHorarios.destroy();
-  
-  const horas = Array(24).fill(0);
-  registros.forEach(r => {
-    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
-    const fecha = r.timestamp.toDate();
-    const hora = fecha.getHours();
-    horas[hora]++;
-  });
-  
-  graficaHorarios = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-      datasets: [{
-        label: "Accesos por hora",
-        data: horas,
-        fill: true,
-        backgroundColor: 'rgba(13, 110, 253, 0.2)',
-        borderColor: 'rgba(13, 110, 253, 1)',
-        tension: 0.4
-      }]
-    },
-    options: getChartOptions("Accesos por hora del día")
-  });
-}
-
-function renderGraficaMensual() {
-  const ctx = document.getElementById("graficaMensual").getContext("2d");
-  if (graficaMensual) graficaMensual.destroy();
-  
-  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  const conteo = Array(12).fill(0);
-  
-  registros.forEach(r => {
-    if (!r.timestamp || typeof r.timestamp.toDate !== "function") return;
-    const fecha = r.timestamp.toDate();
-    const mes = fecha.getMonth();
-    conteo[mes]++;
-  });
-  
-  graficaMensual = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: meses,
-      datasets: [{
-        label: "Accesos por mes",
-        data: conteo,
-        backgroundColor: 'rgba(111, 66, 193, 0.7)',
-        borderColor: 'rgba(111, 66, 193, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: getChartOptions("Accesos mensuales")
-  });
-}
-
-function renderGraficaUsuarios() {
-  const ctx = document.getElementById("graficaUsuarios").getContext("2d");
-  if (graficaUsuarios) graficaUsuarios.destroy();
-  
-  // Obtener los 5 usuarios con más registros
-  const usuarios = {};
-  registros.forEach(r => {
-    if (!r.email) return;
-    usuarios[r.email] = (usuarios[r.email] || 0) + 1;
-  });
-  
-  const topUsuarios = Object.entries(usuarios)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-  
-  const nombres = topUsuarios.map(u => u[0].split('@')[0]);
-  const conteo = topUsuarios.map(u => u[1]);
-  
-  graficaUsuarios = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: nombres,
-      datasets: [{
-        data: conteo,
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.7)',
-          'rgba(54, 162, 235, 0.7)',
-          'rgba(255, 206, 86, 0.7)',
-          'rgba(75, 192, 192, 0.7)',
-          'rgba(153, 102, 255, 0.7)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)'
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'bottom'
-        }
-      }
-    }
-  });
-}
-
-// Configuración común para gráficas
-function getChartOptions(title) {
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  return {
-    responsive: true,
-    plugins: { 
-      legend: { display: false },
-      title: {
-        display: true,
-        text: title,
-        color: isDarkMode ? '#fff' : '#333'
-      }
-    },
-    scales: {
-      y: { 
-        beginAtZero: true, 
-        grid: { color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
-        ticks: { color: isDarkMode ? '#fff' : '#333' }
-      },
-      x: { 
-        grid: { display: false },
-        ticks: { color: isDarkMode ? '#fff' : '#333' }
-      }
-    }
-  };
-}
-
-// ==================== EVENT LISTENERS ====================
-
+// Event listeners
 document.getElementById("filtroBusqueda").addEventListener("input", renderTabla);
 document.getElementById("filtroFecha").addEventListener("change", renderTabla);
 document.getElementById("filtroTipo").addEventListener("change", renderTabla);
 document.getElementById("filtroEvento").addEventListener("change", renderTabla);
 
-document.getElementById("themeToggle").addEventListener("click", () => {
-  document.body.classList.toggle("dark-mode");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
-  renderGraficas();
-});
-
-// Inicializar modo oscuro si estaba activo
-if (localStorage.getItem("darkMode") === "true") {
-  document.body.classList.add("dark-mode");
-}
-
-// Inicializar filtros con la fecha de hoy
+// Inicialización
 document.getElementById("filtroFecha").valueAsDate = new Date();
