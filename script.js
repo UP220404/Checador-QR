@@ -221,7 +221,12 @@ function getBadgeClass(tipoEvento) {
 async function registrarAsistencia(user, datosUsuario, coords) {
   const ahora = new Date();
   const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
-  const fecha = ahora.toLocaleDateString("es-MX");
+  const fecha = ahora.toLocaleDateString("es-MX", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).split('/').reverse().join('-'); // "YYYY-MM-DD"
   
   // Lógica mejorada para determinar el tipo de evento
   let tipoEvento;
