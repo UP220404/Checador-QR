@@ -74,7 +74,7 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
-    const fechaMatch = !fecha || formatearFecha(r.timestamp) === new Date(fecha).toLocaleDateString("es-MX");
+    const fechaMatch = !fecha || formatearFecha(r.timestamp) === fecha;
     const tipoMatch = !tipo || r.tipo === tipo;
     const busquedaMatch = !busqueda || 
       r.nombre.toLowerCase().includes(busqueda) || 
@@ -129,7 +129,6 @@ window.verDetalle = (id) => {
   const registro = registros.find(r => r.id === id);
   if (!registro) return;
   
-  // Aquí podrías implementar un modal con los detalles completos
   alert(`Detalles del registro:\n\nNombre: ${registro.nombre}\nEmail: ${registro.email}\nTipo: ${registro.tipo}\nFecha y hora: ${formatearFechaHora(registro.timestamp)}\nEvento: ${registro.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}`);
 };
 
@@ -194,29 +193,29 @@ async function cargarRegistros() {
 // Calcular KPIs y comparaciones
 async function calcularKPIs() {
   const hoy = new Date();
-  const hoyStr = hoy.toLocaleDateString("es-MX");
+  const hoyStr = formatearFecha({ seconds: Math.floor(hoy.getTime() / 1000) });
   const ayer = new Date(hoy);
   ayer.setDate(hoy.getDate() - 1);
-  const ayerStr = ayer.toLocaleDateString("es-MX");
+  const ayerStr = formatearFecha({ seconds: Math.floor(ayer.getTime() / 1000) });
   
   // Entradas hoy
   const entradasHoy = registros.filter(r => 
-    r.fecha === hoyStr && r.tipoEvento !== "salida"
+    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento !== "salida"
   ).length;
   
   // Salidas hoy
   const salidasHoy = registros.filter(r => 
-    r.fecha === hoyStr && r.tipoEvento === "salida"
+    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "salida"
   ).length;
   
   // Entradas ayer
   const entradasAyer = registros.filter(r => 
-    r.fecha === ayerStr && r.tipoEvento !== "salida"
+    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento !== "salida"
   ).length;
   
   // Salidas ayer
   const salidasAyer = registros.filter(r => 
-    r.fecha === ayerStr && r.tipoEvento === "salida"
+    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "salida"
   ).length;
   
   // Usuarios únicos (últimos 7 días)

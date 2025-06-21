@@ -8,8 +8,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-  <link rel="icon" href="https://cielitohome.com/favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="admin.css">
+  <link rel="icon" href="https://cielitohome.com/favicon.ico" type="image/x-icon">
 </head>
 <body>
 <div class="d-flex">
@@ -112,24 +112,32 @@
         </div>
       </div>
       
-      <div class="filter-bar">
-        <div class="flex-grow-1">
-          <input type="text" class="form-control" id="filtroBusqueda" placeholder="Buscar por nombre o email...">
+      <div class="filter-bar mb-3 p-3 rounded-3 shadow-sm">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <input type="text" class="form-control" id="filtroBusqueda" placeholder="Buscar...">
+          </div>
+          <div class="col-md-2">
+            <input type="date" class="form-control" id="filtroFecha">
+          </div>
+          <div class="col-md-3">
+            <select id="filtroTipo" class="form-select">
+              <option value="">Todos los tipos</option>
+              <option value="becario">Becario</option>
+              <option value="tiempo_completo">Tiempo completo</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select id="filtroEvento" class="form-select">
+              <option value="">Todos los eventos</option>
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+            </select>
+          </div>
         </div>
-        <input type="date" class="form-control" id="filtroFecha" style="max-width: 180px;">
-        <select id="filtroTipo" class="form-select" style="max-width: 200px;">
-          <option value="">Todos los tipos</option>
-          <option value="becario">Becario</option>
-          <option value="tiempo_completo">Tiempo completo</option>
-        </select>
-        <select id="filtroEvento" class="form-select" style="max-width: 180px;">
-          <option value="">Todos los eventos</option>
-          <option value="entrada">Entrada</option>
-          <option value="salida">Salida</option>
-        </select>
       </div>
       
-      <div class="table-responsive rounded-3" style="box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div class="table-responsive rounded-3 shadow-sm">
         <table class="table table-hover align-middle">
           <thead>
             <tr>
@@ -142,7 +150,7 @@
               <th class="text-end">Acciones</th>
             </tr>
           </thead>
-          <tbody id="tabla-registros" class="border-top-0"></tbody>
+          <tbody id="tabla-registros"></tbody>
         </table>
       </div>
       
