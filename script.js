@@ -227,29 +227,56 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     month: "2-digit",
     day: "2-digit"
   }).split('/').reverse().join('-'); // "YYYY-MM-DD"
-  
-  // Lógica mejorada para determinar el tipo de evento
+
+  // RESTRICCIÓN: No permitir registros fuera de 7:00 a 22:00
+  const horaActual = ahora.getHours();
+  if (horaActual < 7 || horaActual >= 22) {
+    mostrarEstado("error", "❌ Solo puedes registrar entre 7:00 am y 10:00 pm.");
+    return;
+  }
+
   let tipoEvento;
   let mensajeTipo = "";
-  
+
   // Verificar si ya registró entrada hoy
-  const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
-  const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
+  const yaRegistroEntrada = CONFIG.MODO_PRUEBAS ? false : await yaRegistradoHoy(user.uid, "entrada");
+  const yaRegistroSalida = CONFIG.MODO_PRUEBAS ? false : await yaRegistradoHoy(user.uid, "salida");
   
   if (!yaRegistroEntrada) {
-    // Registrar ENTRADA (mañana o primera vez del día)
-    tipoEvento = evaluarHoraEntrada(); // "puntual" o "retardo"
+    // Solo permite entrada entre 7:00 y la hora de salida
+    const inicioEntrada = new Date();
+    inicioEntrada.setHours(7, 0, 0, 0);
+    const finEntrada = new Date();
+    if (datosUsuario.tipo === "becario") {
+      finEntrada.setHours(13, 0, 0, 0);
+    } else {
+      finEntrada.setHours(16, 0, 0, 0);
+    }
+    if (ahora < inicioEntrada) {
+      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
+      return;
+    }
+    if (ahora >= finEntrada) {
+      mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
+      return;
+    }
+    // Entrada puntual o retardo
+    const limitePuntual = new Date();
+    limitePuntual.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0, 0); // 8:10 am
+    if (ahora >= inicioEntrada && ahora <= limitePuntual) {
+      tipoEvento = "puntual";
+    } else {
+      tipoEvento = "retardo";
+    }
     mensajeTipo = "entrada";
-  } else if (!yaRegistroSalida && ahora.getHours() >= 12) {
-    // Registrar SALIDA (después del mediodía si ya registró entrada)
-    tipoEvento = "salida";
-    mensajeTipo = "salida";
-    
-    // Verificar hora permitida para salida
+  } else if (!yaRegistroSalida) {
+    // Intentar registrar salida
     if (!horaPermitidaSalida(datosUsuario.tipo) && !CONFIG.MODO_PRUEBAS) {
       mostrarEstado("error", `❌ Aún no es hora de salida, ${datosUsuario.nombre}`);
       return;
     }
+    tipoEvento = "salida";
+    mensajeTipo = "salida";
   } else {
     // No debería registrar otro evento hoy
     const eventoPendiente = yaRegistroEntrada && !yaRegistroSalida ? "salida" : "ninguno";
@@ -279,14 +306,14 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
     // Actualizar UI
     actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
-    
+
     // Mostrar mensaje
     const diaSemana = ahora.getDay();
-    const mensaje = generarMensajeEspecial(diaSemana, tipoEvento, datosUsuario.nombre) || 
+    const mensaje = generarMensajeEspecial(diaSemana, tipoEvento, datosUsuario.nombre) ||
       getMensajeDefault(tipoEvento, hora);
-    
+
     mostrarEstado(tipoEvento, mensaje);
-    
+
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
     mostrarEstado("error", "❌ Error al registrar asistencia");
