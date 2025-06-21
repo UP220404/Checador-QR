@@ -243,23 +243,28 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const yaRegistroSalida = CONFIG.MODO_PRUEBAS ? false : await yaRegistradoHoy(user.uid, "salida");
   
   if (!yaRegistroEntrada) {
-    // Solo permite entrada entre 7:00 y la hora de salida
-    const inicioEntrada = new Date();
-    inicioEntrada.setHours(7, 0, 0, 0);
-    const finEntrada = new Date();
-    if (datosUsuario.tipo === "becario") {
-      finEntrada.setHours(13, 0, 0, 0);
+  const inicioEntrada = new Date();
+  inicioEntrada.setHours(7, 0, 0, 0);
+  const finEntrada = new Date();
+  if (datosUsuario.tipo === "becario") {
+    finEntrada.setHours(13, 0, 0, 0);
+  } else {
+    finEntrada.setHours(16, 0, 0, 0);
+  }
+  if (ahora < inicioEntrada) {
+    mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
+    return;
+  }
+  if (ahora >= finEntrada) {
+    // Ya no es hora de entrada, pero permite salida si cumple la hora
+    if (!yaRegistroSalida && horaPermitidaSalida(datosUsuario.tipo)) {
+      tipoEvento = "salida";
+      mensajeTipo = "salida";
     } else {
-      finEntrada.setHours(16, 0, 0, 0);
-    }
-    if (ahora < inicioEntrada) {
-      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
-      return;
-    }
-    if (ahora >= finEntrada) {
       mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
       return;
     }
+  } else {
     // Entrada puntual o retardo
     const limitePuntual = new Date();
     limitePuntual.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0, 0); // 8:10 am
@@ -269,20 +274,21 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       tipoEvento = "retardo";
     }
     mensajeTipo = "entrada";
-  } else if (!yaRegistroSalida) {
-    // Intentar registrar salida
-    if (!horaPermitidaSalida(datosUsuario.tipo) && !CONFIG.MODO_PRUEBAS) {
-      mostrarEstado("error", `❌ Aún no es hora de salida, ${datosUsuario.nombre}`);
-      return;
-    }
-    tipoEvento = "salida";
-    mensajeTipo = "salida";
-  } else {
-    // No debería registrar otro evento hoy
-    const eventoPendiente = yaRegistroEntrada && !yaRegistroSalida ? "salida" : "ninguno";
-    mostrarEstado("error", `⚠️ Ya registraste todos los eventos por hoy. Pendiente: ${eventoPendiente}`);
+  }
+} else if (!yaRegistroSalida) {
+  // Intentar registrar salida
+  if (!horaPermitidaSalida(datosUsuario.tipo) && !CONFIG.MODO_PRUEBAS) {
+    mostrarEstado("error", `❌ Aún no es hora de salida, ${datosUsuario.nombre}`);
     return;
   }
+  tipoEvento = "salida";
+  mensajeTipo = "salida";
+} else {
+  // No debería registrar otro evento hoy
+  const eventoPendiente = yaRegistroEntrada && !yaRegistroSalida ? "salida" : "ninguno";
+  mostrarEstado("error", `⚠️ Ya registraste todos los eventos por hoy. Pendiente: ${eventoPendiente}`);
+  return;
+}
 
   // Crear registro en Firestore
   try {
