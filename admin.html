@@ -3,128 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CH Panel Admin</title>
+  <title>CH Panel Admin | Cielito Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f8f9fa;
-      margin: 0;
-    }
-    .d-flex {
-      display: flex;
-      height: 100vh;
-    }
-    .sidebar {
-      width: 220px;
-      background: linear-gradient(to bottom right, #0f5132, #198754);
-      color: white;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-    }
-    .sidebar a {
-      color: white;
-      text-decoration: none;
-      padding: 12px;
-      display: block;
-      border-radius: 6px;
-    }
-    .sidebar a:hover, .sidebar .active {
-      background-color: rgba(255,255,255,0.2);
-    }
-    .sidebar-footer {
-      margin-top: auto;
-    }
-    .content {
-      flex-grow: 1;
-      overflow-y: auto;
-      padding: 2rem;
-    }
-    .card-metric {
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      border: none;
-      border-radius: 12px;
-      text-align: center;
-    }
-    .card-metric h3 {
-      font-size: 1.1rem;
-      color: #6c757d;
-    }
-    .card-metric p {
-      font-size: 2rem;
-      margin: 0;
-      color: #198754;
-      font-weight: bold;
-    }
-    table th {
-      background-color: #198754;
-      color: white;
-    }
-  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <!-- Agrega Favicon -->
+  <link rel="icon" href="https://cielitohome.com/favicon.ico" type="image/x-icon">
 </head>
 <body>
 <div class="d-flex">
   <div class="sidebar">
-    <h5 class="mb-4"><i class="bi bi-shield-lock-fill me-2"></i>CH Panel</h5>
-    <a href="#dashboard" class="active" onclick="mostrarSeccion('dashboard')"><i class="bi bi-bar-chart me-2"></i>Dashboard</a>
-    <a href="#registros" onclick="mostrarSeccion('registros')"><i class="bi bi-journal-text me-2"></i>Registros</a>
-    <a href="#analisis" onclick="mostrarSeccion('analisis')"><i class="bi bi-graph-up me-2"></i>Análisis</a>
-    <a href="#reportes" onclick="mostrarSeccion('reportes')"><i class="bi bi-file-earmark-text me-2"></i>Reportes</a>
+    <div class="sidebar-header">
+      <h5><i class="bi bi-shield-lock-fill"></i>CH Panel Admin</h5>
+    </div>
+    <a href="#dashboard" class="active" onclick="mostrarSeccion('dashboard')">
+      <i class="bi bi-speedometer2"></i>Dashboard
+    </a>
+    <a href="#registros" onclick="mostrarSeccion('registros')">
+      <i class="bi bi-table"></i>Registros
+    </a>
+    <a href="#analisis" onclick="mostrarSeccion('analisis')">
+      <i class="bi bi-graph-up-arrow"></i>Análisis
+    </a>
+    <a href="#reportes" onclick="mostrarSeccion('reportes')">
+      <i class="bi bi-file-earmark-bar-graph"></i>Reportes
+    </a>
     <div class="sidebar-footer">
-      <button id="btn-logout" class="btn btn-outline-light w-100"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</button>
+      <button id="btn-logout" class="btn btn-outline-light w-100">
+        <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+      </button>
     </div>
   </div>
+  
   <div class="content">
+    <!-- Dashboard -->
     <div id="dashboard" class="seccion">
-      <h2 class="mb-4">Bienvenido, Administrador</h2>
-      <div class="row mb-4">
+      <div class="section-header">
+        <h2><i class="bi bi-speedometer2"></i>Panel de Control</h2>
+        <div class="text-muted">Bienvenido, <span id="admin-name">Administrador</span></div>
+      </div>
+      
+      <div class="row mb-4 g-4">
         <div class="col-md-4">
-          <div class="card card-metric p-3">
+          <div class="card card-metric p-4">
+            <div class="icon-wrapper">
+              <i class="bi bi-door-open"></i>
+            </div>
             <h3>Entradas Hoy</h3>
             <p id="entradas-hoy">0</p>
+            <small class="text-muted">vs. ayer: <span id="entradas-comparacion" class="text-success">+0%</span></small>
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card card-metric p-3">
+          <div class="card card-metric p-4">
+            <div class="icon-wrapper">
+              <i class="bi bi-door-closed"></i>
+            </div>
             <h3>Salidas Hoy</h3>
             <p id="salidas-hoy">0</p>
+            <small class="text-muted">vs. ayer: <span id="salidas-comparacion" class="text-success">+0%</span></small>
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card card-metric p-3">
-            <h3>Total Usuarios</h3>
+          <div class="card card-metric p-4">
+            <div class="icon-wrapper">
+              <i class="bi bi-people"></i>
+            </div>
+            <h3>Usuarios Activos</h3>
             <p id="usuarios-totales">-</p>
+            <small class="text-muted">Últimos 7 días</small>
           </div>
         </div>
       </div>
-      <h4 class="mt-5"><i class="bi bi-graph-up me-2"></i>Resumen Semanal</h4>
-      <canvas id="graficaSemanal" height="100"></canvas>
+      
+      <div class="chart-container">
+        <h4 class="mb-4"><i class="bi bi-calendar-week"></i> Actividad Semanal</h4>
+        <canvas id="graficaSemanal" height="120"></canvas>
+      </div>
+      
+      <div class="row mt-4 g-4">
+        <div class="col-md-6">
+          <div class="chart-container">
+            <h4><i class="bi bi-pie-chart"></i> Distribución por Tipo</h4>
+            <canvas id="graficaTipo" height="200"></canvas>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="chart-container">
+            <h4><i class="bi bi-clock-history"></i> Horarios más Activos</h4>
+            <canvas id="graficaHorarios" height="200"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Registros -->
     <div id="registros" class="seccion d-none">
-      <h4 class="mb-3"><i class="bi bi-journal-text me-2"></i>Tabla de Registros</h4>
-      <div class="row mb-3">
-        <div class="col-md-4">
-          <input type="date" class="form-control" id="filtroFecha">
-        </div>
-        <div class="col-md-4">
-          <select id="filtroTipo" class="form-select">
-            <option value="">Todos</option>
-            <option value="becario">Becario</option>
-            <option value="tiempo_completo">Tiempo completo</option>
-          </select>
-        </div>
-        <div class="col-md-4 d-flex gap-2">
-          <button class="btn btn-outline-success" onclick="exportarCSV()"><i class="bi bi-download"></i> CSV</button>
-          <button class="btn btn-outline-secondary" onclick="descargarJSON()"><i class="bi bi-download"></i> JSON</button>
+      <div class="section-header">
+        <h2><i class="bi bi-table"></i> Registros de Acceso</h2>
+        <div class="btn-group">
+          <button class="btn btn-outline-success" onclick="exportarCSV()">
+            <i class="bi bi-file-earmark-excel"></i> Exportar CSV
+          </button>
+          <button class="btn btn-outline-primary" onclick="descargarJSON()">
+            <i class="bi bi-file-earmark-code"></i> Exportar JSON
+          </button>
         </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-bordered table-hover">
+      
+      <div class="filter-bar">
+        <div class="flex-grow-1">
+          <input type="text" class="form-control" id="filtroBusqueda" placeholder="Buscar por nombre o email...">
+        </div>
+        <input type="date" class="form-control" id="filtroFecha" style="max-width: 180px;">
+        <select id="filtroTipo" class="form-select" style="max-width: 200px;">
+          <option value="">Todos los tipos</option>
+          <option value="becario">Becario</option>
+          <option value="tiempo_completo">Tiempo completo</option>
+        </select>
+        <select id="filtroEvento" class="form-select" style="max-width: 180px;">
+          <option value="">Todos los eventos</option>
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+        </select>
+      </div>
+      
+      <div class="table-responsive rounded-3" style="box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <table class="table table-hover align-middle">
           <thead>
             <tr>
               <th>Nombre</th>
@@ -133,24 +139,153 @@
               <th>Fecha</th>
               <th>Hora</th>
               <th>Evento</th>
-              <th>Acción</th>
+              <th class="text-end">Acciones</th>
             </tr>
           </thead>
-          <tbody id="tabla-registros"></tbody>
+          <tbody id="tabla-registros" class="border-top-0"></tbody>
         </table>
+      </div>
+      
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">Anterior</a>
+          </li>
+          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+          <li class="page-item"><a class="page-link" href="#">2</a></li>
+          <li class="page-item"><a class="page-link" href="#">3</a></li>
+          <li class="page-item">
+            <a class="page-link" href="#">Siguiente</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- Análisis -->
+    <div id="analisis" class="seccion d-none">
+      <div class="section-header">
+        <h2><i class="bi bi-graph-up-arrow"></i> Análisis Avanzados</h2>
+      </div>
+      
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill me-2"></i> Esta sección está en desarrollo y mostrará análisis detallados de patrones de acceso.
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="chart-container">
+            <h4><i class="bi bi-calendar-month"></i> Tendencia Mensual</h4>
+            <canvas id="graficaMensual" height="250"></canvas>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="chart-container">
+            <h4><i class="bi bi-person-lines-fill"></i> Usuarios Más Activos</h4>
+            <canvas id="graficaUsuarios" height="250"></canvas>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div id="analisis" class="seccion d-none">
-      <h4 class="mb-3">Próximamente análisis avanzados...</h4>
-    </div>
-
+    <!-- Reportes -->
     <div id="reportes" class="seccion d-none">
-      <h4 class="mb-3">Exportación de reportes y métricas...</h4>
+      <div class="section-header">
+        <h2><i class="bi bi-file-earmark-bar-graph"></i> Generar Reportes</h2>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <div class="icon-wrapper-lg mb-3">
+                <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 2.5rem;"></i>
+              </div>
+              <h4>Reporte Diario</h4>
+              <p class="text-muted">Genera un reporte PDF con el resumen de actividades del día.</p>
+              <button class="btn btn-danger">
+                <i class="bi bi-download me-2"></i>Generar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <div class="icon-wrapper-lg mb-3">
+                <i class="bi bi-file-earmark-excel text-success" style="font-size: 2.5rem;"></i>
+              </div>
+              <h4>Reporte Semanal</h4>
+              <p class="text-muted">Exporta a Excel todos los registros de la semana actual.</p>
+              <button class="btn btn-success">
+                <i class="bi bi-download me-2"></i>Generar Excel
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <div class="icon-wrapper-lg mb-3">
+                <i class="bi bi-file-earmark-text text-primary" style="font-size: 2.5rem;"></i>
+              </div>
+              <h4>Reporte Personalizado</h4>
+              <p class="text-muted">Crea un reporte con filtros específicos de fecha y tipo.</p>
+              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalReporte">
+                <i class="bi bi-gear me-2"></i>Personalizar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- Modal para reporte personalizado -->
+<div class="modal fade" id="modalReporte" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Reporte Personalizado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formReporte">
+          <div class="mb-3">
+            <label class="form-label">Rango de fechas</label>
+            <div class="input-group">
+              <input type="date" class="form-control" id="fechaInicio">
+              <span class="input-group-text">a</span>
+              <input type="date" class="form-control" id="fechaFin">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tipo de usuario</label>
+            <select class="form-select" id="reporteTipo">
+              <option value="">Todos</option>
+              <option value="becario">Becarios</option>
+              <option value="tiempo_completo">Tiempo completo</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Formato</label>
+            <select class="form-select" id="reporteFormato">
+              <option value="pdf">PDF</option>
+              <option value="excel">Excel</option>
+              <option value="csv">CSV</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary">Generar Reporte</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module" src="admin.js"></script>
 <script>
 function mostrarSeccion(id) {
@@ -158,6 +293,10 @@ function mostrarSeccion(id) {
   document.getElementById(id).classList.remove('d-none');
   document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
   document.querySelector(`.sidebar a[href="#${id}"]`)?.classList.add('active');
+  
+  // Actualizar el título de la página
+  const tituloSeccion = document.querySelector(`.sidebar a[href="#${id}"]`).textContent.trim();
+  document.title = `CH Panel Admin | ${tituloSeccion}`;
 }
 </script>
 </body>
