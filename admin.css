@@ -176,46 +176,85 @@ body.dark-mode .card-metric .icon-wrapper {
 }
 
 /* Tabla */
-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
+.table-responsive {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
 }
 
-table th {
+body.dark-mode .table-responsive {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.table {
+  margin-bottom: 0;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
   background-color: var(--primary-color);
   color: white;
   font-weight: 600;
   padding: 12px 15px;
-  position: sticky;
-  top: 0;
+  border: none;
 }
 
-body.dark-mode table th {
-  background-color: #0d6efd;
+body.dark-mode .table th {
+  background-color: #0a3622;
 }
 
-table td {
+.table td {
   padding: 12px 15px;
-  border-bottom: 1px solid #e9ecef;
   vertical-align: middle;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  border: none;
+  border-bottom: 1px solid #dee2e6;
 }
 
-body.dark-mode table td {
-  border-color: #444;
+body.dark-mode .table td {
+  border-bottom-color: #444;
 }
 
-table tr:last-child td {
+.table tr:last-child td {
   border-bottom: none;
 }
 
-table tr:hover td {
-  background-color: #f8f9fa;
+.table-hover tbody tr:hover td {
+  background-color: rgba(25, 135, 84, 0.05);
 }
 
-body.dark-mode table tr:hover td {
-  background-color: #2d2d2d;
+body.dark-mode .table-hover tbody tr:hover td {
+  background-color: rgba(32, 201, 151, 0.1);
+}
+
+/* Badges mejorados */
+.badge {
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.bg-primary {
+  background-color: var(--primary-color) !important;
+}
+
+.bg-success {
+  background-color: var(--secondary-color) !important;
+}
+
+.bg-info {
+  background-color: #0dcaf0 !important;
+}
+
+.bg-warning {
+  background-color: var(--warning-color) !important;
+  color: #000 !important;
 }
 
 /* Formularios y filtros */
@@ -246,18 +285,24 @@ body.dark-mode .form-control,
 body.dark-mode .form-select {
   background-color: #2d2d2d;
   border-color: #444;
-  color: #e0e0e0;
+  color: #ffffff !important;
 }
 
-body.dark-mode .input-group-text {
-  background-color: #3d3d3d;
-  border-color: #444;
-  color: #e0e0e0;
+body.dark-mode .form-control::placeholder,
+body.dark-mode .form-select::placeholder {
+  color: #a0a0a0 !important;
+  opacity: 1;
 }
 
 /* Paginación */
+.pagination {
+  margin-top: 1.5rem;
+}
+
 .page-link {
   transition: all 0.3s ease;
+  border-radius: 8px !important;
+  margin: 0 3px;
 }
 
 body.dark-mode .page-link {
@@ -289,6 +334,23 @@ body.dark-mode .page-item.disabled .page-link {
 body.dark-mode .chart-container {
   background-color: #1e1e1e;
   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.chart-container h4 {
+  color: var(--dark-color);
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+body.dark-mode .chart-container h4 {
+  color: #e0e0e0;
+}
+
+.chart-container h4 i {
+  margin-right: 10px;
+  color: var(--secondary-color);
 }
 
 /* Secciones */
@@ -348,22 +410,80 @@ body.dark-mode .text-muted {
   justify-content: center;
   cursor: pointer;
   z-index: 1000;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
   border: none;
   transition: all 0.3s ease;
 }
 
 .theme-toggle:hover {
   transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 
 .theme-toggle i {
-  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+  font-size: 1.2rem;
+}
+
+body.dark-mode .theme-toggle i {
+  transform: rotate(180deg);
 }
 
 /* Alertas */
 .alert {
   transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+/* Modal */
+.modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .modal-content {
+  background-color: #1e1e1e;
+}
+
+.modal-header {
+  border-bottom: 1px solid #dee2e6;
+  transition: border-color 0.3s ease;
+}
+
+body.dark-mode .modal-header {
+  border-bottom-color: #444;
+}
+
+.modal-footer {
+  border-top: 1px solid #dee2e6;
+  transition: border-color 0.3s ease;
+}
+
+body.dark-mode .modal-footer {
+  border-top-color: #444;
+}
+
+/* Botones */
+.btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-secondary {
+  border-color: #dee2e6;
+}
+
+body.dark-mode .btn-outline-secondary {
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+body.dark-mode .btn-outline-secondary:hover {
+  background-color: #444;
+  color: white;
 }
 
 /* Responsive */
@@ -410,6 +530,14 @@ body.dark-mode .text-muted {
     width: 40px;
     height: 40px;
   }
+  
+  .filter-bar .row > div {
+    margin-bottom: 10px;
+  }
+  
+  .filter-bar .row > div:last-child {
+    margin-bottom: 0;
+  }
 }
 
 /* Animaciones */
@@ -422,97 +550,64 @@ body.dark-mode .text-muted {
   animation: fadeIn 0.4s ease-out;
 }
 
-/* Añade esto al final de tu archivo admin.css */
-
-/* Mejoras para el modo oscuro */
-body.dark-mode {
-  background-color: #121212;
-  color: #e0e0e0;
-}
-
-/* Buscador y campos de texto */
-body.dark-mode .form-control,
-body.dark-mode .form-select,
-body.dark-mode .form-control:focus,
-body.dark-mode .form-select:focus {
-  background-color: #2d2d2d;
-  border-color: #444;
+/* Correcciones específicas para inputs en modo oscuro */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
   color: #ffffff !important;
+  background-color: #2d2d2d !important;
 }
 
-/* Placeholder en modo oscuro */
-body.dark-mode .form-control::placeholder {
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
   color: #a0a0a0 !important;
-  opacity: 1;
 }
 
-/* Tabla en modo oscuro */
-body.dark-mode .table {
-  --bs-table-bg: #1e1e1e;
-  --bs-table-striped-bg: #252525;
-  --bs-table-hover-bg: #2d2d2d;
-  --bs-table-color: #e0e0e0;
-  --bs-table-border-color: #444;
+/* Mejoras para las tarjetas de reportes */
+.card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
-body.dark-mode .table th {
-  background-color: #0a3622;
-  color: white;
-}
-
-body.dark-mode .table td {
-  border-color: #444;
-}
-
-/* Tarjetas de reportes en modo oscuro */
 body.dark-mode .card {
   background-color: #1e1e1e;
-  border-color: #444;
-  color: #e0e0e0;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
-body.dark-mode .card .text-muted {
-  color: #a0a0a0 !important;
+.card-body {
+  padding: 1.5rem;
 }
 
-/* Modal de reporte personalizado */
-body.dark-mode .modal-content {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
+.icon-wrapper-lg {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: rgba(25, 135, 84, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  transition: background-color 0.3s ease;
 }
 
-body.dark-mode .modal-header {
-  border-bottom-color: #444;
+body.dark-mode .icon-wrapper-lg {
+  background-color: rgba(32, 201, 151, 0.1);
 }
 
-body.dark-mode .modal-footer {
-  border-top-color: #444;
+.icon-wrapper-lg i {
+  font-size: 1.75rem;
+  color: var(--secondary-color);
 }
 
-/* Paginación mejorada */
-body.dark-mode .page-item:not(.active):not(.disabled) .page-link {
-  background-color: #2d2d2d;
-  color: #e0e0e0;
+/* Ajustes para el modal de reporte */
+#previewRegistros tr td {
+  padding: 8px 12px;
 }
 
-body.dark-mode .page-item.active .page-link {
-  background-color: var(--secondary-color);
-  border-color: var(--secondary-color);
-}
-
-/* Corrección para el texto en inputs */
-body.dark-mode input,
-body.dark-mode select {
-  color: #ffffff !important;
-}
-
-/* Botones en modo oscuro */
-body.dark-mode .btn-outline-secondary {
-  color: #e0e0e0;
-  border-color: #6c757d;
-}
-
-body.dark-mode .btn-outline-secondary:hover {
-  background-color: #6c757d;
-  color: white;
+#previewRegistros .badge {
+  font-size: 0.75rem;
+  padding: 4px 8px;
 }
