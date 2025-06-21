@@ -200,7 +200,7 @@ async function calcularKPIs() {
   
   // Entradas hoy
   const entradasHoy = registros.filter(r => 
-    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento !== "salida"
+    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento !== "entrada"
   ).length;
   
   // Salidas hoy
@@ -210,7 +210,7 @@ async function calcularKPIs() {
   
   // Entradas ayer
   const entradasAyer = registros.filter(r => 
-    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento !== "salida"
+    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento !== "entrada"
   ).length;
   
   // Salidas ayer
