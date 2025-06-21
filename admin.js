@@ -9,7 +9,9 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc
+  doc,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -35,68 +37,45 @@ const eventoFiltro = document.getElementById("filtroEvento");
 let registros = [];
 let graficaSemanal, graficaTipo, graficaHorarios, graficaMensual, graficaUsuarios;
 
-// Verificar autenticación y permisos
+// ==================== FUNCIONES PRINCIPALES ====================
+
+// Verificar autenticación
 onAuthStateChanged(auth, (user) => {
   if (user) {
     if (!adminEmails.includes(user.email)) {
-      // Usuario no autorizado
-      mostrarNotificacion("No tienes permisos para acceder a esta página", "danger");
-      setTimeout(() => {
-        window.location.href = "index.html";
-      }, 3000);
+      mostrarNotificacion("No tienes permisos para acceder", "danger");
+      setTimeout(() => window.location.href = "index.html", 3000);
       return;
     }
     
-    // Usuario autorizado
     document.getElementById("admin-name").textContent = user.email;
     cargarRegistros();
     
-    // Configurar evento de logout
     document.getElementById("btn-logout").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      }).catch((error) => {
-        mostrarNotificacion("Error al cerrar sesión", "danger");
-      });
+      signOut(auth).then(() => window.location.href = "index.html")
+        .catch(error => mostrarNotificacion("Error al cerrar sesión", "danger"));
     });
-    
   } else {
-    // No hay usuario logueado
     window.location.href = "index.html";
   }
 });
 
-// Formateadores de fecha corregidos para zona horaria
+// Formateo de fechas
 function formatearFecha(timestamp) {
   const fecha = new Date(timestamp.seconds * 1000);
-  // Ajustar a zona horaria local
   const offset = fecha.getTimezoneOffset() * 60000;
-  const fechaLocal = new Date(fecha.getTime() - offset);
-  return fechaLocal.toISOString().split('T')[0];
+  return new Date(fecha.getTime() - offset).toISOString().split('T')[0];
 }
 
 function formatearHora(timestamp) {
-  const fecha = new Date(timestamp.seconds * 1000);
-  // Ajustar a zona horaria local
-  return fecha.toLocaleTimeString("es-MX", { 
-    hour: '2-digit', 
+  return new Date(timestamp.seconds * 1000).toLocaleTimeString("es-MX", {
+    hour: '2-digit',
     minute: '2-digit',
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
 }
 
-function formatearFechaHora(timestamp) {
-  const fecha = new Date(timestamp.seconds * 1000);
-  return fecha.toLocaleString("es-MX", {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-// Renderizar tabla con filtros
+// Renderizar tabla
 function renderTabla() {
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
@@ -105,27 +84,18 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
-    const fechaMatch = !fecha || formatearFecha(r.timestamp) === fecha;
-    const tipoMatch = !tipo || r.tipo === tipo;
-    const busquedaMatch = !busqueda || 
-      r.nombre.toLowerCase().includes(busqueda) || 
-      r.email.toLowerCase().includes(busqueda);
-    const eventoMatch = !evento || r.tipoEvento === evento;
-    
-    return fechaMatch && tipoMatch && busquedaMatch && eventoMatch;
-  });
-
-  // Ordenar por fecha más reciente primero
-  filtrados.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+    return (!fecha || formatearFecha(r.timestamp) === fecha) &&
+           (!tipo || r.tipo === tipo) &&
+           (!busqueda || r.nombre.toLowerCase().includes(busqueda) || r.email.toLowerCase().includes(busqueda)) &&
+           (!evento || r.tipoEvento === evento);
+  }).sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
 
   if (filtrados.length === 0) {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-      <td colspan="7" class="text-center py-4 text-muted">
+    tabla.innerHTML = `
+      <tr><td colspan="7" class="text-center py-4 text-muted">
         <i class="bi bi-exclamation-circle me-2"></i>No se encontraron registros
-      </td>
+      </td></tr>
     `;
-    tabla.appendChild(fila);
     return;
   }
 
@@ -134,19 +104,27 @@ function renderTabla() {
     fila.innerHTML = `
       <td>${r.nombre}</td>
       <td>${r.email}</td>
-      <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo === 'becario' ? 'Becario' : 'T. Completo'}</span></td>
+      <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${
+        r.tipo === 'becario' ? 'Becario' : 'T. Completo'
+      }</span></td>
       <td>${formatearFecha(r.timestamp)}</td>
       <td>${formatearHora(r.timestamp)}</td>
       <td>
-        <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
-          ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
+        <span class="badge ${
+          r.tipoEvento === 'entrada' 
+            ? (r.estado === 'puntual' ? 'bg-success' : 'bg-warning text-dark') 
+            : 'bg-primary'
+        }">
+          ${r.tipoEvento === 'entrada' 
+            ? (r.estado === 'puntual' ? 'Entrada puntual' : 'Entrada con retardo') 
+            : 'Salida'}
         </span>
       </td>
       <td class="text-end">
-        <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
+        <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')">
           <i class="bi bi-eye"></i>
         </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
+        <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')">
           <i class="bi bi-trash"></i>
         </button>
       </td>
@@ -155,27 +133,58 @@ function renderTabla() {
   });
 }
 
-// Ver detalles de un registro
+// Cargar registros
+async function cargarRegistros() {
+  try {
+    const snap = await getDocs(collection(db, "registros"));
+    registros = snap.docs.map(doc => ({
+      id: doc.id,
+      nombre: doc.data().nombre || "Sin nombre",
+      email: doc.data().email || "Sin email",
+      tipo: doc.data().tipo || "desconocido",
+      tipoEvento: doc.data().tipoEvento || "entrada",
+      estado: doc.data().estado || "puntual",
+      timestamp: doc.data().timestamp || { seconds: Math.floor(Date.now() / 1000) }
+    }));
+    
+    await calcularKPIs();
+    renderTabla();
+    renderGraficas();
+  } catch (error) {
+    console.error("Error al cargar registros:", error);
+    mostrarNotificacion("Error al cargar registros", "danger");
+  }
+}
+
+// ==================== FUNCIONES SECUNDARIAS ====================
+
+// Ver detalles
 window.verDetalle = (id) => {
-  const registro = registros.find(r => r.id === id);
-  if (!registro) return;
+  const reg = registros.find(r => r.id === id);
+  if (!reg) return;
   
-  alert(`Detalles del registro:\n\nNombre: ${registro.nombre}\nEmail: ${registro.email}\nTipo: ${registro.tipo}\nFecha y hora: ${formatearFechaHora(registro.timestamp)}\nEvento: ${registro.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}`);
+  const detalle = `
+    Nombre: ${reg.nombre}
+    Email: ${reg.email}
+    Tipo: ${reg.tipo}
+    Fecha: ${formatearFecha(reg.timestamp)}
+    Hora: ${formatearHora(reg.timestamp)}
+    Evento: ${reg.tipoEvento === 'entrada' 
+      ? (reg.estado === 'puntual' ? 'Entrada puntual' : 'Entrada con retardo') 
+      : 'Salida'}
+  `;
+  alert(detalle);
 };
 
 // Eliminar registro
 window.eliminarRegistro = async (id) => {
-  if (!confirm("¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.")) {
-    return;
-  }
-  
+  if (!confirm("¿Eliminar este registro permanentemente?")) return;
   try {
     await deleteDoc(doc(db, "registros", id));
-    mostrarNotificacion("Registro eliminado correctamente", "success");
+    mostrarNotificacion("Registro eliminado", "success");
     cargarRegistros();
   } catch (error) {
-    console.error("Error al eliminar registro:", error);
-    mostrarNotificacion("Error al eliminar registro", "danger");
+    mostrarNotificacion("Error al eliminar", "danger");
   }
 };
 
@@ -183,119 +192,54 @@ window.eliminarRegistro = async (id) => {
 function mostrarNotificacion(mensaje, tipo = "info") {
   const notificacion = document.createElement("div");
   notificacion.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-  notificacion.style.top = "20px";
-  notificacion.style.right = "20px";
-  notificacion.style.zIndex = "9999";
-  notificacion.style.maxWidth = "400px";
-  notificacion.role = "alert";
+  notificacion.style = "top:20px;right:20px;z-index:9999;max-width:400px";
   notificacion.innerHTML = `
     ${mensaje}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   `;
-  
   document.body.appendChild(notificacion);
-  
-  // Auto cerrar después de 5 segundos
-  setTimeout(() => {
-    notificacion.classList.remove("show");
-    setTimeout(() => notificacion.remove(), 150);
-  }, 5000);
+  setTimeout(() => notificacion.remove(), 5000);
 }
 
-// Cargar registros desde Firestore
-async function cargarRegistros() {
-  try {
-    mostrarNotificacion("Cargando registros...", "info");
-    
-    const snap = await getDocs(collection(db, "registros"));
-    registros = snap.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data(),
-      nombre: doc.data().nombre || "Sin nombre",
-      email: doc.data().email || "Sin email",
-      tipo: doc.data().tipo || "desconocido",
-      tipoEvento: doc.data().tipoEvento || "entrada",
-      timestamp: doc.data().timestamp || { seconds: Math.floor(Date.now() / 1000) }
-    }));
-    
-    if (registros.length === 0) {
-      mostrarNotificacion("No se encontraron registros", "warning");
-    } else {
-      mostrarNotificacion(`Se cargaron ${registros.length} registros`, "success");
-    }
-    
-    await calcularKPIs();
-    renderTabla();
-    renderGraficas();
-    
-  } catch (error) {
-    console.error("Error al cargar registros:", error);
-    mostrarNotificacion("Error al cargar los registros: " + error.message, "danger");
-  }
-}
+// ==================== REPORTES Y EXPORTACIÓN ====================
 
-// Calcular KPIs y comparaciones
-async function calcularKPIs() {
-  const hoy = new Date();
-  const hoyStr = formatearFecha({ seconds: Math.floor(hoy.getTime() / 1000) });
-  const ayer = new Date(hoy);
-  ayer.setDate(hoy.getDate() - 1);
-  const ayerStr = formatearFecha({ seconds: Math.floor(ayer.getTime() / 1000) });
+window.exportarCSV = () => {
+  const headers = "Nombre,Email,Tipo,Fecha,Hora,Evento,Estado\n";
+  const csvContent = registros.map(r => 
+    `"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}",` +
+    `"${formatearHora(r.timestamp)}","${r.tipoEvento}","${r.estado}"`
+  ).join("\n");
   
-  // Entradas hoy
-  const entradasHoy = registros.filter(r => 
-    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "entrada"
-  ).length;
-  
-  // Salidas hoy
-  const salidasHoy = registros.filter(r => 
-    formatearFecha(r.timestamp) === hoyStr && r.tipoEvento === "salida"
-  ).length;
-  
-  // Entradas ayer
-  const entradasAyer = registros.filter(r => 
-    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "entrada"
-  ).length;
-  
-  // Salidas ayer
-  const salidasAyer = registros.filter(r => 
-    formatearFecha(r.timestamp) === ayerStr && r.tipoEvento === "salida"
-  ).length;
-  
-  // Usuarios únicos (últimos 7 días)
-  const sieteDiasAtras = new Date(hoy);
-  sieteDiasAtras.setDate(hoy.getDate() - 7);
-  const usuariosUnicos = new Set(
-    registros
-      .filter(r => new Date(r.timestamp.seconds * 1000) >= sieteDiasAtras)
-      .map(r => r.email)
-  ).size;
-  
-  // Calcular porcentajes de comparación
-  const calcVariacion = (actual, anterior) => {
-    if (anterior === 0) return actual === 0 ? 0 : 100;
-    return Math.round(((actual - anterior) / anterior) * 100);
-  };
-  
-  const entradasVariacion = calcVariacion(entradasHoy, entradasAyer);
-  const salidasVariacion = calcVariacion(salidasHoy, salidasAyer);
-  
-  // Actualizar UI
-  document.getElementById("entradas-hoy").textContent = entradasHoy;
-  document.getElementById("salidas-hoy").textContent = salidasHoy;
-  document.getElementById("usuarios-totales").textContent = usuariosUnicos;
-  
-  const entradasComparacion = document.getElementById("entradas-comparacion");
-  const salidasComparacion = document.getElementById("salidas-comparacion");
-  
-  entradasComparacion.textContent = `${entradasVariacion >= 0 ? '+' : ''}${entradasVariacion}%`;
-  entradasComparacion.className = entradasVariacion >= 0 ? "text-success" : "text-danger";
-  
-  salidasComparacion.textContent = `${salidasVariacion >= 0 ? '+' : ''}${salidasVariacion}%`;
-  salidasComparacion.className = salidasVariacion >= 0 ? "text-success" : "text-danger";
-}
+  const blob = new Blob([headers + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `registros_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+};
 
-// Renderizar todas las gráficas
+window.descargarJSON = () => {
+  const data = registros.map(r => ({
+    nombre: r.nombre,
+    email: r.email,
+    tipo: r.tipo,
+    fecha: formatearFecha(r.timestamp),
+    hora: formatearHora(r.timestamp),
+    evento: r.tipoEvento,
+    estado: r.estado,
+    timestamp: r.timestamp.seconds
+  }));
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `registros_${new Date().toISOString().slice(0,10)}.json`;
+  link.click();
+};
+
+// ==================== GRÁFICAS ====================
+
 function renderGraficas() {
   renderGraficaSemanal();
   renderGraficaTipo();
@@ -304,688 +248,66 @@ function renderGraficas() {
   renderGraficaUsuarios();
 }
 
-// Gráfica semanal
 function renderGraficaSemanal() {
   const ctx = document.getElementById("graficaSemanal").getContext("2d");
-  
-  if (graficaSemanal) {
-    graficaSemanal.destroy();
-  }
+  if (graficaSemanal) graficaSemanal.destroy();
   
   const dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const conteo = Array(7).fill(0);
-  const ahora = new Date();
   
   registros.forEach(r => {
     const fecha = new Date(r.timestamp.seconds * 1000);
-    if (fecha > new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 7)) {
-      conteo[fecha.getDay() === 0 ? 6 : fecha.getDay() - 1]++;
-    }
+    const dia = fecha.getDay(); // 0 (Dom) a 6 (Sáb)
+    conteo[dia === 0 ? 6 : dia - 1]++;
   });
-  
-  // Color según modo oscuro
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  const bgColor = isDarkMode ? 'rgba(32, 201, 151, 0.7)' : 'rgba(25, 135, 84, 0.7)';
-  const borderColor = isDarkMode ? 'rgba(32, 201, 151, 1)' : 'rgba(25, 135, 84, 1)';
-  const textColor = isDarkMode ? '#e0e0e0' : '#666';
   
   graficaSemanal = new Chart(ctx, {
     type: "bar",
     data: {
       labels: dias,
       datasets: [{
-        label: "Accesos",
         data: conteo,
-        backgroundColor: bgColor,
-        borderColor: borderColor,
+        backgroundColor: document.body.classList.contains('dark-mode') 
+          ? 'rgba(32, 201, 151, 0.7)' 
+          : 'rgba(25, 135, 84, 0.7)',
+        borderColor: document.body.classList.contains('dark-mode') 
+          ? 'rgba(32, 201, 151, 1)' 
+          : 'rgba(25, 135, 84, 1)',
         borderWidth: 1,
         borderRadius: 4
       }]
     },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-          },
-          ticks: {
-            color: textColor
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            color: textColor
-          }
-        }
-      }
-    }
+    options: getChartOptions("Accesos semanales")
   });
 }
 
-// Gráfica por tipo de usuario
-function renderGraficaTipo() {
-  const ctx = document.getElementById("graficaTipo").getContext("2d");
-  
-  if (graficaTipo) {
-    graficaTipo.destroy();
-  }
-  
-  const tipos = {
-    becario: registros.filter(r => r.tipo === "becario").length,
-    tiempo_completo: registros.filter(r => r.tipo === "tiempo_completo").length
+// Configuración común para gráficas
+function getChartOptions(title) {
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  return {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' } },
+      x: { grid: { display: false } }
+    }
   };
-  
-  // Color según modo oscuro
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  const textColor = isDarkMode ? '#e0e0e0' : '#666';
-  
-  graficaTipo = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: ["Becarios", "Tiempo completo"],
-      datasets: [{
-        data: [tipos.becario, tipos.tiempo_completo],
-        backgroundColor: [
-          "rgba(13, 110, 253, 0.7)",
-          "rgba(25, 135, 84, 0.7)"
-        ],
-        borderColor: [
-          "rgba(13, 110, 253, 1)",
-          "rgba(25, 135, 84, 1)"
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: "bottom",
-          labels: {
-            color: textColor
-          }
-        }
-      },
-      cutout: "70%"
-    }
-  });
 }
 
-// Gráfica de horarios más activos
-function renderGraficaHorarios() {
-  const ctx = document.getElementById("graficaHorarios").getContext("2d");
-  
-  if (graficaHorarios) {
-    graficaHorarios.destroy();
-  }
-  
-  const horas = Array(24).fill(0);
-  
-  registros.forEach(r => {
-    const fecha = new Date(r.timestamp.seconds * 1000);
-    const hora = fecha.getHours();
-    horas[hora]++;
-  });
-  
-  // Color según modo oscuro
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  const bgColor = isDarkMode ? 'rgba(108, 117, 125, 0.1)' : 'rgba(108, 117, 125, 0.1)';
-  const borderColor = isDarkMode ? 'rgba(32, 201, 151, 1)' : 'rgba(108, 117, 125, 1)';
-  const textColor = isDarkMode ? '#e0e0e0' : '#666';
-  
-  graficaHorarios = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-      datasets: [{
-        label: "Accesos por hora",
-        data: horas,
-        backgroundColor: bgColor,
-        borderColor: borderColor,
-        borderWidth: 2,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-          },
-          ticks: {
-            color: textColor
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            color: textColor
-          }
-        }
-      }
-    }
-  });
-}
+// ==================== EVENT LISTENERS ====================
 
-// Gráfica mensual (simplificada)
-function renderGraficaMensual() {
-  const ctx = document.getElementById("graficaMensual").getContext("2d");
-  
-  if (graficaMensual) {
-    graficaMensual.destroy();
-  }
-  
-  // Color según modo oscuro
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  const textColor = isDarkMode ? '#e0e0e0' : '#666';
-  
-  // Implementación básica - puedes mejorarla con datos reales
-  graficaMensual = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
-      datasets: [{
-        label: "Accesos",
-        data: [120, 190, 170, 210, 230, 180],
-        backgroundColor: "rgba(13, 110, 253, 0.7)",
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-          },
-          ticks: {
-            color: textColor
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            color: textColor
-          }
-        }
-      }
-    }
-  });
-}
-
-// Gráfica de usuarios más activos (simplificada)
-function renderGraficaUsuarios() {
-  const ctx = document.getElementById("graficaUsuarios").getContext("2d");
-  
-  if (graficaUsuarios) {
-    graficaUsuarios.destroy();
-  }
-  
-  // Color según modo oscuro
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  const textColor = isDarkMode ? '#e0e0e0' : '#666';
-  
-  // Implementación básica - puedes mejorarla con datos reales
-  graficaUsuarios = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Usuario 1", "Usuario 2", "Usuario 3", "Usuario 4", "Usuario 5"],
-      datasets: [{
-        label: "Accesos",
-        data: [45, 32, 28, 25, 22],
-        backgroundColor: "rgba(111, 66, 193, 0.7)",
-        borderRadius: 4
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            color: textColor
-          }
-        },
-        x: {
-          grid: {
-            color: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-          },
-          ticks: {
-            color: textColor
-          }
-        }
-      }
-    }
-  });
-}
-
-// Generar reporte PDF
-window.generarReportePDF = async () => {
-  mostrarNotificacion("Generando reporte PDF...", "info");
-  
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    // Configuración inicial
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    const textColor = isDarkMode ? [200, 200, 200] : [0, 0, 0];
-    const primaryColor = [15, 81, 50]; // Verde Cielito Home
-    
-    // Título
-    doc.setFontSize(18);
-    doc.setTextColor(...textColor);
-    doc.text('Reporte de Accesos - Cielito Home', 105, 20, { align: 'center' });
-    
-    // Fecha de generación
-    doc.setFontSize(12);
-    doc.text(`Generado el: ${new Date().toLocaleDateString('es-MX')}`, 105, 30, { align: 'center' });
-    
-    // Datos para la tabla
-    const hoy = new Date();
-    const registrosHoy = registros.filter(r => {
-      const fechaReg = new Date(r.timestamp.seconds * 1000);
-      return fechaReg.toDateString() === hoy.toDateString();
-    });
-    
-    if (registrosHoy.length === 0) {
-      doc.text('No hay registros para hoy', 105, 40, { align: 'center' });
-    } else {
-      const headers = [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']];
-      const data = registrosHoy.map(r => [
-        r.nombre.substring(0, 20), // Limitar longitud para evitar desbordamiento
-        r.email.substring(0, 20),
-        r.tipo === 'becario' ? 'Becario' : 'T. Completo',
-        formatearHora(r.timestamp),
-        r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'
-      ]);
-      
-      // Generar tabla
-      doc.autoTable({
-        head: headers,
-        body: data,
-        startY: 40,
-        margin: { horizontal: 10 },
-        headStyles: {
-          fillColor: primaryColor,
-          textColor: [255, 255, 255],
-          fontStyle: 'bold'
-        },
-        bodyStyles: {
-          textColor: textColor,
-          fontStyle: 'normal'
-        },
-        alternateRowStyles: {
-          fillColor: isDarkMode ? [30, 30, 30] : [245, 245, 245]
-        },
-        styles: {
-          cellPadding: 5,
-          fontSize: 10,
-          overflow: 'linebreak'
-        }
-      });
-    }
-    
-    // Guardar el PDF
-    doc.save(`reporte_accesos_${new Date().toISOString().slice(0,10)}.pdf`);
-    mostrarNotificacion("PDF generado correctamente", "success");
-    
-  } catch (error) {
-    console.error("Error al generar PDF:", error);
-    mostrarNotificacion("Error al generar PDF: " + error.message, "danger");
-  }
-};
-
-// Generar reporte Excel
-window.generarReporteExcel = async () => {
-  mostrarNotificacion("Generando reporte Excel...", "info");
-  
-  // Filtrar registros de la semana actual
-  const hoy = new Date();
-  const inicioSemana = new Date(hoy);
-  inicioSemana.setDate(hoy.getDate() - hoy.getDay());
-  
-  const registrosSemana = registros.filter(r => 
-    new Date(r.timestamp.seconds * 1000) >= inicioSemana
-  );
-  
-  if (registrosSemana.length === 0) {
-    mostrarNotificacion("No hay registros esta semana", "warning");
-    return;
-  }
-  
-  // Crear CSV (simulando Excel)
-  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
-  registrosSemana.forEach(r => {
-    filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
-  });
-  
-  const blob = new Blob([filas.join("\n")], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reporte_semanal_${new Date().toISOString().slice(0,10)}.csv`;
-  link.click();
-  
-  mostrarNotificacion("Reporte Excel generado con éxito", "success");
-};
-
-// Generar reporte personalizado
-window.generarReportePersonalizado = async () => {
-  const fechaInicio = document.getElementById("fechaInicio").value;
-  const fechaFin = document.getElementById("fechaFin").value;
-  const tipo = document.getElementById("reporteTipo").value;
-  const formato = document.getElementById("reporteFormato").value;
-  
-  // Validar fechas
-  if (!fechaInicio || !fechaFin) {
-    mostrarNotificacion("Debes seleccionar un rango de fechas válido", "warning");
-    return;
-  }
-  
-  const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
-  fin.setHours(23, 59, 59); // Ajustar para incluir todo el día
-
-  // Filtrar registros
-  const registrosFiltrados = registros.filter(r => {
-    const fechaReg = new Date(r.timestamp.seconds * 1000);
-    const tipoMatch = !tipo || r.tipo === tipo;
-    return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
-  });
-
-  if (registrosFiltrados.length === 0) {
-    mostrarNotificacion("No hay registros con los filtros seleccionados", "warning");
-    return;
-  }
-
-  mostrarNotificacion(`Generando reporte en formato ${formato.toUpperCase()}...`, "info");
-
-  try {
-    // Generar según formato seleccionado
-    switch(formato) {
-      case 'pdf':
-        await generarPDF(registrosFiltrados, inicio, fin);
-        break;
-      case 'excel':
-        await generarExcel(registrosFiltrados, inicio, fin);
-        break;
-      case 'json':
-        await generarJSON(registrosFiltrados, inicio, fin);
-        break;
-      default:
-        throw new Error("Formato no soportado");
-    }
-    
-    mostrarNotificacion(`Reporte ${formato.toUpperCase()} generado con éxito`, "success");
-  } catch (error) {
-    console.error("Error al generar reporte:", error);
-    mostrarNotificacion(`Error al generar reporte: ${error.message}`, "danger");
-  } finally {
-    // Cerrar modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporte'));
-    if (modal) modal.hide();
-  }
-};
-
-// Función para generar PDF real
-async function generarPDF(registros, inicio, fin) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  
-  // Configuración
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  
-  // Encabezado
-  doc.setFontSize(18);
-  doc.setTextColor(isDarkMode ? 200 : 0);
-  doc.text('Reporte de Accesos - Cielito Home', 105, 20, { align: 'center' });
-  
-  // Información del reporte
-  doc.setFontSize(12);
-  doc.text(`Del ${inicio.toLocaleDateString('es-MX')} al ${fin.toLocaleDateString('es-MX')}`, 105, 30, { align: 'center' });
-  
-  // Datos de la tabla
-  const headers = [['Nombre', 'Email', 'Tipo', 'Fecha', 'Hora', 'Evento']];
-  const data = registros.map(r => [
-    r.nombre.substring(0, 20),
-    r.email.substring(0, 20),
-    r.tipo === 'becario' ? 'Becario' : 'T. Completo',
-    formatearFecha(r.timestamp),
-    formatearHora(r.timestamp),
-    r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'
-  ]);
-  
-  // Generar tabla
-  doc.autoTable({
-    head: headers,
-    body: data,
-    startY: 40,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [15, 81, 50], // Verde Cielito Home
-      textColor: 255,
-      fontStyle: 'bold'
-    },
-    bodyStyles: {
-      textColor: isDarkMode ? 200 : 0,
-      fillColor: isDarkMode ? [30, 30, 30] : [255, 255, 255]
-    },
-    alternateRowStyles: {
-      fillColor: isDarkMode ? [40, 40, 40] : [245, 245, 245]
-    },
-    margin: { top: 40 }
-  });
-  
-  // Pie de página
-  const pageCount = doc.internal.getNumberOfPages();
-  for(let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 20, doc.internal.pageSize.height - 10, { align: 'right' });
-    doc.text(`Generado el ${new Date().toLocaleDateString('es-MX')}`, 20, doc.internal.pageSize.height - 10);
-  }
-  
-  // Guardar PDF
-  doc.save(`reporte_accesos_${inicio.toISOString().slice(0,10)}_a_${fin.toISOString().slice(0,10)}.pdf`);
-}
-
-// Función para generar Excel (CSV)
-async function generarExcel(registros, inicio, fin) {
-  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
-  
-  registros.forEach(r => {
-    filas.push([
-      `"${r.nombre}"`,
-      `"${r.email}"`,
-      `"${r.tipo}"`,
-      `"${formatearFecha(r.timestamp)}"`,
-      `"${formatearHora(r.timestamp)}"`,
-      `"${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`
-    ].join(','));
-  });
-  
-  const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reporte_accesos_${inicio.toISOString().slice(0,10)}_a_${fin.toISOString().slice(0,10)}.csv`;
-  link.click();
-}
-
-// Función para generar JSON
-async function generarJSON(registros, inicio, fin) {
-  const datos = registros.map(r => ({
-    nombre: r.nombre,
-    email: r.email,
-    tipo: r.tipo,
-    fecha: formatearFecha(r.timestamp),
-    hora: formatearHora(r.timestamp),
-    evento: r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida',
-    timestamp: r.timestamp.seconds
-  }));
-  
-  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `reporte_accesos_${inicio.toISOString().slice(0,10)}_a_${fin.toISOString().slice(0,10)}.json`;
-  link.click();
-}
-
-// Función para actualizar vista previa en el modal
-function actualizarVistaPrevia() {
-  const fechaInicio = document.getElementById("fechaInicio").value;
-  const fechaFin = document.getElementById("fechaFin").value;
-  const tipo = document.getElementById("reporteTipo").value;
-  const preview = document.getElementById("previewRegistros");
-  
-  if (!fechaInicio || !fechaFin) {
-    preview.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Seleccione un rango de fechas</td></tr>';
-    return;
-  }
-  
-  const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
-  fin.setHours(23, 59, 59);
-  
-  const registrosFiltrados = registros.filter(r => {
-    const fechaReg = new Date(r.timestamp.seconds * 1000);
-    const tipoMatch = !tipo || r.tipo === tipo;
-    return fechaReg >= inicio && fechaReg <= fin && tipoMatch;
-  });
-  
-  if (registrosFiltrados.length === 0) {
-    preview.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay registros con estos filtros</td></tr>';
-    return;
-  }
-  
-  preview.innerHTML = registrosFiltrados.slice(0, 5).map(r => `
-    <tr>
-      <td>${r.nombre}</td>
-      <td>${formatearFecha(r.timestamp)}</td>
-      <td>${formatearHora(r.timestamp)}</td>
-      <td><span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning'}">${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}</span></td>
-    </tr>
-  `).join('');
-  
-  if (registrosFiltrados.length > 5) {
-    preview.innerHTML += `<tr><td colspan="4" class="text-center text-muted">+ ${registrosFiltrados.length - 5} registros más...</td></tr>`;
-  }
-}
-
-// Event listeners para vista previa
-document.getElementById("fechaInicio").addEventListener("change", actualizarVistaPrevia);
-document.getElementById("fechaFin").addEventListener("change", actualizarVistaPrevia);
-document.getElementById("reporteTipo").addEventListener("change", actualizarVistaPrevia);
-
-// Configurar tema oscuro/claro
-document.getElementById("themeToggle").addEventListener("click", () => {
-  document.body.classList.toggle("dark-mode");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
-  
-  // Actualizar gráficas cuando cambia el tema
-  if (graficaSemanal) renderGraficaSemanal();
-  if (graficaTipo) renderGraficaTipo();
-  if (graficaHorarios) renderGraficaHorarios();
-  if (graficaMensual) renderGraficaMensual();
-  if (graficaUsuarios) renderGraficaUsuarios();
-});
-
-// Verificar preferencia de tema al cargar
-if (localStorage.getItem("darkMode") === "true") {
-  document.body.classList.add("dark-mode");
-}
-
-// Event listeners para filtros
 document.getElementById("filtroBusqueda").addEventListener("input", renderTabla);
 document.getElementById("filtroFecha").addEventListener("change", renderTabla);
 document.getElementById("filtroTipo").addEventListener("change", renderTabla);
 document.getElementById("filtroEvento").addEventListener("change", renderTabla);
 
-// Exportar a CSV
-window.exportarCSV = async () => {
-  mostrarNotificacion("Generando archivo CSV...", "info");
-  
-  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
-  registros.forEach(r => {
-    filas.push([
-      `"${r.nombre}"`,
-      `"${r.email}"`,
-      `"${r.tipo}"`,
-      `"${formatearFecha(r.timestamp)}"`,
-      `"${formatearHora(r.timestamp)}"`,
-      `"${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`
-    ].join(','));
-  });
-  
-  const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `registros_acceso_${new Date().toISOString().slice(0,10)}.csv`;
-  link.click();
-  
-  mostrarNotificacion("Archivo CSV generado con éxito", "success");
-};
+document.getElementById("themeToggle").addEventListener("click", () => {
+  document.body.classList.toggle("dark-mode");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+  renderGraficas();
+});
 
-// Exportar a JSON
-window.descargarJSON = async () => {
-  mostrarNotificacion("Generando archivo JSON...", "info");
-  
-  const datos = registros.map(r => ({
-    nombre: r.nombre,
-    email: r.email,
-    tipo: r.tipo,
-    fecha: formatearFecha(r.timestamp),
-    hora: formatearHora(r.timestamp),
-    evento: r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida',
-    timestamp: r.timestamp.seconds
-  }));
-  
-  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `registros_acceso_${new Date().toISOString().slice(0,10)}.json`;
-  link.click();
-  
-  mostrarNotificacion("Archivo JSON generado con éxito", "success");
-};
+// Inicializar modo oscuro si estaba activo
+if (localStorage.getItem("darkMode") === "true") {
+  document.body.classList.add("dark-mode");
+}

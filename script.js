@@ -1,4 +1,3 @@
-// script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -51,7 +50,6 @@ const DOM = {
   infoBox: document.getElementById("info"),
   historialContainer: document.getElementById("historial-container"),
   historialLista: document.getElementById("historial-lista"),
-  // Elementos de información
   nombreUsuario: document.getElementById("nombreUsuario"),
   correoUsuario: document.getElementById("correoUsuario"),
   tipoUsuario: document.getElementById("tipoUsuario"),
@@ -184,8 +182,10 @@ async function cargarHistorial(uid) {
       `;
       
       const tipo = `
-        <span class="badge ${getBadgeClass(registro.tipoEvento)}">
-          ${registro.tipoEvento.toUpperCase()}
+        <span class="badge ${getBadgeClass(registro.estado || registro.tipoEvento)}">
+          ${registro.tipoEvento === 'entrada' ? 
+            (registro.estado === 'puntual' ? 'Entrada puntual' : 'Entrada con retardo') : 
+            'Salida'}
         </span>
       `;
       
@@ -206,6 +206,7 @@ function getBadgeClass(tipoEvento) {
     puntual: "bg-success",
     retardo: "bg-warning text-dark",
     salida: "bg-primary",
+    entrada: "bg-info",
     error: "bg-danger"
   };
   return classes[tipoEvento] || "bg-secondary";
@@ -221,23 +222,34 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const ahora = new Date();
   const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
   const fecha = ahora.toLocaleDateString("es-MX");
-  const tipoEvento = ahora.getHours() < 12 ? evaluarHoraEntrada() : "salida";
-  const permitido = tipoEvento === "salida" 
-    ? horaPermitidaSalida(datosUsuario.tipo) 
-    : true;
-
-  // Validaciones
-  if (!CONFIG.MODO_PRUEBAS) {
-    if (tipoEvento === "salida" && !permitido) {
+  
+  // Lógica mejorada para determinar el tipo de evento
+  let tipoEvento;
+  let mensajeTipo = "";
+  
+  // Verificar si ya registró entrada hoy
+  const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
+  const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
+  
+  if (!yaRegistroEntrada) {
+    // Registrar ENTRADA (mañana o primera vez del día)
+    tipoEvento = evaluarHoraEntrada(); // "puntual" o "retardo"
+    mensajeTipo = "entrada";
+  } else if (!yaRegistroSalida && ahora.getHours() >= 12) {
+    // Registrar SALIDA (después del mediodía si ya registró entrada)
+    tipoEvento = "salida";
+    mensajeTipo = "salida";
+    
+    // Verificar hora permitida para salida
+    if (!horaPermitidaSalida(datosUsuario.tipo) && !CONFIG.MODO_PRUEBAS) {
       mostrarEstado("error", `❌ Aún no es hora de salida, ${datosUsuario.nombre}`);
       return;
     }
-    
-    const duplicado = await yaRegistradoHoy(user.uid, tipoEvento);
-    if (duplicado) {
-      mostrarEstado("error", `⚠️ Ya registraste ${tipoEvento} hoy`);
-      return;
-    }
+  } else {
+    // No debería registrar otro evento hoy
+    const eventoPendiente = yaRegistroEntrada && !yaRegistroSalida ? "salida" : "ninguno";
+    mostrarEstado("error", `⚠️ Ya registraste todos los eventos por hoy. Pendiente: ${eventoPendiente}`);
+    return;
   }
 
   // Crear registro en Firestore
@@ -249,7 +261,8 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       tipo: datosUsuario.tipo,
       fecha,
       hora,
-      tipoEvento,
+      tipoEvento: mensajeTipo,
+      estado: tipoEvento,
       ubicacion: coords || null,
       timestamp: serverTimestamp()
     });
@@ -260,7 +273,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     }, 1200);
 
     // Actualizar UI
-    actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento });
+    actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
     
     // Mostrar mensaje
     const diaSemana = ahora.getDay();
@@ -287,7 +300,7 @@ function actualizarUI(user, datosUsuario, registro) {
   DOM.tipoUsuario.textContent = datosUsuario.tipo;
   DOM.fechaHoy.textContent = registro.fecha;
   DOM.horaRegistro.textContent = registro.hora;
-  DOM.tipoEvento.textContent = registro.tipoEvento;
+  DOM.tipoEvento.textContent = registro.tipoEvento === 'entrada' ? 'Entrada' : 'Salida';
   DOM.infoBox.classList.remove(CSS_CLASSES.dNone);
 }
 
