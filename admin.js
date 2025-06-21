@@ -61,7 +61,8 @@ const formatearFechaHora = (timestamp) => {
   });
 };
 
-// Renderizar tabla con filtros
+// ...existing code...
+
 function renderTabla() {
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
@@ -70,17 +71,24 @@ function renderTabla() {
   const evento = eventoFiltro.value;
 
   const filtrados = registros.filter(r => {
-    const fechaMatch = !fecha || formatearFecha(r.timestamp) === new Date(fecha).toLocaleDateString("es-MX");
+    let fechaMatch = true;
+    if (fecha) {
+      const inicioDia = new Date(fecha + "T00:00:00");
+      const finDia = new Date(fecha + "T23:59:59.999");
+      const registroFecha = new Date(r.timestamp.seconds * 1000);
+      fechaMatch = registroFecha >= inicioDia && registroFecha <= finDia;
+    }
+
     const tipoMatch = !tipo || r.tipo === tipo;
-    const busquedaMatch = !busqueda || 
-      r.nombre.toLowerCase().includes(busqueda) || 
+    const busquedaMatch = !busqueda ||
+      r.nombre.toLowerCase().includes(busqueda) ||
       r.email.toLowerCase().includes(busqueda);
     const eventoMatch = !evento || r.tipoEvento === evento;
-    
+
     return fechaMatch && tipoMatch && busquedaMatch && eventoMatch;
   });
 
-  // Ordenar por fecha más reciente primero
+  // Ordenar por fecha más reciente
   filtrados.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
 
   if (filtrados.length === 0) {
