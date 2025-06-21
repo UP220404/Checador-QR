@@ -63,12 +63,16 @@ onAuthStateChanged(auth, (user) => {
 // Formateo de fechas
 function formatearFecha(timestamp) {
   const fecha = new Date(timestamp.seconds * 1000);
+  // Ajustar a zona horaria local
   const offset = fecha.getTimezoneOffset() * 60000;
-  return new Date(fecha.getTime() - offset).toISOString().split('T')[0];
+  const fechaLocal = new Date(fecha.getTime() - offset);
+  return fechaLocal.toISOString().split('T')[0];
 }
 
 function formatearHora(timestamp) {
-  return new Date(timestamp.seconds * 1000).toLocaleTimeString("es-MX", {
+  const fecha = new Date(timestamp.seconds * 1000);
+  // Ajustar a zona horaria local
+  return fecha.toLocaleTimeString("es-MX", {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -146,8 +150,6 @@ async function cargarRegistros() {
       estado: doc.data().estado || "puntual",
       timestamp: doc.data().timestamp || { seconds: Math.floor(Date.now() / 1000) }
     }));
-    
-    await calcularKPIs();
     renderTabla();
     renderGraficas();
   } catch (error) {
