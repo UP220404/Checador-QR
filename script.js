@@ -233,6 +233,14 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     day: "2-digit"
   }).split('/').reverse().join('-'); // "YYYY-MM-DD"
 
+  // RESTRICCIÓN: No permitir registros en fin de semana
+  const diaSemana = ahora.getDay(); 
+
+  if (diaSemana === 0 || diaSemana === 6) {
+    mostrarEstado("error", "⛔ No puedes registrar asistencia en fin de semana.");
+    return;
+  }
+
   // RESTRICCIÓN: No permitir registros fuera de 7:00 a 22:00
   const horaActual = ahora.getHours();
   if (horaActual < 7 || horaActual >= 22) {
