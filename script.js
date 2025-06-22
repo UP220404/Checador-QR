@@ -114,7 +114,12 @@ function horaPermitidaSalida(tipoUsuario) {
  * @returns {Promise<boolean>} - True si ya está registrado
  */
 async function yaRegistradoHoy(uid, tipoEvento) {
-  const hoy = new Date().toLocaleDateString("es-MX");
+  // Obtener la fecha de hoy en formato YYYY-MM-DD (igual que en Firestore)
+  const hoy = new Date().toLocaleDateString("es-MX", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).split('/').reverse().join('-');
   const q = query(
     collection(db, "registros"),
     where("uid", "==", uid),
