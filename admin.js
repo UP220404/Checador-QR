@@ -124,6 +124,34 @@ function renderTabla() {
     `;
     tabla.appendChild(fila);
   });
+
+  // Destruye DataTable anterior si existe
+if ($.fn.DataTable.isDataTable('#tabla-registros')) {
+  $('#tabla-registros').DataTable().clear().destroy();
+}
+
+// Inicializa DataTable
+$('#tabla-registros').DataTable({
+  pageLength: 20,
+  lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+  language: {
+    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+    infoEmpty: "No hay registros para mostrar",
+    zeroRecords: "No se encontraron registros"
+  },
+  drawCallback: function(settings) {
+    var api = this.api();
+    var pages = api.page.info().pages;
+    if (pages <= 1) {
+      $('.dataTables_paginate').hide();
+      $('.dataTables_info').hide();
+    } else {
+      $('.dataTables_paginate').show();
+      $('.dataTables_info').show();
+    }
+  }
+});
+  
 }
 
 // Ver detalles de un registro
@@ -173,32 +201,7 @@ function mostrarNotificacion(mensaje, tipo = "info") {
   }, 5000);
 }
 
-  // Destruye DataTable anterior si existe
-  if ($.fn.DataTable.isDataTable('#tabla-registros')) {
-    $('#tabla-registros').DataTable().destroy();
-  }
 
-  // Inicializa DataTable
-  $('#tabla-registros').DataTable({
-  pageLength: 20,
-  lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-  language: {
-    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-    infoEmpty: "No hay registros para mostrar",
-    zeroRecords: "No se encontraron registros"
-  },
-  drawCallback: function(settings) {
-    var api = this.api();
-    var pages = api.page.info().pages;
-    if (pages <= 1) {
-      $('.dataTables_paginate').hide();
-      $('.dataTables_info').hide();
-    } else {
-      $('.dataTables_paginate').show();
-      $('.dataTables_info').show();
-    }
-  }
-});
   
 
 
