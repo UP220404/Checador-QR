@@ -135,7 +135,8 @@ function renderTabla() {
   // Inicializa DataTable SOLO si hay registros
   dataTableInstance = $('#tabla-registros').DataTable({
     pageLength: 20,
-    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+    lengthChange: false, // Oculta el selector "Mostrar X registros"
+    searching: false, // Oculta el buscador de la derecha
     language: {
       url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
       infoEmpty: "No hay registros para mostrar",
