@@ -33,6 +33,7 @@ const eventoFiltro = document.getElementById("filtroEvento");
 
 let registros = [];
 let graficaSemanal, graficaTipo, graficaHorarios, graficaMensual, graficaUsuarios;
+let dataTableInstance = null;
 
 function formatearFecha(timestamp) {
   if (!timestamp || typeof timestamp.seconds !== "number") return "-";
@@ -69,6 +70,12 @@ function formatearFechaHora(timestamp) {
 
 // Renderizar tabla con filtros
 function renderTabla() {
+  // Si ya existe una instancia, destrúyela antes de modificar el DOM
+  if (dataTableInstance) {
+    dataTableInstance.destroy();
+    dataTableInstance = null;
+  }
+
   tabla.innerHTML = "";
   const tipo = tipoFiltro.value;
   const fecha = fechaFiltro.value;
@@ -78,15 +85,14 @@ function renderTabla() {
   const filtrados = registros.filter(r => {
     const fechaMatch = !fecha || formatearFecha(r.timestamp) === fecha;
     const tipoMatch = !tipo || r.tipo === tipo;
-    const busquedaMatch = !busqueda || 
-      r.nombre.toLowerCase().includes(busqueda) || 
+    const busquedaMatch = !busqueda ||
+      r.nombre.toLowerCase().includes(busqueda) ||
       r.email.toLowerCase().includes(busqueda);
     const eventoMatch = !evento || r.tipoEvento === evento;
-    
+
     return fechaMatch && tipoMatch && busquedaMatch && eventoMatch;
   });
 
-  // Ordenar por fecha más reciente primero
   filtrados.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
 
   if (filtrados.length === 0) {
@@ -97,61 +103,54 @@ function renderTabla() {
       </td>
     `;
     tabla.appendChild(fila);
-    return;
+  } else {
+    filtrados.forEach(r => {
+      const fila = document.createElement("tr");
+      fila.innerHTML = `
+        <td>${r.nombre}</td>
+        <td>${r.email}</td>
+        <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo}</span></td>
+        <td>${formatearFecha(r.timestamp)}</td>
+        <td>${formatearHora(r.timestamp)}</td>
+        <td>
+          <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
+            ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
+          </span>
+        </td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      `;
+      tabla.appendChild(fila);
+    });
   }
 
-  filtrados.forEach(r => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-      <td>${r.nombre}</td>
-      <td>${r.email}</td>
-      <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo}</span></td>
-      <td>${formatearFecha(r.timestamp)}</td>
-      <td>${formatearHora(r.timestamp)}</td>
-      <td>
-        <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
-          ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
-        </span>
-      </td>
-      <td class="text-end">
-        <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
-          <i class="bi bi-eye"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
-          <i class="bi bi-trash"></i>
-        </button>
-      </td>
-    `;
-    tabla.appendChild(fila);
-  });
-
-  // Destruye DataTable anterior si existe
-if ($.fn.DataTable.isDataTable('#tabla-registros')) {
-  $('#tabla-registros').DataTable().clear().destroy();
-}
-
-// Inicializa DataTable
-$('#tabla-registros').DataTable({
-  pageLength: 20,
-  lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-  language: {
-    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-    infoEmpty: "No hay registros para mostrar",
-    zeroRecords: "No se encontraron registros"
-  },
-  drawCallback: function(settings) {
-    var api = this.api();
-    var pages = api.page.info().pages;
-    if (pages <= 1) {
-      $('.dataTables_paginate').hide();
-      $('.dataTables_info').hide();
-    } else {
-      $('.dataTables_paginate').show();
-      $('.dataTables_info').show();
+  // Inicializa DataTable SOLO una vez por render
+  dataTableInstance = $('#tabla-registros').DataTable({
+    pageLength: 20,
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+    language: {
+      url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+      infoEmpty: "No hay registros para mostrar",
+      zeroRecords: "No se encontraron registros"
+    },
+    drawCallback: function(settings) {
+      var api = this.api();
+      var pages = api.page.info().pages;
+      if (pages <= 1) {
+        $('.dataTables_paginate').hide();
+        $('.dataTables_info').hide();
+      } else {
+        $('.dataTables_paginate').show();
+        $('.dataTables_info').show();
+      }
     }
-  }
-});
-  
+  });
 }
 
 // Ver detalles de un registro
