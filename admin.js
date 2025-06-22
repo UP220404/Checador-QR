@@ -468,23 +468,34 @@ function renderGraficaHorarios() {
 // Gráfica mensual (simplificada)
 function renderGraficaMensual() {
   const ctx = document.getElementById("graficaMensual").getContext("2d");
-  
+
   if (graficaMensual) {
     graficaMensual.destroy();
   }
-  
+
+  // Inicializa los meses
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const conteo = Array(12).fill(0);
+  const year = new Date().getFullYear();
+
+  registros.forEach(r => {
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    if (fecha.getFullYear() === year) {
+      conteo[fecha.getMonth()]++;
+    }
+  });
+
   // Color según modo oscuro
   const isDarkMode = document.body.classList.contains('dark-mode');
   const textColor = isDarkMode ? '#e0e0e0' : '#666';
-  
-  // Implementación básica - puedes mejorarla con datos reales
+
   graficaMensual = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
+      labels: meses,
       datasets: [{
         label: "Accesos",
-        data: [120, 190, 170, 210, 230, 180],
+        data: conteo,
         backgroundColor: "rgba(13, 110, 253, 0.7)",
         borderRadius: 4
       }]
@@ -522,23 +533,36 @@ function renderGraficaMensual() {
 // Gráfica de usuarios más activos (simplificada)
 function renderGraficaUsuarios() {
   const ctx = document.getElementById("graficaUsuarios").getContext("2d");
-  
+
   if (graficaUsuarios) {
     graficaUsuarios.destroy();
   }
-  
+
+  // Contar accesos por usuario (por email)
+  const conteoUsuarios = {};
+  registros.forEach(r => {
+    conteoUsuarios[r.email] = (conteoUsuarios[r.email] || 0) + 1;
+  });
+
+  // Ordenar y tomar top 5
+  const topUsuarios = Object.entries(conteoUsuarios)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const labels = topUsuarios.map(([email]) => email);
+  const data = topUsuarios.map(([, count]) => count);
+
   // Color según modo oscuro
   const isDarkMode = document.body.classList.contains('dark-mode');
   const textColor = isDarkMode ? '#e0e0e0' : '#666';
-  
-  // Implementación básica - puedes mejorarla con datos reales
+
   graficaUsuarios = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: ["Usuario 1", "Usuario 2", "Usuario 3", "Usuario 4", "Usuario 5"],
+      labels,
       datasets: [{
         label: "Accesos",
-        data: [45, 32, 28, 25, 22],
+        data,
         backgroundColor: "rgba(111, 66, 193, 0.7)",
         borderRadius: 4
       }]
