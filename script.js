@@ -235,60 +235,105 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     return;
   }
 
+  // Definir límites según tipo
+  const inicioEntrada = new Date();
+  inicioEntrada.setHours(7, 0, 0, 0);
+  const finEntrada = new Date();
+  const horaSalida = new Date();
+  if (datosUsuario.tipo === "becario") {
+    finEntrada.setHours(13, 0, 0, 0); // 13:00
+    horaSalida.setHours(13, 0, 0, 0); // 13:00
+  } else {
+    finEntrada.setHours(16, 0, 0, 0); // 16:00
+    horaSalida.setHours(16, 0, 0, 0); // 16:00
+  }
+
+  // MODO PRUEBAS: Permite registrar todas las veces que quieras, pero respeta la lógica de entrada/salida según la hora
+  if (CONFIG.MODO_PRUEBAS) {
+    let tipoEvento = "";
+    let mensajeTipo = "";
+
+    if (ahora >= inicioEntrada && ahora < finEntrada) {
+      // Entrada puntual o retardo
+      const limitePuntual = new Date();
+      limitePuntual.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0, 0); // 8:10 am
+      tipoEvento = (ahora <= limitePuntual) ? "puntual" : "retardo";
+      mensajeTipo = "entrada";
+    } else if (ahora >= horaSalida) {
+      tipoEvento = "salida";
+      mensajeTipo = "salida";
+    } else {
+      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
+      return;
+    }
+
+    // Crear registro en Firestore
+    try {
+      const docRef = await addDoc(collection(db, "registros"), {
+        uid: user.uid,
+        nombre: datosUsuario.nombre,
+        email: user.email,
+        tipo: datosUsuario.tipo,
+        fecha,
+        hora,
+        tipoEvento: mensajeTipo,
+        estado: tipoEvento,
+        ubicacion: coords || null,
+        timestamp: serverTimestamp()
+      });
+
+      setTimeout(async () => {
+        await cargarHistorial(user.uid);
+      }, 1200);
+
+      actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
+
+      const diaSemana = ahora.getDay();
+      const mensaje = generarMensajeEspecial(diaSemana, tipoEvento, datosUsuario.nombre) ||
+        getMensajeDefault(tipoEvento, hora);
+
+      mostrarEstado(tipoEvento, mensaje);
+
+    } catch (error) {
+      console.error("Error al registrar asistencia:", error);
+      mostrarEstado("error", "❌ Error al registrar asistencia");
+    }
+    return;
+  }
+
+  // MODO NORMAL: Solo una entrada y una salida por día
   let tipoEvento;
   let mensajeTipo = "";
 
   // Verificar si ya registró entrada hoy
-  const yaRegistroEntrada = CONFIG.MODO_PRUEBAS ? false : await yaRegistradoHoy(user.uid, "entrada");
-  const yaRegistroSalida = CONFIG.MODO_PRUEBAS ? false : await yaRegistradoHoy(user.uid, "salida");
-  
+  const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
+  const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
+
   if (!yaRegistroEntrada) {
-  const inicioEntrada = new Date();
-  inicioEntrada.setHours(7, 0, 0, 0);
-  const finEntrada = new Date();
-  if (datosUsuario.tipo === "becario") {
-    finEntrada.setHours(13, 0, 0, 0);
-  } else {
-    finEntrada.setHours(16, 0, 0, 0);
-  }
-  if (ahora < inicioEntrada) {
-    mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
-    return;
-  }
-  if (ahora >= finEntrada) {
-    // Ya no es hora de entrada, pero permite salida si cumple la hora
-    if (!yaRegistroSalida && horaPermitidaSalida(datosUsuario.tipo)) {
-      tipoEvento = "salida";
-      mensajeTipo = "salida";
-    } else {
+    if (ahora < inicioEntrada) {
+      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
+      return;
+    }
+    if (ahora >= finEntrada) {
       mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
       return;
     }
-  } else {
     // Entrada puntual o retardo
     const limitePuntual = new Date();
     limitePuntual.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0, 0); // 8:10 am
-    if (ahora >= inicioEntrada && ahora <= limitePuntual) {
-      tipoEvento = "puntual";
-    } else {
-      tipoEvento = "retardo";
-    }
+    tipoEvento = (ahora <= limitePuntual) ? "puntual" : "retardo";
     mensajeTipo = "entrada";
-  }
-} else if (!yaRegistroSalida) {
-  // Intentar registrar salida
-  if (!horaPermitidaSalida(datosUsuario.tipo) && !CONFIG.MODO_PRUEBAS) {
-    mostrarEstado("error", `❌ Aún no es hora de salida, ${datosUsuario.nombre}`);
+  } else if (!yaRegistroSalida) {
+    if (ahora < horaSalida) {
+      mostrarEstado("error", `⏳ Espera a la hora de salida (${horaSalida.getHours()}:00) para registrar tu salida.`);
+      return;
+    }
+    tipoEvento = "salida";
+    mensajeTipo = "salida";
+  } else {
+    mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
     return;
   }
-  tipoEvento = "salida";
-  mensajeTipo = "salida";
-} else {
-  // No debería registrar otro evento hoy
-  const eventoPendiente = yaRegistroEntrada && !yaRegistroSalida ? "salida" : "ninguno";
-  mostrarEstado("error", `⚠️ Ya registraste todos los eventos por hoy. Pendiente: ${eventoPendiente}`);
-  return;
-}
 
   // Crear registro en Firestore
   try {
@@ -305,15 +350,12 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       timestamp: serverTimestamp()
     });
 
-    // Esperar a que Firestore asigne el timestamp antes de recargar historial
     setTimeout(async () => {
       await cargarHistorial(user.uid);
     }, 1200);
 
-    // Actualizar UI
     actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
 
-    // Mostrar mensaje
     const diaSemana = ahora.getDay();
     const mensaje = generarMensajeEspecial(diaSemana, tipoEvento, datosUsuario.nombre) ||
       getMensajeDefault(tipoEvento, hora);
@@ -325,7 +367,6 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     mostrarEstado("error", "❌ Error al registrar asistencia");
   }
 }
-
 /**
  * Actualiza la interfaz con los datos del usuario
  * @param {object} user 
