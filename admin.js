@@ -539,19 +539,19 @@ function renderGraficaUsuarios() {
   }
 
   // Contar accesos por usuario (por email)
-  const conteoUsuarios = {};
-  registros.forEach(r => {
-    conteoUsuarios[r.email] = (conteoUsuarios[r.email] || 0) + 1;
-  });
+ // Contar accesos por usuario (por nombre)
+const conteoUsuarios = {};
+registros.forEach(r => {
+  conteoUsuarios[r.nombre] = (conteoUsuarios[r.nombre] || 0) + 1;
+});
 
-  // Ordenar y tomar top 5
-  const topUsuarios = Object.entries(conteoUsuarios)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+// Ordenar y tomar top 5
+const topUsuarios = Object.entries(conteoUsuarios)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 5);
 
-  const labels = topUsuarios.map(([email]) => email);
-  const data = topUsuarios.map(([, count]) => count);
-
+const labels = topUsuarios.map(([nombre]) => nombre);
+const data = topUsuarios.map(([, count]) => count);
   // Color según modo oscuro
   const isDarkMode = document.body.classList.contains('dark-mode');
   const textColor = isDarkMode ? '#e0e0e0' : '#666';
