@@ -174,6 +174,20 @@ function mostrarNotificacion(mensaje, tipo = "info") {
   }, 5000);
 }
 
+  // Destruye DataTable anterior si existe
+  if ($.fn.DataTable.isDataTable('#tabla-registros')) {
+    $('#tabla-registros').DataTable().destroy();
+  }
+
+  // Inicializa DataTable
+  $('#tabla-registros').DataTable({
+    pageLength: 20,
+    language: {
+      url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+    }
+  });
+
+
 // Cargar registros desde Firestore
 async function cargarRegistros() {
   try {
