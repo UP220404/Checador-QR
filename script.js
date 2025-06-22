@@ -30,7 +30,7 @@ const firebaseConfig = {
 
 // Constantes de configuración
 const CONFIG = {
-  MODO_PRUEBAS: false, // Cambiar a true para pruebas sin Firestore
+  MODO_PRUEBAS: false, // Cambiar a true para pruebas 
   HORA_LIMITE_ENTRADA: { hours: 8, minutes: 10 }, // 8:10 AM
   HORA_LIMITE_SALIDA_BECARIO: { hours: 13, minutes: 0 }, // 1:00 PM
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
@@ -309,6 +309,40 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
   const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
 
+  if (!yaRegistroEntrada && ahora >= horaSalida) {
+    // Permitir salida aunque no haya entrada, pero mostrar advertencia
+    tipoEvento = "salida";
+    mensajeTipo = "salida";
+    // Crear registro en Firestore
+    try {
+      const docRef = await addDoc(collection(db, "registros"), {
+        uid: user.uid,
+        nombre: datosUsuario.nombre,
+        email: user.email,
+        tipo: datosUsuario.tipo,
+        fecha,
+        hora,
+        tipoEvento: mensajeTipo,
+        estado: tipoEvento,
+        ubicacion: coords || null,
+        timestamp: serverTimestamp()
+      });
+
+      setTimeout(async () => {
+        await cargarHistorial(user.uid);
+      }, 1200);
+
+      actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
+
+      mostrarEstado("salida", "⚠️ No olvides registrar tu entrada.");
+
+    } catch (error) {
+      console.error("Error al registrar asistencia:", error);
+      mostrarEstado("error", "❌ Error al registrar asistencia");
+    }
+    return;
+  }
+
   if (!yaRegistroEntrada) {
     if (ahora < inicioEntrada) {
       mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
@@ -366,8 +400,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     console.error("Error al registrar asistencia:", error);
     mostrarEstado("error", "❌ Error al registrar asistencia");
   }
-}
-/**
+}/**
  * Actualiza la interfaz con los datos del usuario
  * @param {object} user 
  * @param {object} datosUsuario 
