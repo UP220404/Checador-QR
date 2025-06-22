@@ -310,10 +310,14 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
 
   if (!yaRegistroEntrada && ahora >= horaSalida) {
+    // Si ya registró salida hoy, no permitir otra
+    if (yaRegistroSalida) {
+      mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
+      return;
+    }
     // Permitir salida aunque no haya entrada, pero mostrar advertencia
     tipoEvento = "salida";
     mensajeTipo = "salida";
-    // Crear registro en Firestore
     try {
       const docRef = await addDoc(collection(db, "registros"), {
         uid: user.uid,
@@ -398,9 +402,10 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
-    mostrarEstado("error", "❌ Error al registrar asistencia");
+    mostrarEstado("error", "❌ Error al registrar asistencia"); 
   }
-}/**
+}
+/**
  * Actualiza la interfaz con los datos del usuario
  * @param {object} user 
  * @param {object} datosUsuario 
