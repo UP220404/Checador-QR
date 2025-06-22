@@ -26,8 +26,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
-const tabla = document.getElementById("tabla-registros");
-const tipoFiltro = document.getElementById("filtroTipo");
+const tabla = document.querySelector("#tabla-registros tbody");const tipoFiltro = document.getElementById("filtroTipo");
 const fechaFiltro = document.getElementById("filtroFecha");
 const busquedaFiltro = document.getElementById("filtroBusqueda");
 const eventoFiltro = document.getElementById("filtroEvento");
@@ -181,11 +180,26 @@ function mostrarNotificacion(mensaje, tipo = "info") {
 
   // Inicializa DataTable
   $('#tabla-registros').DataTable({
-    pageLength: 20,
-    language: {
-      url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+  pageLength: 20,
+  lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+  language: {
+    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+    infoEmpty: "No hay registros para mostrar",
+    zeroRecords: "No se encontraron registros"
+  },
+  drawCallback: function(settings) {
+    var api = this.api();
+    var pages = api.page.info().pages;
+    if (pages <= 1) {
+      $('.dataTables_paginate').hide();
+      $('.dataTables_info').hide();
+    } else {
+      $('.dataTables_paginate').show();
+      $('.dataTables_info').show();
     }
-  });
+  }
+});
+  
 
 
 // Cargar registros desde Firestore
