@@ -70,7 +70,7 @@ function formatearFechaHora(timestamp) {
 
 // Renderizar tabla con filtros
 function renderTabla() {
-  // Si ya existe una instancia, destrúyela antes de modificar el DOM
+  // Destruye DataTable anterior si existe
   if (dataTableInstance) {
     dataTableInstance.destroy();
     dataTableInstance = null;
@@ -103,34 +103,36 @@ function renderTabla() {
       </td>
     `;
     tabla.appendChild(fila);
-  } else {
-    filtrados.forEach(r => {
-      const fila = document.createElement("tr");
-      fila.innerHTML = `
-        <td>${r.nombre}</td>
-        <td>${r.email}</td>
-        <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo}</span></td>
-        <td>${formatearFecha(r.timestamp)}</td>
-        <td>${formatearHora(r.timestamp)}</td>
-        <td>
-          <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
-            ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
-          </span>
-        </td>
-        <td class="text-end">
-          <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
-            <i class="bi bi-eye"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
-            <i class="bi bi-trash"></i>
-          </button>
-        </td>
-      `;
-      tabla.appendChild(fila);
-    });
+    // NO inicialices DataTables si no hay registros
+    return;
   }
 
-  // Inicializa DataTable SOLO una vez por render
+  filtrados.forEach(r => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td>${r.nombre}</td>
+      <td>${r.email}</td>
+      <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo}</span></td>
+      <td>${formatearFecha(r.timestamp)}</td>
+      <td>${formatearHora(r.timestamp)}</td>
+      <td>
+        <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
+          ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
+        </span>
+      </td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
+          <i class="bi bi-eye"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    `;
+    tabla.appendChild(fila);
+  });
+
+  // Inicializa DataTable SOLO si hay registros
   dataTableInstance = $('#tabla-registros').DataTable({
     pageLength: 20,
     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
