@@ -488,3 +488,10 @@ body.dark-mode .form-select {
   color: #e0e0e0 !important;
   border-color: #444 !important;
 }
+
+/* Ranking de puntualidad: fondo especial en modo oscuro */
+body.dark-mode #ranking-puntualidad .list-group-item {
+  background-color: #232323 !important;
+  color: #e0e0e0 !important;
+  border-color: #333 !important;
+}
