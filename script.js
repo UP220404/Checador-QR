@@ -339,11 +339,19 @@ if (distancia > RADIO_METROS) {
 
       actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
 
-      const diaSemana = ahora.getDay();
-      const mensaje = generarMensajeEspecial(diaSemana, tipoEvento, datosUsuario.nombre) ||
-        getMensajeDefault(tipoEvento, hora);
-
-      mostrarEstado(tipoEvento, mensaje);
+      let mensaje = "";
+  if (tipoEvento === "puntual") {
+    mensaje = `✅ Entrada puntual a las ${hora}`;
+  } else if (tipoEvento === "retardo") {
+    mensaje = `⚠️ Entrada con retardo a las ${hora}`;
+  } else if (tipoEvento === "salida") {
+    mensaje = `📤 Salida registrada a las ${hora}`;
+  }
+  const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
+  if (mensajeEspecial) {
+    mensaje += `\n${mensajeEspecial}`;
+  }
+  mostrarEstado(tipoEvento, mensaje);
 
     } catch (error) {
       console.error("Error al registrar asistencia:", error);
@@ -456,11 +464,22 @@ if (distancia > RADIO_METROS) {
 
     actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
 
-    const diaSemana = ahora.getDay();
-    const mensaje = generarMensajeEspecial(diaSemana, tipoEvento, datosUsuario.nombre) ||
-      getMensajeDefault(tipoEvento, hora);
+    let mensaje = "";
+    if (tipoEvento === "puntual") {
+    mensaje = `✅ Entrada puntual a las ${hora}`;
+    } else if (tipoEvento === "retardo") {
+    mensaje = `⚠️ Entrada con retardo a las ${hora}`;
+    } else if (tipoEvento === "salida") {
+    mensaje = `📤 Salida registrada a las ${hora}`;
+    }
 
-    mostrarEstado(tipoEvento, mensaje);
+// Si hay mensaje especial, lo agregas debajo
+const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
+if (mensajeEspecial) {
+  mensaje += `\n${mensajeEspecial}`;
+}
+
+mostrarEstado(tipoEvento, mensaje);
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
