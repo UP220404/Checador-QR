@@ -637,10 +637,26 @@ window.generarReportePDF = async () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  doc.setFontSize(16);
-  doc.text("Reporte Diario - Cielito Home", 10, 15);
+  // Cargar logo (debe estar en la misma carpeta o usar ruta absoluta)
+  const logoUrl = "img/cielitohome.png";
+  const logoBase64 = await toDataURL(logoUrl);
+
+  // Logo institucional
+  doc.addImage(logoBase64, "PNG", 10, 8, 24, 24);
+
+  // Título con color institucional
+  doc.setFontSize(18);
+  doc.setTextColor(25, 135, 84); // Verde institucional
+  doc.text("Reporte Diario - Cielito Home", 38, 20);
+
   doc.setFontSize(12);
-  doc.text("Resumen de actividades del día.", 10, 23);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Resumen de actividades del día.", 38, 28);
+
+  // Línea decorativa
+  doc.setDrawColor(25, 135, 84);
+  doc.setLineWidth(1.2);
+  doc.line(10, 34, 200, 34);
 
   // Filtrar registros del día
   const hoyStr = getFechaHoyMX();
@@ -659,7 +675,7 @@ window.generarReportePDF = async () => {
   doc.autoTable({
     head: [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']],
     body: rows,
-    startY: 30,
+    startY: 38,
     styles: {
       fontSize: 10,
       cellPadding: 3,
@@ -683,6 +699,16 @@ window.generarReportePDF = async () => {
   mostrarNotificacion("Reporte PDF generado con éxito", "success");
 };
 
+// Utilidad para convertir imagen a base64
+async function toDataURL(url) {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
 // Generar reporte Excel
 window.generarReporteExcel = async () => {
   mostrarNotificacion("Generando reporte Excel...", "info");
@@ -963,7 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderRankingPuntualidad() {
-  
+
   const puntuales = registros.filter(r => r.tipoEvento === "entrada" && r.estado === "puntual");
   const conteo = {};
   puntuales.forEach(r => {
