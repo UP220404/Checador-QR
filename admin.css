@@ -557,3 +557,24 @@ body.dark-mode #ranking-puntualidad .list-group-item {
 #ranking-puntualidad .list-group-item:last-child {
   margin-bottom: 0;
 }
+
+.col-nombre {
+  min-width: 220px;
+  width: 28%;
+}
+
+#tabla-registros th:nth-child(6), /* Estado */
+#tabla-registros td:nth-child(6) {
+  width: 90px;
+  min-width: 70px;
+  max-width: 110px;
+  text-align: center;
+}
+
+#tabla-registros th.text-end, /* Acciones */
+#tabla-registros td.text-end {
+  width: 80px;
+  min-width: 60px;
+  max-width: 100px;
+  text-align: right;
+}
