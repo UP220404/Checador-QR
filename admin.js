@@ -106,30 +106,42 @@ function renderTabla() {
     return;
   }
 
-  filtrados.forEach(r => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-      <td>${r.nombre}</td>
-      <td>${r.email}</td>
-      <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo}</span></td>
-      <td>${formatearFecha(r.timestamp)}</td>
-      <td>${formatearHora(r.timestamp)}</td>
-      <td>
-        <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
-          ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
-        </span>
-      </td>
-      <td class="text-end">
-        <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
-          <i class="bi bi-eye"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
-          <i class="bi bi-trash"></i>
-        </button>
-      </td>
-    `;
-    tabla.appendChild(fila);
-  });
+filtrados.forEach(r => {
+  const fila = document.createElement("tr");
+  fila.innerHTML = `
+    <td>${r.nombre}</td>
+    <td><span class="badge ${r.tipo === 'becario' ? 'bg-info' : 'bg-primary'}">${r.tipo}</span></td>
+    <td>${formatearFecha(r.timestamp)}</td>
+    <td>${formatearHora(r.timestamp)}</td>
+    <td>
+      <span class="badge ${r.tipoEvento === 'entrada' ? 'bg-success' : 'bg-warning text-dark'}">
+        ${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}
+      </span>
+    </td>
+    <td>
+      <span class="badge ${
+        r.estado === 'puntual' ? 'bg-success' :
+        r.estado === 'retardo' ? 'bg-warning text-dark' :
+        r.tipoEvento === 'salida' ? 'bg-primary' : 'bg-secondary'
+      }">
+        ${
+          r.tipoEvento === 'entrada'
+            ? (r.estado === 'puntual' ? 'Puntual' : r.estado === 'retardo' ? 'Retardo' : 'Entrada')
+            : 'Salida'
+        }
+      </span>
+    </td>
+    <td class="text-end">
+      <button class="btn btn-sm btn-outline-secondary me-1" onclick="verDetalle('${r.id}')" title="Ver detalles">
+        <i class="bi bi-eye"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
+        <i class="bi bi-trash"></i>
+      </button>
+    </td>
+  `;
+  tabla.appendChild(fila);
+});
 
   // Inicializa DataTable SOLO si hay registros
   dataTableInstance = $('#tabla-registros').DataTable({
