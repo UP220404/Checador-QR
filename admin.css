@@ -495,3 +495,37 @@ body.dark-mode #ranking-puntualidad .list-group-item {
   color: #e0e0e0 !important;
   border-color: #333 !important;
 }
+
+/* Mejorar visual de ranking de puntualidad */
+#ranking-puntualidad {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+  transition: background 0.3s, color 0.3s;
+}
+
+body.dark-mode #ranking-puntualidad {
+  background: #232323;
+  border: 1px solid #333;
+  color: #e0e0e0;
+}
+
+#ranking-puntualidad .list-group-item {
+  border: none;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  transition: background 0.3s, color 0.3s;
+}
+
+body.dark-mode #ranking-puntualidad .list-group-item {
+  background-color: #292929 !important;
+  color: #e0e0e0 !important;
+}
+
+#ranking-puntualidad .list-group-item:last-child {
+  margin-bottom: 0;
+}
