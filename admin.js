@@ -218,6 +218,7 @@ async function cargarRegistros() {
     // Renderizar elementos
     renderTabla();
     renderGraficas();
+    renderRankingPuntualidad();
     
   } catch (error) {
     console.error("Error al cargar registros:", error);
@@ -960,3 +961,38 @@ document.addEventListener('DOMContentLoaded', () => {
     return new bootstrap.Tooltip(tooltipTriggerEl);
   });
 });
+
+function renderRankingPuntualidad() {
+  // Filtra solo entradas puntuales
+  const puntuales = registros.filter(r => r.tipoEvento === "entrada" && r.estado === "puntual");
+  // Cuenta por usuario
+  const conteo = {};
+  puntuales.forEach(r => {
+    conteo[r.nombre] = (conteo[r.nombre] || 0) + 1;
+  });
+  // Ordena y toma top 5
+  const top = Object.entries(conteo)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const rankingList = document.getElementById("ranking-puntualidad");
+  if (!rankingList) return; // Si no existe el contenedor, no hace nada
+
+  rankingList.innerHTML = "";
+
+  if (top.length === 0) {
+    rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad aún</li>`;
+    return;
+  }
+
+  top.forEach(([nombre, cantidad], idx) => {
+    const li = document.createElement("li");
+    li.className = "list-group-item d-flex justify-content-between align-items-center";
+    li.innerHTML = `
+      <span>${nombre}</span>
+      <span class="badge bg-success rounded-pill">${cantidad} puntual${cantidad > 1 ? 'es' : ''}</span>
+      ${idx === 0 ? '<span class="ms-2">🥇</span>' : idx === 1 ? '<span class="ms-2">🥈</span>' : idx === 2 ? '<span class="ms-2">🥉</span>' : ''}
+    `;
+    rankingList.appendChild(li);
+  });
+}
