@@ -363,6 +363,9 @@ if (distancia > RADIO_METROS) {
     mensaje += `\n${mensajeEspecial}`;
   }
   mostrarEstado(tipoEvento, mensaje);
+  setTimeout(() => {
+  window.close();
+  }, 7000);
 
     } catch (error) {
       console.error("Error al registrar asistencia:", error);
@@ -491,6 +494,9 @@ if (mensajeEspecial) {
 }
 
 mostrarEstado(tipoEvento, mensaje);
+setTimeout(() => {
+  window.close();
+}, 7000);
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
