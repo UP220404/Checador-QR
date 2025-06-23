@@ -963,22 +963,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderRankingPuntualidad() {
-  // Filtra solo entradas puntuales
+  
   const puntuales = registros.filter(r => r.tipoEvento === "entrada" && r.estado === "puntual");
-  // Cuenta por usuario
   const conteo = {};
   puntuales.forEach(r => {
     conteo[r.nombre] = (conteo[r.nombre] || 0) + 1;
   });
-  // Ordena y toma top 5
   const top = Object.entries(conteo)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
   const rankingList = document.getElementById("ranking-puntualidad");
-  if (!rankingList) return; // Si no existe el contenedor, no hace nada
+  if (!rankingList) return;
 
   rankingList.innerHTML = "";
+
+  // Configuración de íconos y estilos para cada puesto
+  const estilos = [
+    { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", nombre: "Diamante" }, // Top 1
+    { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", nombre: "Rubí" },     // Top 2
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#ffc107", nombre: "Oro" }, // Top 3
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#adb5bd", nombre: "Plata" }, // Top 4
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", nombre: "Bronce" } // Top 5
+  ];
 
   if (top.length === 0) {
     rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad aún</li>`;
@@ -986,13 +993,17 @@ function renderRankingPuntualidad() {
   }
 
   top.forEach(([nombre, cantidad], idx) => {
+    const { icon, color, nombre: nombreMedalla } = estilos[idx];
     const li = document.createElement("li");
     li.className = "list-group-item d-flex justify-content-between align-items-center";
+    li.style.background = color + "18"; // color suave de fondo
     li.innerHTML = `
-      <span>${nombre}</span>
-      <span class="badge bg-success rounded-pill">${cantidad} puntual${cantidad > 1 ? 'es' : ''}</span>
-      ${idx === 0 ? '<span class="ms-2">🥇</span>' : idx === 1 ? '<span class="ms-2">🥈</span>' : idx === 2 ? '<span class="ms-2">🥉</span>' : ''}
-    `;
+      <span class="d-flex align-items-center">
+        <span style="font-size:1.7em; color:${color}; margin-right:10px;">${icon}</span>
+        <strong style="color:${color};">${nombre}</strong>
+        <span class="badge ms-2" style="background:${color};color:#fff;">${nombreMedalla}</span>
+      </span>
+      <span class="badge bg-success rounded-pill">${cantidad} puntual${cantidad > 1 ? 'es' : ''}</span>`;
     rankingList.appendChild(li);
   });
 }
