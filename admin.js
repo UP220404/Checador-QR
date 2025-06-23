@@ -891,7 +891,7 @@ busquedaFiltro.addEventListener("input", renderTabla);
 eventoFiltro.addEventListener("change", renderTabla);
 
 // Configurar fecha por defecto en el filtro
-fechaFiltro.valueAsDate = new Date();
+fechaFiltro.value = getFechaHoyMX();
 
 // Modo oscuro
 const themeToggle = document.getElementById('themeToggle');
