@@ -1016,13 +1016,40 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderRankingPuntualidad() {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
 
-  const puntuales = registros.filter(r => r.tipoEvento === "entrada" && r.estado === "puntual");
-  const conteo = {};
-  puntuales.forEach(r => {
-    conteo[r.nombre] = (conteo[r.nombre] || 0) + 1;
+  // Solo entradas del mes actual y que sean puntuales o retardo (para puntaje)
+  const entradasMes = registros.filter(r =>
+    r.tipoEvento === "entrada" &&
+    new Date(r.timestamp.seconds * 1000).getMonth() === mesActual &&
+    new Date(r.timestamp.seconds * 1000).getFullYear() === anioActual
+  );
+
+  // Puntaje por usuario
+  const puntaje = {};
+  entradasMes.forEach(r => {
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    const hora = fecha.getHours();
+    const minutos = fecha.getMinutes();
+    let puntos = 0;
+
+    if (hora < 8) {
+      puntos = 3;
+    } else if (hora === 8 && minutos <= 5) {
+      puntos = 2;
+    } else if (hora === 8 && minutos <= 10) {
+      puntos = 1;
+    } // después de 8:10 no suma puntos
+
+    if (puntos > 0) {
+      puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
+    }
   });
-  const top = Object.entries(conteo)
+
+  // Top 5 por puntaje
+  const top = Object.entries(puntaje)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
@@ -1041,11 +1068,11 @@ function renderRankingPuntualidad() {
   ];
 
   if (top.length === 0) {
-    rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad aún</li>`;
+    rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad este mes</li>`;
     return;
   }
 
-  top.forEach(([nombre, cantidad], idx) => {
+  top.forEach(([nombre, puntos], idx) => {
     const { icon, color, nombre: nombreMedalla } = estilos[idx];
     const li = document.createElement("li");
     li.className = "list-group-item d-flex justify-content-between align-items-center";
@@ -1056,7 +1083,7 @@ function renderRankingPuntualidad() {
         <strong style="color:${color};">${nombre}</strong>
         <span class="badge ms-2" style="background:${color};color:#fff;">${nombreMedalla}</span>
       </span>
-      <span class="badge bg-success rounded-pill">${cantidad} puntual${cantidad > 1 ? 'es' : ''}</span>`;
+      <span class="badge bg-success rounded-pill">${puntos} punto${puntos > 1 ? 's' : ''}</span>`;
     rankingList.appendChild(li);
   });
 }
