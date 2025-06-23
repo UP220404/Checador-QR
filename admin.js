@@ -775,14 +775,28 @@ window.generarReportePersonalizado = async () => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   
   let blob, extension;
- if (formato === 'pdf') {
+  if (formato === 'pdf') {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
+  // Cargar logo institucional
+  const logoUrl = "img/cielitohome.png";
+  const logoBase64 = await toDataURL(logoUrl);
+  doc.addImage(logoBase64, "PNG", 10, 8, 24, 24);
+
+  // Título y colores institucionales
   doc.setFontSize(16);
-  doc.text("Reporte Personalizado - Cielito Home", 10, 15);
+  doc.setTextColor(25, 135, 84);
+  doc.text("Reporte Personalizado - Cielito Home", 38, 20);
+
   doc.setFontSize(12);
-  doc.text(`Rango: ${fechaInicio} a ${fechaFin}`, 10, 23);
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Rango: ${fechaInicio} a ${fechaFin}`, 38, 28);
+
+  // Línea decorativa
+  doc.setDrawColor(25, 135, 84);
+  doc.setLineWidth(1.2);
+  doc.line(10, 34, 200, 34);
 
   const rows = registrosFiltrados.map(r => [
     r.nombre,
@@ -796,7 +810,7 @@ window.generarReportePersonalizado = async () => {
   doc.autoTable({
     head: [['Nombre', 'Email', 'Tipo', 'Fecha', 'Hora', 'Evento']],
     body: rows,
-    startY: 30,
+    startY: 38,
     styles: { fontSize: 10, cellPadding: 3 },
     headStyles: {
       fillColor: [25, 135, 84],
@@ -817,6 +831,7 @@ window.generarReportePersonalizado = async () => {
   mostrarNotificacion(`Reporte PDF generado con éxito`, "success");
   bootstrap.Modal.getInstance(document.getElementById('modalReporte')).hide();
   return;
+
 
   }else if (formato === 'excel') {
   const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
