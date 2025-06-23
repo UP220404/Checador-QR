@@ -248,6 +248,34 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     return;
   }
 
+  // Coordenadas de la oficina
+const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
+const RADIO_METROS = 100; // Radio permitido en metros
+
+function distanciaMetros(lat1, lng1, lat2, lng2) {
+  const R = 6371e3; // metros
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Validación de ubicación
+if (!coords || !coords.lat || !coords.lng) {
+  mostrarEstado("error", "⛔ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
+  return;
+}
+const distancia = distanciaMetros(coords.lat, coords.lng, OFICINA.lat, OFICINA.lng);
+if (distancia > RADIO_METROS) {
+  mostrarEstado("error", "⛔ Solo puedes registrar asistencia dentro de la oficina.");
+  return;
+}
+
   // Definir límites según tipo
   const inicioEntrada = new Date();
   inicioEntrada.setHours(7, 0, 0, 0);
