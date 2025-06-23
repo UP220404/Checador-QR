@@ -38,13 +38,12 @@ let dataTableInstance = null;
 function formatearFecha(timestamp) {
   if (!timestamp || typeof timestamp.seconds !== "number") return "-";
   const fecha = new Date(timestamp.seconds * 1000);
-  // Usar la zona horaria de México
-  return fecha.toLocaleDateString("es-MX", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).split('/').reverse().join('-'); // yyyy-mm-dd
+  // Formato YYYY-MM-DD local
+  return [
+    fecha.getFullYear(),
+    String(fecha.getMonth() + 1).padStart(2, '0'),
+    String(fecha.getDate()).padStart(2, '0')
+  ].join('-');
 }
 
 function formatearHora(timestamp) {
@@ -228,23 +227,21 @@ async function cargarRegistros() {
 
 function getFechaHoyMX() {
   const now = new Date();
-  return now.toLocaleDateString("es-MX", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).split('/').reverse().join('-');
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
 }
 
 function getFechaAyerMX() {
   const now = new Date();
   now.setDate(now.getDate() - 1);
-  return now.toLocaleDateString("es-MX", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).split('/').reverse().join('-');
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
 }
 
  async function calcularKPIs() {

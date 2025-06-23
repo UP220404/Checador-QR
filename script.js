@@ -115,11 +115,12 @@ function horaPermitidaSalida(tipoUsuario) {
  */
 async function yaRegistradoHoy(uid, tipoEvento) {
   // Obtener la fecha de hoy en formato YYYY-MM-DD (igual que en Firestore)
-  const hoy = new Date().toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).split('/').reverse().join('-');
+const ahora = new Date();
+const hoy = [
+  ahora.getFullYear(),
+  String(ahora.getMonth() + 1).padStart(2, '0'),
+  String(ahora.getDate()).padStart(2, '0')
+].join('-');
   const q = query(
     collection(db, "registros"),
     where("uid", "==", uid),
@@ -226,13 +227,11 @@ function getBadgeClass(tipoEvento) {
 async function registrarAsistencia(user, datosUsuario, coords) {
   const ahora = new Date();
   const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
-  const fecha = ahora.toLocaleDateString("es-MX", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).split('/').reverse().join('-'); // "YYYY-MM-DD"
-
+  const fecha = [
+  ahora.getFullYear(),
+  String(ahora.getMonth() + 1).padStart(2, '0'),
+  String(ahora.getDate()).padStart(2, '0')].join('-');
+ 
   // RESTRICCIÓN: No permitir registros en fin de semana
   const diaSemana = ahora.getDay(); 
 
