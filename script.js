@@ -36,6 +36,12 @@ const CONFIG = {
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
 };
 
+function validarQR() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('qr') === 'OFICINA2025';
+}
+
+
 // Inicialización de Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -232,6 +238,11 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   String(ahora.getMonth() + 1).padStart(2, '0'),
   String(ahora.getDate()).padStart(2, '0')].join('-');
  
+  if (!validarQR()) {
+    mostrarEstado("error", "⛔ Debes escanear el QR de la oficina para registrar tu entrada.");
+    return;
+  }
+
   // RESTRICCIÓN: No permitir registros en fin de semana
   const diaSemana = ahora.getDay(); 
 
