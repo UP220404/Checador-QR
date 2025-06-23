@@ -295,9 +295,20 @@ if (distancia > RADIO_METROS) {
 
     if (ahora >= inicioEntrada && ahora < finEntrada) {
       // Entrada puntual o retardo
-      const limitePuntual = new Date();
-      limitePuntual.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0, 0); // 8:10 am
-      tipoEvento = (ahora <= limitePuntual) ? "puntual" : "retardo";
+      const horaActual = ahora.getHours();
+      const minutosActual = ahora.getMinutes();
+      const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
+      const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
+
+      let esPuntual = false;  
+      if (horaActual < limiteHora) {
+      esPuntual = true;
+      } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
+      esPuntual = true;
+      } else {
+      esPuntual = false;
+      }
+      tipoEvento = esPuntual ? "puntual" : "retardo";
       mensajeTipo = "entrada";
     } else if (ahora >= horaSalida) {
       tipoEvento = "salida";
@@ -397,9 +408,20 @@ if (distancia > RADIO_METROS) {
       return;
     }
     // Entrada puntual o retardo
-    const limitePuntual = new Date();
-    limitePuntual.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0, 0); // 8:10 am
-    tipoEvento = (ahora <= limitePuntual) ? "puntual" : "retardo";
+    const horaActual = ahora.getHours();
+    const minutosActual = ahora.getMinutes();
+    const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
+    const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
+
+    let esPuntual = false;
+    if (horaActual < limiteHora) {
+    esPuntual = true;
+    } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
+    esPuntual = true;
+    } else {
+    esPuntual = false;
+    }
+    tipoEvento = esPuntual ? "puntual" : "retardo";
     mensajeTipo = "entrada";
   } else if (!yaRegistroSalida) {
     if (ahora < horaSalida) {
