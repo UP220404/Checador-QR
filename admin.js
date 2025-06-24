@@ -1067,6 +1067,14 @@ function renderRankingPuntualidad() {
     { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", nombre: "Bronce" } // Top 5
   ];
 
+  const medallaClases = [
+    "ranking-medalla ranking-diamante",
+    "ranking-medalla ranking-rubi",
+    "ranking-medalla ranking-oro",
+    "ranking-medalla ranking-plata",
+    "ranking-medalla ranking-bronce"
+  ];
+
   if (top.length === 0) {
     rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad este mes</li>`;
     return;
@@ -1076,12 +1084,11 @@ function renderRankingPuntualidad() {
     const { icon, color, nombre: nombreMedalla } = estilos[idx];
     const li = document.createElement("li");
     li.className = "list-group-item d-flex justify-content-between align-items-center";
-    li.style.background = color + "18"; // color suave de fondo
     li.innerHTML = `
       <span class="d-flex align-items-center">
         <span style="font-size:1.7em; color:${color}; margin-right:10px;">${icon}</span>
         <strong style="color:${color};">${nombre}</strong>
-        <span class="badge ms-2" style="background:${color};color:#fff;">${nombreMedalla}</span>
+        <span class="${medallaClases[idx]} ms-2">${nombreMedalla}</span>
       </span>
       <span class="badge bg-success rounded-pill">${puntos} punto${puntos > 1 ? 's' : ''}</span>`;
     rankingList.appendChild(li);

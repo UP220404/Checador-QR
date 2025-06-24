@@ -121,12 +121,12 @@ function horaPermitidaSalida(tipoUsuario) {
  */
 async function yaRegistradoHoy(uid, tipoEvento) {
   // Obtener la fecha de hoy en formato YYYY-MM-DD (igual que en Firestore)
-const ahora = new Date();
-const hoy = [
-  ahora.getFullYear(),
-  String(ahora.getMonth() + 1).padStart(2, '0'),
-  String(ahora.getDate()).padStart(2, '0')
-].join('-');
+  const ahora = new Date();
+  const hoy = [
+    ahora.getFullYear(),
+    String(ahora.getMonth() + 1).padStart(2, '0'),
+    String(ahora.getDate()).padStart(2, '0')
+  ].join('-');
   const q = query(
     collection(db, "registros"),
     where("uid", "==", uid),
@@ -234,9 +234,10 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const ahora = new Date();
   const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
   const fecha = [
-  ahora.getFullYear(),
-  String(ahora.getMonth() + 1).padStart(2, '0'),
-  String(ahora.getDate()).padStart(2, '0')].join('-');
+    ahora.getFullYear(),
+    String(ahora.getMonth() + 1).padStart(2, '0'),
+    String(ahora.getDate()).padStart(2, '0')
+  ].join('-');
  
   if (!validarQR()) {
     mostrarEstado("error", "⛔ Debes escanear el QR de la oficina para registrar tu entrada.");
@@ -259,32 +260,32 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   }
 
   // Coordenadas de la oficina
-const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
-const RADIO_METROS = 100; // Radio permitido en metros
+  const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
+  const RADIO_METROS = 100; // Radio permitido en metros
 
-function distanciaMetros(lat1, lng1, lat2, lng2) {
-  const R = 6371e3; // metros
-  const φ1 = lat1 * Math.PI/180;
-  const φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lng2-lng1) * Math.PI/180;
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
+  function distanciaMetros(lat1, lng1, lat2, lng2) {
+    const R = 6371e3; // metros
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lng2-lng1) * Math.PI/180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
 
-// Validación de ubicación
-if (!coords || !coords.lat || !coords.lng) {
-  mostrarEstado("error", "⛔ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
-  return;
-}
-const distancia = distanciaMetros(coords.lat, coords.lng, OFICINA.lat, OFICINA.lng);
-if (distancia > RADIO_METROS) {
-  mostrarEstado("error", "⛔ Solo puedes registrar asistencia dentro de la oficina.");
-  return;
-}
+  // Validación de ubicación
+  if (!coords || !coords.lat || !coords.lng) {
+    mostrarEstado("error", "⛔ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
+    return;
+  }
+  const distancia = distanciaMetros(coords.lat, coords.lng, OFICINA.lat, OFICINA.lng);
+  if (distancia > RADIO_METROS) {
+    mostrarEstado("error", "⛔ Solo puedes registrar asistencia dentro de la oficina.");
+    return;
+  }
 
   // Definir límites según tipo
   const inicioEntrada = new Date();
@@ -313,11 +314,11 @@ if (distancia > RADIO_METROS) {
 
       let esPuntual = false;  
       if (horaActual < limiteHora) {
-      esPuntual = true;
+        esPuntual = true;
       } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
-      esPuntual = true;
+        esPuntual = true;
       } else {
-      esPuntual = false;
+        esPuntual = false;
       }
       tipoEvento = esPuntual ? "puntual" : "retardo";
       mensajeTipo = "entrada";
@@ -351,21 +352,21 @@ if (distancia > RADIO_METROS) {
       actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
 
       let mensaje = "";
-  if (tipoEvento === "puntual") {
-    mensaje = `✅ Entrada puntual a las ${hora}`;
-  } else if (tipoEvento === "retardo") {
-    mensaje = `⚠️ Entrada con retardo a las ${hora}`;
-  } else if (tipoEvento === "salida") {
-    mensaje = `📤 Salida registrada a las ${hora}`;
-  }
-  const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
-  if (mensajeEspecial) {
-    mensaje += `\n${mensajeEspecial}`;
-  }
-  mostrarEstado(tipoEvento, mensaje);
-  setTimeout(() => {
-  window.close();
-  }, 7000);
+      if (tipoEvento === "puntual") {
+        mensaje = `✅ Entrada puntual a las ${hora}`;
+      } else if (tipoEvento === "retardo") {
+        mensaje = `⚠️ Entrada con retardo a las ${hora}`;
+      } else if (tipoEvento === "salida") {
+        mensaje = `📤 Salida registrada a las ${hora}`;
+      }
+      const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
+      if (mensajeEspecial) {
+        mensaje += `\n${mensajeEspecial}`;
+      }
+      mostrarEstado(tipoEvento, mensaje);
+      setTimeout(() => {
+        window.close();
+      }, 7000);
 
     } catch (error) {
       console.error("Error al registrar asistencia:", error);
@@ -382,44 +383,7 @@ if (distancia > RADIO_METROS) {
   const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
   const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
 
-  if (!yaRegistroEntrada && ahora >= horaSalida) {
-    // Si ya registró salida hoy, no permitir otra
-    if (yaRegistroSalida) {
-      mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
-      return;
-    }
-    // Permitir salida aunque no haya entrada, pero mostrar advertencia
-    tipoEvento = "salida";
-    mensajeTipo = "salida";
-    try {
-      const docRef = await addDoc(collection(db, "registros"), {
-        uid: user.uid,
-        nombre: datosUsuario.nombre,
-        email: user.email,
-        tipo: datosUsuario.tipo,
-        fecha,
-        hora,
-        tipoEvento: mensajeTipo,
-        estado: tipoEvento,
-        ubicacion: coords || null,
-        timestamp: serverTimestamp()
-      });
-
-      setTimeout(async () => {
-        await cargarHistorial(user.uid);
-      }, 1200);
-
-      actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
-
-      mostrarEstado("salida", "⚠️ No olvides registrar tu entrada.");
-
-    } catch (error) {
-      console.error("Error al registrar asistencia:", error);
-      mostrarEstado("error", "❌ Error al registrar asistencia");
-    }
-    return;
-  }
-
+  // --- BLOQUE CORREGIDO ---
   if (!yaRegistroEntrada) {
     if (ahora < inicioEntrada) {
       mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
@@ -437,11 +401,11 @@ if (distancia > RADIO_METROS) {
 
     let esPuntual = false;
     if (horaActual < limiteHora) {
-    esPuntual = true;
+      esPuntual = true;
     } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
-    esPuntual = true;
+      esPuntual = true;
     } else {
-    esPuntual = false;
+      esPuntual = false;
     }
     tipoEvento = esPuntual ? "puntual" : "retardo";
     mensajeTipo = "entrada";
@@ -456,6 +420,7 @@ if (distancia > RADIO_METROS) {
     mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
     return;
   }
+  // --- FIN BLOQUE CORREGIDO ---
 
   // Crear registro en Firestore
   try {
@@ -480,29 +445,30 @@ if (distancia > RADIO_METROS) {
 
     let mensaje = "";
     if (tipoEvento === "puntual") {
-    mensaje = `✅ Entrada puntual a las ${hora}`;
+      mensaje = `✅ Entrada puntual a las ${hora}`;
     } else if (tipoEvento === "retardo") {
-    mensaje = `⚠️ Entrada con retardo a las ${hora}`;
+      mensaje = `⚠️ Entrada con retardo a las ${hora}`;
     } else if (tipoEvento === "salida") {
-    mensaje = `📤 Salida registrada a las ${hora}`;
+      mensaje = `📤 Salida registrada a las ${hora}`;
     }
 
-// Si hay mensaje especial, lo agregas debajo
-const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
-if (mensajeEspecial) {
-  mensaje += `\n${mensajeEspecial}`;
-}
+    // Si hay mensaje especial, lo agregas debajo
+    const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
+    if (mensajeEspecial) {
+      mensaje += `\n${mensajeEspecial}`;
+    }
 
-mostrarEstado(tipoEvento, mensaje);
-setTimeout(() => {
-  window.close();
-}, 7000);
+    mostrarEstado(tipoEvento, mensaje);
+    setTimeout(() => {
+      window.close();
+    }, 7000);
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
     mostrarEstado("error", "❌ Error al registrar asistencia"); 
   }
 }
+
 /**
  * Actualiza la interfaz con los datos del usuario
  * @param {object} user 
@@ -591,6 +557,4 @@ DOM.btnLogout?.addEventListener("click", () => {
 });
 
 // Inicialización
-document.addEventListener("DOMContentLoaded", () => {
-  // Configuración inicial adicional si es necesaria
-});
+document.addEventListener("DOMContentLoaded", () => {});
