@@ -41,7 +41,6 @@ function validarQR() {
   return params.get('qr') === 'OFICINA2025';
 }
 
-
 // Inicialización de Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -74,6 +73,12 @@ const CSS_CLASSES = {
     error: "alert-danger"
   }
 };
+
+// Lista blanca de correos remotos
+const USUARIOS_REMOTOS = [
+  "sistemas20cielitoh@gmail.com",
+  "remoto2@gmail.com"
+];
 
 /**
  * Muestra un mensaje de estado en la interfaz
@@ -231,6 +236,8 @@ function getBadgeClass(tipoEvento) {
  * @param {object} coords - Coordenadas de geolocalización
  */
 async function registrarAsistencia(user, datosUsuario, coords) {
+  const esRemoto = USUARIOS_REMOTOS.includes(user.email);
+
   const ahora = new Date();
   const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
   const fecha = [
@@ -238,53 +245,55 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     String(ahora.getMonth() + 1).padStart(2, '0'),
     String(ahora.getDate()).padStart(2, '0')
   ].join('-');
- 
-  if (!validarQR()) {
-    mostrarEstado("error", "⛔ Debes escanear el QR de la oficina para registrar tu entrada.");
-    return;
-  }
 
-  // RESTRICCIÓN: No permitir registros en fin de semana
-  const diaSemana = ahora.getDay(); 
+  // Solo validar QR y ubicación si NO es remoto
+  if (!esRemoto) {
+    if (!validarQR()) {
+      mostrarEstado("error", "⛔ Debes escanear el QR de la oficina para registrar tu entrada.");
+      return;
+    }
 
-  if (diaSemana === 0 || diaSemana === 6) {
-    mostrarEstado("error", "⛔ No puedes registrar asistencia en fin de semana.");
-    return;
-  }
+    // RESTRICCIÓN: No permitir registros en fin de semana
+    const diaSemana = ahora.getDay(); 
+    if (diaSemana === 0 || diaSemana === 6) {
+      mostrarEstado("error", "⛔ No puedes registrar asistencia en fin de semana.");
+      return;
+    }
 
-  // RESTRICCIÓN: No permitir registros fuera de 7:00 a 22:00
-  const horaActual = ahora.getHours();
-  if (horaActual < 7 || horaActual >= 22) {
-    mostrarEstado("error", "❌ Solo puedes registrar entre 7:00 am y 10:00 pm.");
-    return;
-  }
+    // RESTRICCIÓN: No permitir registros fuera de 7:00 a 22:00
+    const horaActual = ahora.getHours();
+    if (horaActual < 7 || horaActual >= 22) {
+      mostrarEstado("error", "❌ Solo puedes registrar entre 7:00 am y 10:00 pm.");
+      return;
+    }
 
-  // Coordenadas de la oficina
-  const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
-  const RADIO_METROS = 100; // Radio permitido en metros
+    // Coordenadas de la oficina
+    const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
+    const RADIO_METROS = 100; // Radio permitido en metros
 
-  function distanciaMetros(lat1, lng1, lat2, lng2) {
-    const R = 6371e3; // metros
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lng2-lng1) * Math.PI/180;
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }
+    function distanciaMetros(lat1, lng1, lat2, lng2) {
+      const R = 6371e3; // metros
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lng2-lng1) * Math.PI/180;
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
 
-  // Validación de ubicación
-  if (!coords || !coords.lat || !coords.lng) {
-    mostrarEstado("error", "⛔ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
-    return;
-  }
-  const distancia = distanciaMetros(coords.lat, coords.lng, OFICINA.lat, OFICINA.lng);
-  if (distancia > RADIO_METROS) {
-    mostrarEstado("error", "⛔ Solo puedes registrar asistencia dentro de la oficina.");
-    return;
+    // Validación de ubicación
+    if (!coords || !coords.lat || !coords.lng) {
+      mostrarEstado("error", "⛔ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
+      return;
+    }
+    const distancia = distanciaMetros(coords.lat, coords.lng, OFICINA.lat, OFICINA.lng);
+    if (distancia > RADIO_METROS) {
+      mostrarEstado("error", "⛔ Solo puedes registrar asistencia dentro de la oficina.");
+      return;
+    }
   }
 
   // Definir límites según tipo

@@ -153,6 +153,7 @@ filtrados.forEach(r => {
       infoEmpty: "No hay registros para mostrar",
       zeroRecords: "No se encontraron registros"
     },
+    order: [[3, "asc"]], // Ordena por hora (columna 3)
     drawCallback: function(settings) {
       var api = this.api();
       var pages = api.page.info().pages;
@@ -1035,14 +1036,16 @@ function renderRankingPuntualidad() {
     const minutos = fecha.getMinutes();
     let puntos = 0;
 
-    if (hora < 8) {
-      puntos = 3;
+    if (hora === 7 && minutos <= 45) {
+      puntos = 4; // Entrada entre  7:00 y 7:45 
+    }else if (hora < 8) {
+      puntos = 3; // Entrada antes de las 8:00
     } else if (hora === 8 && minutos <= 5) {
-      puntos = 2;
+      puntos = 2; // Entrada entre 8:00 y 8:05
     } else if (hora === 8 && minutos <= 10) {
-      puntos = 1;
-    } // después de 8:10 no suma puntos
-
+      puntos = 1; // Entrada entre 8:06 y 8:10
+    } 
+    // después de 8:10 no suma puntos
     if (puntos > 0) {
       puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
     }
