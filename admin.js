@@ -641,7 +641,7 @@ const data = topUsuarios.map(([, count]) => count);
   });
 }
 
-// Generar reporte PDF (simulado)
+// Generar reporte PDF 
 window.generarReportePDF = async () => {
   mostrarNotificacion("Generando reporte PDF...", "info");
 
@@ -675,38 +675,67 @@ window.generarReportePDF = async () => {
   const hoyStr = getFechaHoyMX();
   const registrosHoy = registros.filter(r => formatearFecha(r.timestamp) === hoyStr);
 
-  // Prepara los datos para la tabla
-  const rows = registrosHoy.map(r => [
-    r.nombre,
-    r.email,
-    r.tipo,
-    formatearHora(r.timestamp),
-    r.tipoEvento === "entrada" ? "Entrada" : "Salida"
-  ]);
+  // Separar y ordenar entradas y salidas por hora ascendente
+  const entradas = registrosHoy
+    .filter(r => r.tipoEvento === "entrada")
+    .sort((a, b) => a.timestamp.seconds - b.timestamp.seconds);
+
+  const salidas = registrosHoy
+    .filter(r => r.tipoEvento === "salida")
+    .sort((a, b) => a.timestamp.seconds - b.timestamp.seconds);
+
+  // Prepara los datos para la tabla: primero entradas, luego salidas
+  const rows = [
+    ...entradas.map(r => [
+      r.nombre,
+      r.email,
+      r.tipo,
+      formatearHora(r.timestamp),
+      "Entrada"
+    ]),
+    ...salidas.map(r => [
+      r.nombre,
+      r.email,
+      r.tipo,
+      formatearHora(r.timestamp),
+      "Salida"
+    ])
+  ];
 
   // Usa autoTable para formato y colores
   doc.autoTable({
-    head: [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']],
-    body: rows,
-    startY: 38,
-    styles: {
-      fontSize: 10,
-      cellPadding: 3,
-    },
-    headStyles: {
-      fillColor: [25, 135, 84], // Verde institucional
-      textColor: 255,
-      fontStyle: 'bold'
-    },
-    bodyStyles: {
-      fillColor: [240, 240, 240],
-      textColor: 30
-    },
-    alternateRowStyles: {
-      fillColor: [220, 255, 220]
-    },
-    margin: { left: 10, right: 10 }
-  });
+  head: [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']],
+  body: rows,
+  startY: 38,
+  styles: {
+    fontSize: 10,
+    cellPadding: 3,
+  },
+  headStyles: {
+    fillColor: [25, 135, 84], // Verde institucional
+    textColor: 255,
+    fontStyle: 'bold'
+  },
+  bodyStyles: {
+    fillColor: [240, 240, 240],
+    textColor: 30
+  },
+  alternateRowStyles: {
+    fillColor: [220, 255, 220]
+  },
+  margin: { left: 10, right: 10 },
+  // Cambia el color de fondo si es retardo
+  didParseCell: function (data) {
+    if (
+      data.section === 'body' &&
+      data.column.index === 4 && // Columna "Evento"
+      data.cell.raw === 'Retardo'
+    ) {
+      data.cell.styles.fillColor = [255, 221, 51]; // Amarillo
+      data.cell.styles.textColor = [0, 0, 0]; // Texto negro
+    }
+  }
+});
 
   doc.save(`reporte_diario_${hoyStr}.pdf`);
   mostrarNotificacion("Reporte PDF generado con éxito", "success");
@@ -788,6 +817,7 @@ window.generarReportePersonalizado = async () => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   
   let blob, extension;
+
   if (formato === 'pdf') {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -811,19 +841,52 @@ window.generarReportePersonalizado = async () => {
   doc.setLineWidth(1.2);
   doc.line(10, 34, 200, 34);
 
-  const rows = registrosFiltrados.map(r => [
-    r.nombre,
-    r.email,
-    r.tipo,
-    formatearFecha(r.timestamp),
-    formatearHora(r.timestamp),
-    r.tipoEvento === "entrada" ? "Entrada" : "Salida"
-  ]);
+  // Agrupar por día
+  const registrosPorDia = {};
+  registrosFiltrados.forEach(r => {
+    const dia = formatearFecha(r.timestamp);
+    if (!registrosPorDia[dia]) registrosPorDia[dia] = [];
+    registrosPorDia[dia].push(r);
+  });
+
+  let startY = 38;
+
+  for (const dia of Object.keys(registrosPorDia).sort()) {
+  doc.setFontSize(13);
+  doc.setTextColor(25, 135, 84);
+  doc.text(`Fecha: ${dia}`, 10, startY + 8);
+
+  // Separar y ordenar entradas y salidas
+  const entradas = registrosPorDia[dia]
+    .filter(r => r.tipoEvento === "entrada")
+    .sort((a, b) => a.timestamp.seconds - b.timestamp.seconds);
+
+  const salidas = registrosPorDia[dia]
+    .filter(r => r.tipoEvento === "salida")
+    .sort((a, b) => a.timestamp.seconds - b.timestamp.seconds);
+
+  // Incluye el estado en la fila
+  const rows = [
+    ...entradas.map(r => [
+      r.nombre,
+      r.email,
+      r.tipo,
+      formatearHora(r.timestamp),
+      r.estado === 'retardo' ? 'Retardo' : (r.estado === 'puntual' ? 'Puntual' : 'Entrada')
+    ]),
+    ...salidas.map(r => [
+      r.nombre,
+      r.email,
+      r.tipo,
+      formatearHora(r.timestamp),
+      "Salida"
+    ])
+  ];
 
   doc.autoTable({
-    head: [['Nombre', 'Email', 'Tipo', 'Fecha', 'Hora', 'Evento']],
+    head: [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']],
     body: rows,
-    startY: 38,
+    startY: startY + 12,
     styles: { fontSize: 10, cellPadding: 3 },
     headStyles: {
       fillColor: [25, 135, 84],
@@ -837,8 +900,27 @@ window.generarReportePersonalizado = async () => {
     alternateRowStyles: {
       fillColor: [220, 255, 220]
     },
-    margin: { left: 10, right: 10 }
+    margin: { left: 10, right: 10 },
+    // Cambia el color de fondo si es retardo
+    didParseCell: function (data) {
+      if (
+        data.section === 'body' &&
+        data.column.index === 4 && // Columna "Evento"
+        data.cell.raw === 'Retardo'
+      ) {
+        data.cell.styles.fillColor = [255, 221, 51]; // Amarillo
+        data.cell.styles.textColor = [0, 0, 0]; // Texto negro
+      }
+    }
   });
+
+  // Calcular nueva posición Y para el siguiente día
+  startY = doc.lastAutoTable.finalY + 8;
+  if (startY > 250) {
+    doc.addPage();
+    startY = 20;
+  }
+}
 
   doc.save(`reporte_personalizado_${fechaInicio}_a_${fechaFin}.pdf`);
   mostrarNotificacion(`Reporte PDF generado con éxito`, "success");
