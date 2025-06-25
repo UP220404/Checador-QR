@@ -77,7 +77,7 @@ const CSS_CLASSES = {
 // Lista blanca de correos remotos
 const USUARIOS_REMOTOS = [
   "sistemas20cielitoh@gmail.com",
-  "remoto2@gmail.com"
+  "operacionescielitoh@gmail.com"
 ];
 
 /**
