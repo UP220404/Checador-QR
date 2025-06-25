@@ -641,6 +641,7 @@ const data = topUsuarios.map(([, count]) => count);
   });
 }
 
+
 // Generar reporte PDF 
 window.generarReportePDF = async () => {
   mostrarNotificacion("Generando reporte PDF...", "info");
@@ -688,54 +689,56 @@ window.generarReportePDF = async () => {
   const rows = [
     ...entradas.map(r => [
       r.nombre,
-      r.email,
       r.tipo,
+      formatearFecha(r.timestamp),
       formatearHora(r.timestamp),
-      "Entrada"
+      "Entrada",
+      r.estado === 'retardo' ? 'Retardo' : (r.estado === 'puntual' ? 'Puntual' : 'Entrada')
     ]),
     ...salidas.map(r => [
       r.nombre,
-      r.email,
       r.tipo,
+      formatearFecha(r.timestamp),
       formatearHora(r.timestamp),
+      "Salida",
       "Salida"
     ])
   ];
 
   // Usa autoTable para formato y colores
   doc.autoTable({
-  head: [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']],
-  body: rows,
-  startY: 38,
-  styles: {
-    fontSize: 10,
-    cellPadding: 3,
-  },
-  headStyles: {
-    fillColor: [25, 135, 84], // Verde institucional
-    textColor: 255,
-    fontStyle: 'bold'
-  },
-  bodyStyles: {
-    fillColor: [240, 240, 240],
-    textColor: 30
-  },
-  alternateRowStyles: {
-    fillColor: [220, 255, 220]
-  },
-  margin: { left: 10, right: 10 },
-  // Cambia el color de fondo si es retardo
-  didParseCell: function (data) {
-    if (
-      data.section === 'body' &&
-      data.column.index === 4 && // Columna "Evento"
-      data.cell.raw === 'Retardo'
-    ) {
-      data.cell.styles.fillColor = [255, 221, 51]; // Amarillo
-      data.cell.styles.textColor = [0, 0, 0]; // Texto negro
+    head: [['Nombre', 'Tipo', 'Fecha', 'Hora', 'Evento', 'Estado']],
+    body: rows,
+    startY: 38,
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+    },
+    headStyles: {
+      fillColor: [25, 135, 84], // Verde institucional
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    bodyStyles: {
+      fillColor: [240, 240, 240],
+      textColor: 30
+    },
+    alternateRowStyles: {
+      fillColor: [220, 255, 220]
+    },
+    margin: { left: 10, right: 10 },
+    // Cambia el color de fondo si es retardo
+    didParseCell: function (data) {
+      if (
+        data.section === 'body' &&
+        data.column.index === 5 && // Columna "Estado"
+        data.cell.raw === 'Retardo'
+      ) {
+        data.cell.styles.fillColor = [255, 221, 51]; // Amarillo
+        data.cell.styles.textColor = [0, 0, 0]; // Texto negro
+      }
     }
-  }
-});
+  });
 
   doc.save(`reporte_diario_${hoyStr}.pdf`);
   mostrarNotificacion("Reporte PDF generado con éxito", "success");
@@ -851,7 +854,8 @@ window.generarReportePersonalizado = async () => {
 
   let startY = 38;
 
-  for (const dia of Object.keys(registrosPorDia).sort()) {
+  // ...existing code...
+for (const dia of Object.keys(registrosPorDia).sort()) {
   doc.setFontSize(13);
   doc.setTextColor(25, 135, 84);
   doc.text(`Fecha: ${dia}`, 10, startY + 8);
@@ -865,26 +869,28 @@ window.generarReportePersonalizado = async () => {
     .filter(r => r.tipoEvento === "salida")
     .sort((a, b) => a.timestamp.seconds - b.timestamp.seconds);
 
-  // Incluye el estado en la fila
+  // Incluye el estado en la fila y la fecha
   const rows = [
     ...entradas.map(r => [
       r.nombre,
-      r.email,
       r.tipo,
+      formatearFecha(r.timestamp),
       formatearHora(r.timestamp),
+      "Entrada",
       r.estado === 'retardo' ? 'Retardo' : (r.estado === 'puntual' ? 'Puntual' : 'Entrada')
     ]),
     ...salidas.map(r => [
       r.nombre,
-      r.email,
       r.tipo,
+      formatearFecha(r.timestamp),
       formatearHora(r.timestamp),
+      "Salida",
       "Salida"
     ])
   ];
 
   doc.autoTable({
-    head: [['Nombre', 'Email', 'Tipo', 'Hora', 'Evento']],
+    head: [['Nombre', 'Tipo', 'Fecha', 'Hora', 'Evento', 'Estado']],
     body: rows,
     startY: startY + 12,
     styles: { fontSize: 10, cellPadding: 3 },
@@ -905,7 +911,7 @@ window.generarReportePersonalizado = async () => {
     didParseCell: function (data) {
       if (
         data.section === 'body' &&
-        data.column.index === 4 && // Columna "Evento"
+        data.column.index === 5 && // Columna "Estado"
         data.cell.raw === 'Retardo'
       ) {
         data.cell.styles.fillColor = [255, 221, 51]; // Amarillo
@@ -921,6 +927,7 @@ window.generarReportePersonalizado = async () => {
     startY = 20;
   }
 }
+
 
   doc.save(`reporte_personalizado_${fechaInicio}_a_${fechaFin}.pdf`);
   mostrarNotificacion(`Reporte PDF generado con éxito`, "success");
