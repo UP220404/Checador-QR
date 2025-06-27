@@ -773,9 +773,9 @@ window.generarReporteExcel = async () => {
   }
   
   // Crear CSV (simulando Excel)
-  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
+  const filas = ["Nombre,Tipo,Fecha,Hora,Evento,Estado"];
   registrosSemana.forEach(r => {
-    filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
+    filas.push(`"${r.nombre}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}", "${r.estado === 'retardo' ? 'Retardo' : (r.estado === 'puntual' ? 'Puntual' : 'Entrada')}"`);
   });
   
   const blob = new Blob([filas.join("\n")], { type: 'text/csv' });
@@ -936,9 +936,9 @@ for (const dia of Object.keys(registrosPorDia).sort()) {
 
 
   }else if (formato === 'excel') {
-  const filas = ["Nombre,Email,Tipo,Fecha,Hora,Evento"];
+  const filas = ["Nombre,Tipo,Fecha,Hora,Evento,Estado"];
   registrosFiltrados.forEach(r => {
-    filas.push(`"${r.nombre}","${r.email}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}"`);
+  filas.push(`"${r.nombre}","${r.tipo}","${formatearFecha(r.timestamp)}","${formatearHora(r.timestamp)}","${r.tipoEvento === 'entrada' ? 'Entrada' : 'Salida'}", "${r.estado === 'retardo' ? 'Retardo' : (r.estado === 'puntual' ? 'Puntual' : 'Entrada')}"`);
   });
   const blob = new Blob([filas.join("\n")], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
