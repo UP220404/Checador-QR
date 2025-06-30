@@ -1238,9 +1238,12 @@ async function cargarUsuariosParaAusencias() {
 /**
  * Carga todas las ausencias desde Firestore
  */
+/**
+ * Carga todas las ausencias desde Firestore
+ */
 async function cargarAusencias() {
   try {
-    // Verificar si la colección existe primero
+    // Primero intentar cargar sin ordenamiento
     const ausenciasSnapshot = await getDocs(collection(db, "ausencias"));
     
     if (ausenciasSnapshot.empty) {
@@ -1251,47 +1254,36 @@ async function cargarAusencias() {
       return;
     }
 
-    // Si hay documentos, ordenar por fecha
-    const ausenciasOrdenadas = await getDocs(
-      query(collection(db, "ausencias"), orderBy("fechaCreacion", "desc"))
-    );
-    
-    ausenciasData = ausenciasOrdenadas.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      fechaCreacion: doc.data().fechaCreacion?.toDate() || new Date(),
-      fechaInicio: new Date(doc.data().fechaInicio),
-      fechaFin: doc.data().fechaFin ? new Date(doc.data().fechaFin) : null
-    }));
+    // Mapear los documentos
+    ausenciasData = ausenciasSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        fechaCreacion: data.fechaCreacion ? 
+          (data.fechaCreacion.toDate ? data.fechaCreacion.toDate() : new Date(data.fechaCreacion)) : 
+          new Date(),
+        fechaInicio: new Date(data.fechaInicio),
+        fechaFin: data.fechaFin ? new Date(data.fechaFin) : null
+      };
+    });
 
+    // Ordenar manualmente por fecha de creación (más reciente primero)
+    ausenciasData.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
+    
     actualizarTablaAusencias();
     actualizarEstadisticasAusencias();
+    
   } catch (error) {
     console.error("Error cargando ausencias:", error);
+    mostrarNotificacion("Error al cargar las ausencias. Verifica la configuración de Firebase.", "danger");
     
-    // Si el error es por ordenamiento, cargar sin orderBy
-    try {
-      const ausenciasSnapshot = await getDocs(collection(db, "ausencias"));
-      ausenciasData = ausenciasSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaCreacion: doc.data().fechaCreacion?.toDate() || new Date(),
-        fechaInicio: new Date(doc.data().fechaInicio),
-        fechaFin: doc.data().fechaFin ? new Date(doc.data().fechaFin) : null
-      }));
-      
-      // Ordenar manualmente por fecha
-      ausenciasData.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
-      
-      actualizarTablaAusencias();
-      actualizarEstadisticasAusencias();
-    } catch (secondError) {
-      console.error("Error secundario:", secondError);
-      mostrarNotificacion("Error al cargar las ausencias", "danger");
-    }
+    // Inicializar con datos vacíos para evitar errores en la UI
+    ausenciasData = [];
+    actualizarTablaAusencias();
+    actualizarEstadisticasAusencias();
   }
-}
-/**
+}/**
  * Actualiza la tabla de ausencias
  */
 function actualizarTablaAusencias() {
@@ -1559,7 +1551,7 @@ async function manejarEditarAusencia(e) {
     cargarAusencias();
   } catch (error) {
     console.error("Error actualizando ausencia:", error);
-    mostrarNotificación("Error al actualizar la ausencia", "error");
+    mostrarNotificacion("Error al actualizar la ausencia", "error");
   }
 }
 
