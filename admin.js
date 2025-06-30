@@ -1380,12 +1380,26 @@ function actualizarTablaAusenciasSafe() {
     if (filtroTipo) {
       ausenciasFiltradas = ausenciasFiltradas.filter(a => a.tipo === filtroTipo);
     }
+    
+    // 🔧 CORREGIR EL FILTRO DE FECHAS
     if (filtroFecha) {
-      const fechaFiltro = new Date(filtroFecha);
-      ausenciasFiltradas = ausenciasFiltradas.filter(a => 
-        a.fechaInicio <= fechaFiltro && (!a.fechaFin || a.fechaFin >= fechaFiltro)
-      );
+      console.log("🔍 Filtrando por fecha:", filtroFecha);
+      
+      ausenciasFiltradas = ausenciasFiltradas.filter(ausencia => {
+        // Convertir fechas de ausencia a formato YYYY-MM-DD
+        const fechaInicioStr = ausencia.fechaInicio.toISOString().split('T')[0];
+        const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toISOString().split('T')[0] : null;
+        
+        // Verificar si la fecha del filtro está dentro del rango de la ausencia
+        const fechaEnRango = filtroFecha >= fechaInicioStr && 
+                            (!fechaFinStr || filtroFecha <= fechaFinStr);
+        
+        console.log(`Ausencia: ${ausencia.nombreUsuario}, Inicio: ${fechaInicioStr}, Fin: ${fechaFinStr}, Filtro: ${filtroFecha}, En rango: ${fechaEnRango}`);
+        
+        return fechaEnRango;
+      });
     }
+    
     if (filtroBusqueda) {
       ausenciasFiltradas = ausenciasFiltradas.filter(a => 
         a.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
@@ -1412,21 +1426,19 @@ function actualizarTablaAusenciasSafe() {
       const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
       
       // Formatear fechas correctamente (sin desplazamiento de zona horaria)
-      // En la función actualizarTablaAusenciasSafe, líneas ~1365-1370, cambiar:
-
-      // Formatear fechas correctamente (sin desplazamiento de zona horaria)
       const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-        });
+      });
       const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-        }) : "";
+      }) : "";
       const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
-        tr.innerHTML = `
+
+      tr.innerHTML = `
         <td>
           <div class="fw-bold">${ausencia.nombreUsuario}</div>
         </td>
