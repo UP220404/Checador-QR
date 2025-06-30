@@ -1255,6 +1255,9 @@ async function cargarUsuariosParaAusencias() {
 /**
  * Carga todas las ausencias desde Firestore
  */
+/**
+ * Carga todas las ausencias desde Firestore
+ */
 async function cargarAusencias() {
   try {
     // Primero intentar cargar sin ordenamiento
@@ -1271,14 +1274,49 @@ async function cargarAusencias() {
     // Mapear los documentos
     ausenciasData = ausenciasSnapshot.docs.map(doc => {
       const data = doc.data();
+      
+      // Función auxiliar para convertir fechas de manera segura
+      function convertirFecha(fechaValue) {
+        if (!fechaValue) return null;
+        
+        // Si es un timestamp de Firestore
+        if (fechaValue.toDate && typeof fechaValue.toDate === 'function') {
+          return fechaValue.toDate();
+        }
+        
+        // Si es un string de fecha (YYYY-MM-DD)
+        if (typeof fechaValue === 'string') {
+          // Agregar tiempo para evitar problemas de zona horaria
+          return new Date(fechaValue + 'T12:00:00');
+        }
+        
+        // Si ya es un objeto Date
+        if (fechaValue instanceof Date) {
+          return fechaValue;
+        }
+        
+        // Si es un timestamp en segundos
+        if (typeof fechaValue === 'number') {
+          return new Date(fechaValue * 1000);
+        }
+        
+        // Fallback: intentar crear fecha directamente
+        try {
+          return new Date(fechaValue);
+        } catch (error) {
+          console.warn('No se pudo convertir fecha:', fechaValue);
+          return new Date(); // Fecha actual como fallback
+        }
+      }
+      
       return {
         id: doc.id,
         ...data,
         fechaCreacion: data.fechaCreacion ? 
-          (data.fechaCreacion.toDate ? data.fechaCreacion.toDate() : new Date(data.fechaCreacion)) : 
+          convertirFecha(data.fechaCreacion) : 
           new Date(),
-        fechaInicio: new Date(data.fechaInicio),
-        fechaFin: data.fechaFin ? new Date(data.fechaFin) : null
+        fechaInicio: convertirFecha(data.fechaInicio),
+        fechaFin: convertirFecha(data.fechaFin)
       };
     });
 
@@ -1540,29 +1578,23 @@ async function manejarNuevaAusencia(e) {
   e.preventDefault();
 
   const selectUsuario = document.getElementById("ausenciaUsuario");
-  const nombreUsuario = selectUsuario.selectedOptions[0]?.textContent.trim() || '';
+  const emailUsuario = selectUsuario.value;
+  const nombreUsuario = selectUsuario.selectedOptions[0]?.textContent.trim() || emailUsuario;
 
-  // Obtener fechas como strings y crear fechas locales correctamente
-  const fechaInicioStr = document.getElementById("ausenciaFechaInicio").value;
-  const fechaFinStr = document.getElementById("ausenciaFechaFin").value;
-  
-  // Crear fechas locales sin desplazamiento UTC
-  const fechaInicio = fechaInicioStr ? new Date(fechaInicioStr + 'T12:00:00') : null;
-  const fechaFin = fechaFinStr ? new Date(fechaFinStr + 'T12:00:00') : null;
-  
   const formData = {
+    emailUsuario: emailUsuario,
     nombreUsuario: nombreUsuario,
     tipo: document.getElementById("ausenciaTipo").value,
-    fechaInicio: fechaInicio,
-    fechaFin: fechaFin,
+    fechaInicio: document.getElementById("ausenciaFechaInicio").value, // Guardar como string YYYY-MM-DD
+    fechaFin: document.getElementById("ausenciaFechaFin").value || null, // Guardar como string YYYY-MM-DD o null
     motivo: document.getElementById("ausenciaMotivo").value,
     estado: document.getElementById("ausenciaEstado").value,
     comentariosAdmin: "",
-    fechaCreacion: new Date()
+    fechaCreacion: new Date() // Timestamp de Firebase
   };
 
   // Validaciones
-  if (!formData.nombreUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
+  if (!formData.emailUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
     mostrarNotificacion("Por favor completa todos los campos obligatorios", "danger");
     return;
   }
