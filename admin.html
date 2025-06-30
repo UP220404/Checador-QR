@@ -538,6 +538,12 @@ function mostrarSeccion(id) {
   document.getElementById(id).classList.remove('d-none');
   document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
   document.querySelector(`.sidebar a[href="#${id}"]`)?.classList.add('active');
+  document.getElementById('modalNuevaAusencia').addEventListener('shown.bs.modal', function () {
+    // Cargar usuarios en el modal de nueva ausencia
+    if (typeof cargarUsuariosParaAusencias === 'function') {
+      cargarUsuariosParaAusencias();
+    }
+  });
 
   //Cargar datos especificos de cada sección
   if ( id=== 'justificantes'){

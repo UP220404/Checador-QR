@@ -1200,11 +1200,21 @@ let ausenciaEditandoId = null;
 /**
  * Carga la lista de usuarios para el select de ausencias
  */
+/**
+ * Carga la lista de usuarios para el select de ausencias
+ */
 async function cargarUsuariosParaAusencias() {
   try {
+    console.log("🔄 Cargando usuarios para ausencias...");
+    
     // Obtener usuarios únicos de los registros
     const registrosSnapshot = await getDocs(collection(db, "registros"));
     const usuariosUnicos = new Map();
+    
+    if (registrosSnapshot.empty) {
+      console.warn("⚠️ No hay registros de usuarios en la base de datos");
+      return;
+    }
     
     registrosSnapshot.forEach(doc => {
       const data = doc.data();
@@ -1217,7 +1227,14 @@ async function cargarUsuariosParaAusencias() {
       }
     });
 
+    console.log("👥 Usuarios encontrados:", usuariosUnicos.size);
+
     const selectUsuario = document.getElementById("ausenciaUsuario");
+    if (!selectUsuario) {
+      console.error("❌ No se encontró el elemento ausenciaUsuario");
+      return;
+    }
+    
     selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
     
     usuariosUnicos.forEach(usuario => {
@@ -1227,8 +1244,11 @@ async function cargarUsuariosParaAusencias() {
       option.dataset.tipo = usuario.tipo;
       selectUsuario.appendChild(option);
     });
+    
+    console.log("✅ Usuarios cargados correctamente en el select");
   } catch (error) {
-    console.error("Error cargando usuarios:", error);
+    console.error("❌ Error cargando usuarios:", error);
+    mostrarNotificacion("Error al cargar la lista de usuarios", "danger");
   }
 }
 
@@ -1683,7 +1703,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-window.editarAusencia = editarAusencia;
-window.aprobarAusencia = aprobarAusencia;
+// Reemplazar las últimas líneas con:
+window.cargarUsuariosParaAusencias = cargarUsuariosParaAusencias;
+window.editarAusencia = editarAusencia;     
+window.aprobarAusencia = aprobarAusencia;   
 window.rechazarAusencia = rechazarAusencia;
 window.eliminarAusencia = eliminarAusencia;
+
+// También agregar esta función para los filtros:
+function actualizarTablaAusencias() {
+  actualizarTablaAusenciasSafe();
+}
+window.actualizarTablaAusencias = actualizarTablaAusencias;
