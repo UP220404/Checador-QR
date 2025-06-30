@@ -1312,7 +1312,7 @@ function actualizarTablaAusenciasSafe() {
     if (ausenciasData.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-4 text-muted">
+          <td colspan="7" class="text-center py-4 text-muted">
             <i class="bi bi-inbox me-2"></i>
             No hay ausencias registradas
           </td>
@@ -1351,7 +1351,7 @@ function actualizarTablaAusenciasSafe() {
     if (ausenciasFiltradas.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-4 text-muted">
+          <td colspan="7" class="text-center py-4 text-muted">
             <i class="bi bi-funnel me-2"></i>
             No se encontraron ausencias con los filtros aplicados
           </td>
@@ -1366,15 +1366,18 @@ function actualizarTablaAusenciasSafe() {
       // Calcular días
       const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
       
-      // Formatear fechas
-      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX");
-      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX") : "";
+      // Formatear fechas correctamente (sin desplazamiento de zona horaria)
+      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
+        timeZone: 'America/Mexico_City'
+      });
+      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
+        timeZone: 'America/Mexico_City'
+      }) : "";
       const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
 
       tr.innerHTML = `
         <td>
           <div class="fw-bold">${ausencia.nombreUsuario}</div>
-          <small class="text-muted">${ausencia.emailUsuario}</small>
         </td>
         <td>
           <span class="badge ${getBadgeClassTipo(ausencia.tipo)}">
@@ -1384,12 +1387,6 @@ function actualizarTablaAusenciasSafe() {
         <td>${rangoFecha}</td>
         <td>
           <span class="badge bg-light text-dark">${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}</span>
-        </td>
-        <td>
-          <span class="text-truncate d-inline-block" style="max-width: 200px;" 
-                title="${ausencia.motivo}">
-            ${ausencia.motivo}
-          </span>
         </td>
         <td>
           <span class="badge ${getBadgeClassEstado(ausencia.estado)}">
@@ -1404,6 +1401,10 @@ function actualizarTablaAusenciasSafe() {
         </td>
         <td class="text-end">
           <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" onclick="verDetalleAusencia('${ausencia.id}')" 
+                    title="Ver detalle">
+              <i class="bi bi-eye"></i>
+            </button>
             <button class="btn btn-outline-primary" onclick="editarAusencia('${ausencia.id}')" 
                     title="Editar">
               <i class="bi bi-pencil"></i>
@@ -1427,6 +1428,7 @@ function actualizarTablaAusenciasSafe() {
     console.error("Error actualizando tabla de ausencias:", error);
   }
 }
+
 
 /**
  * Actualiza las estadísticas de ausencias de forma segura
@@ -1532,7 +1534,6 @@ async function manejarNuevaAusencia(e) {
   e.preventDefault();
   
   const formData = {
-    emailUsuario: document.getElementById("ausenciaUsuario").value,
     nombreUsuario: document.getElementById("ausenciaUsuario").selectedOptions[0]?.textContent || '',    
     tipo: document.getElementById("ausenciaTipo").value,
     fechaInicio: document.getElementById("ausenciaFechaInicio").value,
@@ -1703,12 +1704,59 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+/**
+ * Muestra los detalles completos de una ausencia
+ */
+function verDetalleAusencia(id) {
+  const ausencia = ausenciasData.find(a => a.id === id);
+  if (!ausencia) return;
+  
+  const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }) : "No especificada";
+  
+  const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
+  
+  const detalles = `
+📋 DETALLE DE AUSENCIA
+
+👤 Usuario: ${ausencia.nombreUsuario}
+
+📅 Tipo: ${formatearTipo(ausencia.tipo)} ${getIconoTipo(ausencia.tipo)}
+📅 Fecha inicio: ${fechaInicioStr}
+📅 Fecha fin: ${fechaFinStr}
+⏱️ Duración: ${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}
+
+📝 Motivo:
+${ausencia.motivo}
+
+📊 Estado: ${formatearEstado(ausencia.estado)} ${getIconoEstado(ausencia.estado)}
+
+${ausencia.comentariosAdmin ? `💬 Comentarios del admin:\n${ausencia.comentariosAdmin}` : ''}
+
+🗓️ Solicitado: ${ausencia.fechaCreacion.toLocaleString("es-MX")}
+  `;
+  
+  alert(detalles);
+}
+
 // Reemplazar las últimas líneas con:
 window.cargarUsuariosParaAusencias = cargarUsuariosParaAusencias;
 window.editarAusencia = editarAusencia;     
 window.aprobarAusencia = aprobarAusencia;   
 window.rechazarAusencia = rechazarAusencia;
 window.eliminarAusencia = eliminarAusencia;
+window.verDetalleAusencia = verDetalleAusencia;
 
 // También agregar esta función para los filtros:
 function actualizarTablaAusencias() {
