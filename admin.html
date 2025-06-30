@@ -538,29 +538,39 @@ function mostrarSeccion(id) {
   document.getElementById(id).classList.remove('d-none');
   document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
   document.querySelector(`.sidebar a[href="#${id}"]`)?.classList.add('active');
-  document.getElementById('modalNuevaAusencia').addEventListener('shown.bs.modal', function () {
-    // Cargar usuarios en el modal de nueva ausencia
-    if (typeof cargarUsuariosParaAusencias === 'function') {
-      cargarUsuariosParaAusencias();
-    }
-  });
 
-  //Cargar datos especificos de cada sección
-  if ( id=== 'justificantes'){
-    //Llamar las funciones de ausencias cuando se muestre la sección de Justificantes
-    if (typeof cargarUsuariosParaAusencias === 'function') {
-      cargarUsuariosParaAusencias();
-    }
-    if (typeof cargarAusencias === 'function') {
-      cargarAusencias();
-    }
-
+  // Cargar datos específicos de cada sección
+  if (id === 'justificantes') {
+    // Esperar un momento para que el DOM se actualice
+    setTimeout(() => {
+      console.log("🔄 Cargando sección de ausencias...");
+      
+      if (typeof cargarUsuariosParaAusencias === 'function') {
+        cargarUsuariosParaAusencias();
+      }
+      if (typeof cargarAusencias === 'function') {
+        cargarAusencias();
+      }
+    }, 100);
   }
 
   // Actualizar el título de la página
   const tituloSeccion = document.querySelector(`.sidebar a[href="#${id}"]`).textContent.trim();
   document.title = `CH Panel Admin | ${tituloSeccion}`;
 }
+
+// Event listener para el modal (solo una vez)
+document.addEventListener('DOMContentLoaded', function() {
+  const modalNuevaAusencia = document.getElementById('modalNuevaAusencia');
+  if (modalNuevaAusencia) {
+    modalNuevaAusencia.addEventListener('shown.bs.modal', function () {
+      console.log("📋 Modal de nueva ausencia abierto");
+      if (typeof cargarUsuariosParaAusencias === 'function') {
+        cargarUsuariosParaAusencias();
+      }
+    });
+  }
+});
 </script>
 </body>
 </html>
