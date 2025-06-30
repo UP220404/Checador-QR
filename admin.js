@@ -1235,13 +1235,28 @@ async function cargarUsuariosParaAusencias() {
 /**
  * Carga todas las ausencias desde Firestore
  */
+/**
+ * Carga todas las ausencias desde Firestore
+ */
 async function cargarAusencias() {
   try {
-    const ausenciasSnapshot = await getDocs(
+    // Verificar si la colección existe primero
+    const ausenciasSnapshot = await getDocs(collection(db, "ausencias"));
+    
+    if (ausenciasSnapshot.empty) {
+      console.log("No hay ausencias registradas");
+      ausenciasData = [];
+      actualizarTablaAusencias();
+      actualizarEstadisticasAusencias();
+      return;
+    }
+
+    // Si hay documentos, ordenar por fecha
+    const ausenciasOrdenadas = await getDocs(
       query(collection(db, "ausencias"), orderBy("fechaCreacion", "desc"))
     );
     
-    ausenciasData = ausenciasSnapshot.docs.map(doc => ({
+    ausenciasData = ausenciasOrdenadas.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       fechaCreacion: doc.data().fechaCreacion?.toDate() || new Date(),
@@ -1253,10 +1268,29 @@ async function cargarAusencias() {
     actualizarEstadisticasAusencias();
   } catch (error) {
     console.error("Error cargando ausencias:", error);
-    mostrarNotificacion("Error al cargar las ausencias", "error");
+    
+    // Si el error es por ordenamiento, cargar sin orderBy
+    try {
+      const ausenciasSnapshot = await getDocs(collection(db, "ausencias"));
+      ausenciasData = ausenciasSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        fechaCreacion: doc.data().fechaCreacion?.toDate() || new Date(),
+        fechaInicio: new Date(doc.data().fechaInicio),
+        fechaFin: doc.data().fechaFin ? new Date(doc.data().fechaFin) : null
+      }));
+      
+      // Ordenar manualmente por fecha
+      ausenciasData.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
+      
+      actualizarTablaAusencias();
+      actualizarEstadisticasAusencias();
+    } catch (secondError) {
+      console.error("Error secundario:", secondError);
+      mostrarNotificacion("Error al cargar las ausencias", "danger");
+    }
   }
 }
-
 /**
  * Actualiza la tabla de ausencias
  */
