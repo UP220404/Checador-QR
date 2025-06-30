@@ -1320,9 +1320,12 @@ async function cargarAusencias() {
       };
     });
 
-    // Ordenar manualmente por fecha de creación (más reciente primero)
-    ausenciasData.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
-    
+  // Ordenar manualmente por fecha de creación (más reciente primero)
+  ausenciasData.sort((a, b) => {
+  const nombreA = a.nombreUsuario.toLowerCase();
+  const nombreB = b.nombreUsuario.toLowerCase();
+  return nombreA.localeCompare(nombreB);
+  });    
     actualizarTablaAusenciasSafe();
     actualizarEstadisticasAusenciasSafe();
     
