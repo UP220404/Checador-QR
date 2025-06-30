@@ -1425,7 +1425,7 @@ function actualizarTablaAusenciasSafe() {
         </td>
         <td>
           <span class="badge ${getBadgeClassTipo(ausencia.tipo)}">
-            ${getIconoTipo(ausencia.tipo)} ${formatearTipo(ausencia.tipo)}
+             ${formatearTipo(ausencia.tipo)}
           </span>
         </td>
         <td>${rangoFecha}</td>
@@ -1434,7 +1434,7 @@ function actualizarTablaAusenciasSafe() {
         </td>
         <td>
           <span class="badge ${getBadgeClassEstado(ausencia.estado)}">
-            ${getIconoEstado(ausencia.estado)} ${formatearEstado(ausencia.estado)}
+            ${formatearEstado(ausencia.estado)}
           </span>
         </td>
         <td>
@@ -1534,22 +1534,11 @@ function getBadgeClassEstado(estado) {
 }
 
 function getIconoTipo(tipo) {
-  const iconos = {
-    permiso: "🕐",
-    justificante: "📋",
-    vacaciones: "🏖️",
-    incapacidad: "🏥"
-  };
-  return iconos[tipo] || "📄";
+  return "";
 }
 
 function getIconoEstado(estado) {
-  const iconos = {
-    pendiente: "⏳",
-    aprobada: "✅",
-    rechazada: "❌"
-  };
-  return iconos[estado] || "❓";
+  return "";
 }
 
 function formatearTipo(tipo) {
@@ -1783,7 +1772,7 @@ function verDetalleAusencia(id) {
 
 👤 Usuario: ${ausencia.nombreUsuario}
 
-📅 Tipo: ${formatearTipo(ausencia.tipo)} ${getIconoTipo(ausencia.tipo)}
+📅 Tipo: ${formatearTipo(ausencia.tipo)} 
 📅 Fecha inicio: ${fechaInicioStr}
 📅 Fecha fin: ${fechaFinStr}
 ⏱️ Duración: ${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}
@@ -1791,7 +1780,7 @@ function verDetalleAusencia(id) {
 📝 Motivo:
 ${ausencia.motivo}
 
-📊 Estado: ${formatearEstado(ausencia.estado)} ${getIconoEstado(ausencia.estado)}
+📊 Estado: ${formatearEstado(ausencia.estado)} 
 
 ${ausencia.comentariosAdmin ? `💬 Comentarios del admin:\n${ausencia.comentariosAdmin}` : ''}
 
