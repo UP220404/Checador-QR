@@ -1367,15 +1367,21 @@ function actualizarTablaAusenciasSafe() {
       const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
       
       // Formatear fechas correctamente (sin desplazamiento de zona horaria)
-      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
-        timeZone: 'America/Mexico_City'
-      });
-      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
-        timeZone: 'America/Mexico_City'
-      }) : "";
-      const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
+      // En la función actualizarTablaAusenciasSafe, líneas ~1365-1370, cambiar:
 
-      tr.innerHTML = `
+      // Formatear fechas correctamente (sin desplazamiento de zona horaria)
+      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+        });
+      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+        }) : "";
+      const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
+        tr.innerHTML = `
         <td>
           <div class="fw-bold">${ausencia.nombreUsuario}</div>
         </td>
@@ -1532,12 +1538,23 @@ function formatearEstado(estado) {
  */
 async function manejarNuevaAusencia(e) {
   e.preventDefault();
+
+  const selectUsuario = document.getElementById("ausenciaUsuario");
+  const nombreUsuario = selectUsuario.selectedOptions[0]?.textContent.trim() || '';
+
+  // Obtener fechas como strings y crear fechas locales correctamente
+  const fechaInicioStr = document.getElementById("ausenciaFechaInicio").value;
+  const fechaFinStr = document.getElementById("ausenciaFechaFin").value;
+  
+  // Crear fechas locales sin desplazamiento UTC
+  const fechaInicio = fechaInicioStr ? new Date(fechaInicioStr + 'T12:00:00') : null;
+  const fechaFin = fechaFinStr ? new Date(fechaFinStr + 'T12:00:00') : null;
   
   const formData = {
-    nombreUsuario: document.getElementById("ausenciaUsuario").selectedOptions[0]?.textContent || '',    
+    nombreUsuario: nombreUsuario,
     tipo: document.getElementById("ausenciaTipo").value,
-    fechaInicio: document.getElementById("ausenciaFechaInicio").value,
-    fechaFin: document.getElementById("ausenciaFechaFin").value || null,
+    fechaInicio: fechaInicio,
+    fechaFin: fechaFin,
     motivo: document.getElementById("ausenciaMotivo").value,
     estado: document.getElementById("ausenciaEstado").value,
     comentariosAdmin: "",
@@ -1561,7 +1578,6 @@ async function manejarNuevaAusencia(e) {
     mostrarNotificacion("Error al agregar la ausencia", "danger");
   }
 }
-
 /**
  * Edita una ausencia
  */
@@ -1570,13 +1586,16 @@ function editarAusencia(id) {
   if (!ausencia) return;
 
   ausenciaEditandoId = id;
+
+  const fechaInicioLocal = new Date(ausencia.fechaInicio.getTime() - (ausencia.fechaInicio.getTimezoneOffset() * 60000));
+  const fechaFinLocal = ausencia.fechaFin ? new Date(ausencia.fechaFin.getTime() - (ausencia.fechaFin.getTimezoneOffset() * 60000)) : null;
   
   // Llenar el formulario
   document.getElementById("editarAusenciaId").value = id;
   document.getElementById("editarUsuario").value = `${ausencia.nombreUsuario} (${ausencia.emailUsuario})`;
   document.getElementById("editarTipo").value = ausencia.tipo;
-  document.getElementById("editarFechaInicio").value = ausencia.fechaInicio.toISOString().split('T')[0];
-  document.getElementById("editarFechaFin").value = ausencia.fechaFin ? ausencia.fechaFin.toISOString().split('T')[0] : '';
+  document.getElementById("editarFechaInicio").value = fechaInicioLocal.toISOString().split('T')[0];
+  document.getElementById("editarFechaFin").value = fechaFinLocal ? fechaFinLocal.toISOString().split('T')[0] : '';
   document.getElementById("editarMotivo").value = ausencia.motivo;
   document.getElementById("editarEstado").value = ausencia.estado;
   document.getElementById("editarComentarios").value = ausencia.comentariosAdmin || '';
