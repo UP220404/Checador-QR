@@ -1240,7 +1240,7 @@ async function cargarUsuariosParaAusencias() {
     usuariosUnicos.forEach(usuario => {
       const option = document.createElement("option");
       option.value = usuario.email;
-      option.textContent = `${usuario.nombre} (${usuario.email})`;
+      option.textContent = `${usuario.nombre}`;
       option.dataset.tipo = usuario.tipo;
       selectUsuario.appendChild(option);
     });
@@ -1533,7 +1533,7 @@ async function manejarNuevaAusencia(e) {
   
   const formData = {
     emailUsuario: document.getElementById("ausenciaUsuario").value,
-    nombreUsuario: document.getElementById("ausenciaUsuario").selectedOptions[0]?.textContent.split(' (')[0] || '',
+    nombreUsuario: document.getElementById("ausenciaUsuario").selectedOptions[0]?.textContent || '',    
     tipo: document.getElementById("ausenciaTipo").value,
     fechaInicio: document.getElementById("ausenciaFechaInicio").value,
     fechaFin: document.getElementById("ausenciaFechaFin").value || null,
@@ -1545,7 +1545,7 @@ async function manejarNuevaAusencia(e) {
 
   // Validaciones
   if (!formData.emailUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
-    mostrarNotificacion("Por favor completa todos los campos obligatorios", "error");
+    mostrarNotificacion("Por favor completa todos los campos obligatorios", "danger");
     return;
   }
 
@@ -1557,7 +1557,7 @@ async function manejarNuevaAusencia(e) {
     cargarAusencias();
   } catch (error) {
     console.error("Error agregando ausencia:", error);
-    mostrarNotificacion("Error al agregar la ausencia", "error");
+    mostrarNotificacion("Error al agregar la ausencia", "danger");
   }
 }
 
@@ -1608,7 +1608,7 @@ async function manejarEditarAusencia(e) {
     cargarAusencias();
   } catch (error) {
     console.error("Error actualizando ausencia:", error);
-    mostrarNotificacion("Error al actualizar la ausencia", "error");
+    mostrarNotificacion("Error al actualizar la ausencia", "danger");
   }
 }
 
@@ -1628,7 +1628,7 @@ async function aprobarAusencia(id) {
     cargarAusencias();
   } catch (error) {
     console.error("Error aprobando ausencia:", error);
-    mostrarNotificacion("Error al aprobar la ausencia", "error");
+    mostrarNotificacion("Error al aprobar la ausencia", "danger");
   }
 }
 
@@ -1649,7 +1649,7 @@ async function rechazarAusencia(id) {
     cargarAusencias();
   } catch (error) {
     console.error("Error rechazando ausencia:", error);
-    mostrarNotificacion("Error al rechazar la ausencia", "error");
+    mostrarNotificacion("Error al rechazar la ausencia", "danger");
   }
 }
 
@@ -1667,7 +1667,7 @@ async function eliminarAusencia() {
     cargarAusencias();
   } catch (error) {
     console.error("Error eliminando ausencia:", error);
-    mostrarNotificacion("Error al eliminar la ausencia", "error");
+    mostrarNotificacion("Error al eliminar la ausencia", "danger");
   }
 }
 
