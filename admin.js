@@ -1545,7 +1545,7 @@ async function manejarNuevaAusencia(e) {
   };
 
   // Validaciones
-  if (!formData.emailUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
+  if (!formData.nombrelUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
     mostrarNotificacion("Por favor completa todos los campos obligatorios", "danger");
     return;
   }
