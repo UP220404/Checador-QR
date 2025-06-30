@@ -1237,7 +1237,11 @@ async function cargarUsuariosParaAusencias() {
     
     selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
     
-    usuariosUnicos.forEach(usuario => {
+    // CONVERTIR A ARRAY Y ORDENAR ALFABÉTICAMENTE
+    const usuariosArray = Array.from(usuariosUnicos.values())
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    
+    usuariosArray.forEach(usuario => {
       const option = document.createElement("option");
       option.value = usuario.email;
       option.textContent = `${usuario.nombre}`;
@@ -1245,7 +1249,7 @@ async function cargarUsuariosParaAusencias() {
       selectUsuario.appendChild(option);
     });
     
-    console.log("✅ Usuarios cargados correctamente en el select");
+    console.log("✅ Usuarios cargados correctamente en el select (ordenados alfabéticamente)");
   } catch (error) {
     console.error("❌ Error cargando usuarios:", error);
     mostrarNotificacion("Error al cargar la lista de usuarios", "danger");
