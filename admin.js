@@ -9,7 +9,11 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  doc
+  doc,
+  addDoc,
+  updateDoc,
+  orderBy,
+  query
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1186,3 +1190,437 @@ function renderRankingPuntualidad() {
     rankingList.appendChild(li);
   });
 }
+
+
+// ================== GESTIÓN DE AUSENCIAS ==================
+
+let ausenciasData = [];
+let ausenciaEditandoId = null;
+
+/**
+ * Carga la lista de usuarios para el select de ausencias
+ */
+async function cargarUsuariosParaAusencias() {
+  try {
+    // Obtener usuarios únicos de los registros
+    const registrosSnapshot = await getDocs(collection(db, "registros"));
+    const usuariosUnicos = new Map();
+    
+    registrosSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.email && data.nombre) {
+        usuariosUnicos.set(data.email, {
+          email: data.email,
+          nombre: data.nombre,
+          tipo: data.tipo || 'empleado'
+        });
+      }
+    });
+
+    const selectUsuario = document.getElementById("ausenciaUsuario");
+    selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
+    
+    usuariosUnicos.forEach(usuario => {
+      const option = document.createElement("option");
+      option.value = usuario.email;
+      option.textContent = `${usuario.nombre} (${usuario.email})`;
+      option.dataset.tipo = usuario.tipo;
+      selectUsuario.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error cargando usuarios:", error);
+  }
+}
+
+/**
+ * Carga todas las ausencias desde Firestore
+ */
+async function cargarAusencias() {
+  try {
+    const ausenciasSnapshot = await getDocs(
+      query(collection(db, "ausencias"), orderBy("fechaCreacion", "desc"))
+    );
+    
+    ausenciasData = ausenciasSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      fechaCreacion: doc.data().fechaCreacion?.toDate() || new Date(),
+      fechaInicio: new Date(doc.data().fechaInicio),
+      fechaFin: doc.data().fechaFin ? new Date(doc.data().fechaFin) : null
+    }));
+
+    actualizarTablaAusencias();
+    actualizarEstadisticasAusencias();
+  } catch (error) {
+    console.error("Error cargando ausencias:", error);
+    mostrarNotificacion("Error al cargar las ausencias", "error");
+  }
+}
+
+/**
+ * Actualiza la tabla de ausencias
+ */
+function actualizarTablaAusencias() {
+  const tbody = document.querySelector("#tabla-ausencias tbody");
+  tbody.innerHTML = "";
+
+  // Aplicar filtros
+  let ausenciasFiltradas = [...ausenciasData];
+  
+  const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value;
+  const filtroTipo = document.getElementById("filtroTipoAusencia")?.value;
+  const filtroFecha = document.getElementById("filtroFechaAusencia")?.value;
+  const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value?.toLowerCase();
+
+  if (filtroEstado) {
+    ausenciasFiltradas = ausenciasFiltradas.filter(a => a.estado === filtroEstado);
+  }
+  if (filtroTipo) {
+    ausenciasFiltradas = ausenciasFiltradas.filter(a => a.tipo === filtroTipo);
+  }
+  if (filtroFecha) {
+    const fechaFiltro = new Date(filtroFecha);
+    ausenciasFiltradas = ausenciasFiltradas.filter(a => 
+      a.fechaInicio <= fechaFiltro && (!a.fechaFin || a.fechaFin >= fechaFiltro)
+    );
+  }
+  if (filtroBusqueda) {
+    ausenciasFiltradas = ausenciasFiltradas.filter(a => 
+      a.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
+      a.emailUsuario.toLowerCase().includes(filtroBusqueda)
+    );
+  }
+
+  ausenciasFiltradas.forEach(ausencia => {
+    const tr = document.createElement("tr");
+    
+    // Calcular días
+    const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
+    
+    // Formatear fechas
+    const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX");
+    const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX") : "";
+    const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
+
+    tr.innerHTML = `
+      <td>
+        <div class="fw-bold">${ausencia.nombreUsuario}</div>
+        <small class="text-muted">${ausencia.emailUsuario}</small>
+      </td>
+      <td>
+        <span class="badge ${getBadgeClassTipo(ausencia.tipo)}">
+          ${getIconoTipo(ausencia.tipo)} ${formatearTipo(ausencia.tipo)}
+        </span>
+      </td>
+      <td>${rangoFecha}</td>
+      <td>
+        <span class="badge bg-light text-dark">${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}</span>
+      </td>
+      <td>
+        <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+              title="${ausencia.motivo}">
+          ${ausencia.motivo}
+        </span>
+      </td>
+      <td>
+        <span class="badge ${getBadgeClassEstado(ausencia.estado)}">
+          ${getIconoEstado(ausencia.estado)} ${formatearEstado(ausencia.estado)}
+        </span>
+      </td>
+      <td>
+        <small class="text-muted">
+          ${ausencia.fechaCreacion.toLocaleDateString("es-MX")}
+          <br>
+          ${ausencia.fechaCreacion.toLocaleTimeString("es-MX", { hour: '2-digit', minute: '2-digit' })}
+        </small>
+      </td>
+      <td class="text-end">
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" onclick="editarAusencia('${ausencia.id}')" 
+                  title="Editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-outline-success" onclick="aprobarAusencia('${ausencia.id}')" 
+                  title="Aprobar" ${ausencia.estado === 'aprobada' ? 'disabled' : ''}>
+            <i class="bi bi-check-lg"></i>
+          </button>
+          <button class="btn btn-outline-danger" onclick="rechazarAusencia('${ausencia.id}')" 
+                  title="Rechazar" ${ausencia.estado === 'rechazada' ? 'disabled' : ''}>
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * Actualiza las estadísticas de ausencias
+ */
+function actualizarEstadisticasAusencias() {
+  const stats = {
+    pendientes: ausenciasData.filter(a => a.estado === 'pendiente').length,
+    aprobadas: ausenciasData.filter(a => a.estado === 'aprobada').length,
+    rechazadas: ausenciasData.filter(a => a.estado === 'rechazada').length,
+    total: ausenciasData.length
+  };
+
+  document.getElementById("stat-pendientes").textContent = stats.pendientes;
+  document.getElementById("stat-aprobadas").textContent = stats.aprobadas;
+  document.getElementById("stat-rechazadas").textContent = stats.rechazadas;
+  document.getElementById("stat-total").textContent = stats.total;
+}
+
+/**
+ * Calcula los días de ausencia
+ */
+function calcularDiasAusencia(fechaInicio, fechaFin) {
+  if (!fechaFin) return 1;
+  const diffTime = Math.abs(fechaFin - fechaInicio);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
+
+/**
+ * Funciones auxiliares para formatear y obtener clases CSS
+ */
+function getBadgeClassTipo(tipo) {
+  const classes = {
+    permiso: "bg-warning text-dark",
+    justificante: "bg-info",
+    vacaciones: "bg-success",
+    incapacidad: "bg-danger"
+  };
+  return classes[tipo] || "bg-secondary";
+}
+
+function getBadgeClassEstado(estado) {
+  const classes = {
+    pendiente: "bg-warning text-dark",
+    aprobada: "bg-success",
+    rechazada: "bg-danger"
+  };
+  return classes[estado] || "bg-secondary";
+}
+
+function getIconoTipo(tipo) {
+  const iconos = {
+    permiso: "🕐",
+    justificante: "📋",
+    vacaciones: "🏖️",
+    incapacidad: "🏥"
+  };
+  return iconos[tipo] || "📄";
+}
+
+function getIconoEstado(estado) {
+  const iconos = {
+    pendiente: "⏳",
+    aprobada: "✅",
+    rechazada: "❌"
+  };
+  return iconos[estado] || "❓";
+}
+
+function formatearTipo(tipo) {
+  const nombres = {
+    permiso: "Permiso",
+    justificante: "Justificante",
+    vacaciones: "Vacaciones",
+    incapacidad: "Incapacidad"
+  };
+  return nombres[tipo] || tipo;
+}
+
+function formatearEstado(estado) {
+  const nombres = {
+    pendiente: "Pendiente",
+    aprobada: "Aprobada",
+    rechazada: "Rechazada"
+  };
+  return nombres[estado] || estado;
+}
+
+/**
+ * Maneja el envío del formulario de nueva ausencia
+ */
+async function manejarNuevaAusencia(e) {
+  e.preventDefault();
+  
+  const formData = {
+    emailUsuario: document.getElementById("ausenciaUsuario").value,
+    nombreUsuario: document.getElementById("ausenciaUsuario").selectedOptions[0]?.textContent.split(' (')[0] || '',
+    tipo: document.getElementById("ausenciaTipo").value,
+    fechaInicio: document.getElementById("ausenciaFechaInicio").value,
+    fechaFin: document.getElementById("ausenciaFechaFin").value || null,
+    motivo: document.getElementById("ausenciaMotivo").value,
+    estado: document.getElementById("ausenciaEstado").value,
+    comentariosAdmin: "",
+    fechaCreacion: new Date()
+  };
+
+  // Validaciones
+  if (!formData.emailUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
+    mostrarNotificacion("Por favor completa todos los campos obligatorios", "error");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "ausencias"), formData);
+    mostrarNotificacion("Ausencia agregada correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById("modalNuevaAusencia")).hide();
+    document.getElementById("formNuevaAusencia").reset();
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error agregando ausencia:", error);
+    mostrarNotificacion("Error al agregar la ausencia", "error");
+  }
+}
+
+/**
+ * Edita una ausencia
+ */
+function editarAusencia(id) {
+  const ausencia = ausenciasData.find(a => a.id === id);
+  if (!ausencia) return;
+
+  ausenciaEditandoId = id;
+  
+  // Llenar el formulario
+  document.getElementById("editarAusenciaId").value = id;
+  document.getElementById("editarUsuario").value = `${ausencia.nombreUsuario} (${ausencia.emailUsuario})`;
+  document.getElementById("editarTipo").value = ausencia.tipo;
+  document.getElementById("editarFechaInicio").value = ausencia.fechaInicio.toISOString().split('T')[0];
+  document.getElementById("editarFechaFin").value = ausencia.fechaFin ? ausencia.fechaFin.toISOString().split('T')[0] : '';
+  document.getElementById("editarMotivo").value = ausencia.motivo;
+  document.getElementById("editarEstado").value = ausencia.estado;
+  document.getElementById("editarComentarios").value = ausencia.comentariosAdmin || '';
+
+  new bootstrap.Modal(document.getElementById("modalEditarAusencia")).show();
+}
+
+/**
+ * Maneja el envío del formulario de editar ausencia
+ */
+async function manejarEditarAusencia(e) {
+  e.preventDefault();
+  
+  if (!ausenciaEditandoId) return;
+
+  const datosActualizados = {
+    tipo: document.getElementById("editarTipo").value,
+    fechaInicio: document.getElementById("editarFechaInicio").value,
+    fechaFin: document.getElementById("editarFechaFin").value || null,
+    motivo: document.getElementById("editarMotivo").value,
+    estado: document.getElementById("editarEstado").value,
+    comentariosAdmin: document.getElementById("editarComentarios").value,
+    fechaModificacion: new Date()
+  };
+
+  try {
+    await updateDoc(doc(db, "ausencias", ausenciaEditandoId), datosActualizados);
+    mostrarNotificacion("Ausencia actualizada correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error actualizando ausencia:", error);
+    mostrarNotificación("Error al actualizar la ausencia", "error");
+  }
+}
+
+/**
+ * Aprueba una ausencia
+ */
+async function aprobarAusencia(id) {
+  if (!confirm("¿Estás seguro de aprobar esta ausencia?")) return;
+
+  try {
+    await updateDoc(doc(db, "ausencias", id), {
+      estado: "aprobada",
+      fechaAprobacion: new Date(),
+      comentariosAdmin: "Aprobada por administrador"
+    });
+    mostrarNotificacion("Ausencia aprobada", "success");
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error aprobando ausencia:", error);
+    mostrarNotificacion("Error al aprobar la ausencia", "error");
+  }
+}
+
+/**
+ * Rechaza una ausencia
+ */
+async function rechazarAusencia(id) {
+  const motivo = prompt("Motivo del rechazo (opcional):");
+  if (motivo === null) return; // Cancelado
+
+  try {
+    await updateDoc(doc(db, "ausencias", id), {
+      estado: "rechazada",
+      fechaRechazo: new Date(),
+      comentariosAdmin: motivo || "Rechazada por administrador"
+    });
+    mostrarNotificacion("Ausencia rechazada", "success");
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error rechazando ausencia:", error);
+    mostrarNotificacion("Error al rechazar la ausencia", "error");
+  }
+}
+
+/**
+ * Elimina una ausencia
+ */
+async function eliminarAusencia() {
+  if (!ausenciaEditandoId) return;
+  if (!confirm("¿Estás seguro de eliminar esta ausencia? Esta acción no se puede deshacer.")) return;
+
+  try {
+    await deleteDoc(doc(db, "ausencias", ausenciaEditandoId));
+    mostrarNotificacion("Ausencia eliminada correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error eliminando ausencia:", error);
+    mostrarNotificacion("Error al eliminar la ausencia", "error");
+  }
+}
+
+// Event Listeners para ausencias
+document.addEventListener('DOMContentLoaded', function() {
+  // ...existing code...
+
+  // Formulario nueva ausencia
+  document.getElementById("formNuevaAusencia")?.addEventListener("submit", manejarNuevaAusencia);
+  
+  // Formulario editar ausencia
+  document.getElementById("formEditarAusencia")?.addEventListener("submit", manejarEditarAusencia);
+
+  // Filtros de ausencias
+  document.getElementById("filtroEstadoAusencia")?.addEventListener("change", actualizarTablaAusencias);
+  document.getElementById("filtroTipoAusencia")?.addEventListener("change", actualizarTablaAusencias);
+  document.getElementById("filtroFechaAusencia")?.addEventListener("change", actualizarTablaAusencias);
+  document.getElementById("filtroBusquedaAusencia")?.addEventListener("input", actualizarTablaAusencias);
+
+  // Cargar datos de ausencias al mostrar la sección
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.target.id === 'justificantes' && !mutation.target.classList.contains('d-none')) {
+        cargarUsuariosParaAusencias();
+        cargarAusencias();
+      }
+    });
+  });
+
+  const justificantesSection = document.getElementById('justificantes');
+  if (justificantesSection) {
+    observer.observe(justificantesSection, { attributes: true, attributeFilter: ['class'] });
+  }
+});
+
+window.editarAusencia = editarAusencia;
+window.aprobarAusencia = aprobarAusencia;
+window.rechazarAusencia = rechazarAusencia;
+window.eliminarAusencia = eliminarAusencia;
