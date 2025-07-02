@@ -1433,6 +1433,7 @@ async function verificarCierreMensual() {
 // ✅ AGREGAR AQUÍ EL CÓDIGO DE MIGRACIÓN:
 
 // Función para migrar datos históricos (ejecutar una sola vez)
+// Función para migrar datos históricos (ejecutar una sola vez)
 async function migrarDatosHistoricos() {
   try {
     console.log("🔄 Iniciando migración de datos históricos...");
@@ -1441,7 +1442,8 @@ async function migrarDatosHistoricos() {
     const mesesUnicos = new Set();
     registros.forEach(r => {
       const fecha = new Date(r.timestamp.seconds * 1000);
-      const mesAnio = `${fecha.getFullYear()}-${String(fecha.getMonth()).padStart(2, '0')}`;
+      // CORREGIR: usar getMonth() + 1 para el mes real
+      const mesAnio = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
       mesesUnicos.add(mesAnio);
     });
 
@@ -1449,7 +1451,10 @@ async function migrarDatosHistoricos() {
 
     // Procesar cada mes
     for (const mesAnio of mesesUnicos) {
-      const [anio, mes] = mesAnio.split('-').map(Number);
+      const [anio, mesNum] = mesAnio.split('-').map(Number);
+      const mes = mesNum - 1; // Convertir de 1-12 a 0-11 para JavaScript
+      
+      console.log(`🔄 Procesando ${anio}-${mesNum} (mes JS: ${mes})`);
       
       // Filtrar registros del mes
       const entradasMes = registros.filter(r => {
@@ -1458,6 +1463,8 @@ async function migrarDatosHistoricos() {
                fecha.getMonth() === mes &&
                fecha.getFullYear() === anio;
       });
+
+      console.log(`📊 Entradas encontradas para ${anio}-${mesNum}: ${entradasMes.length}`);
 
       // Calcular puntajes
       const puntaje = {};
@@ -1482,9 +1489,11 @@ async function migrarDatosHistoricos() {
         }
       });
 
+      console.log(`🏆 Puntajes calculados para ${anio}-${mesNum}:`, Object.keys(puntaje).length, "usuarios");
+
       // Solo crear si hay datos
       if (Object.keys(puntaje).length > 0) {
-        const rankingId = `${anio}-${String(mes + 1).padStart(2, '0')}`;
+        const rankingId = `${anio}-${String(mesNum).padStart(2, '0')}`;
         
         // Verificar si ya existe
         const rankingRef = doc(db, "rankings-mensuales", rankingId);
@@ -1492,7 +1501,7 @@ async function migrarDatosHistoricos() {
         
         if (!rankingDoc.exists()) {
           await setDoc(rankingRef, {
-            mes: mes,
+            mes: mes, // Mes en formato JavaScript (0-11)
             anio: anio,
             ranking: puntaje,
             fechaActualizacion: new Date(),
@@ -1511,18 +1520,20 @@ async function migrarDatosHistoricos() {
         } else {
           console.log(`⚠️ Ranking ya existe para ${rankingId}`);
         }
+      } else {
+        console.log(`ℹ️ Sin datos para ${anio}-${mesNum}`);
       }
     }
     
     console.log("🎉 Migración completada");
-    mostrarNotificacion("Datos históricos migrados correctamente", "success");
+    mostrarNotificación("Datos históricos migrados correctamente", "success");
     
     // Recargar el ranking
     await renderRankingPuntualidad();
     
   } catch (error) {
     console.error("❌ Error en migración:", error);
-    mostrarNotificacion("Error en la migración de datos", "danger");
+    mostrarNotificación(`Error en la migración: ${error.message}`, "danger");
   }
 }
 
