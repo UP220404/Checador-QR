@@ -339,10 +339,11 @@ function renderGraficaSemanal() {
     graficaSemanal.destroy();
   }
   
-  const dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-  const conteo = Array(7).fill(0);
+  // Solo días laborales (Lunes a Viernes)
+  const dias = ["Lun", "Mar", "Mié", "Jue", "Vie"];
+  const conteo = Array(5).fill(0);
   
-  // Calcular el inicio y fin de la semana actual (Lunes a Domingo)
+  // Calcular el inicio y fin de la semana laboral actual (Lunes a Viernes)
   const ahora = new Date();
   const diaActual = ahora.getDay(); // 0 = Domingo, 1 = Lunes, etc.
   const diasHastaLunes = diaActual === 0 ? 6 : diaActual - 1; // Ajustar para que Lunes sea el inicio
@@ -352,19 +353,22 @@ function renderGraficaSemanal() {
   inicioSemana.setHours(0, 0, 0, 0);
   
   const finSemana = new Date(inicioSemana);
-  finSemana.setDate(inicioSemana.getDate() + 6);
+  finSemana.setDate(inicioSemana.getDate() + 4); // Solo hasta Viernes (4 días después del Lunes)
   finSemana.setHours(23, 59, 59, 999);
   
-  // Filtrar registros solo de la semana actual
+  // Filtrar registros solo de la semana laboral actual
   registros.forEach(r => {
     const fecha = new Date(r.timestamp.seconds * 1000);
-    if (fecha >= inicioSemana && fecha <= finSemana) {
-      const diaSemana = fecha.getDay() === 0 ? 6 : fecha.getDay() - 1; // Convertir Domingo=0 a índice 6
-      conteo[diaSemana]++;
+    const diaSemana = fecha.getDay();
+    
+    // Solo contar días laborales (Lunes=1 a Viernes=5)
+    if (fecha >= inicioSemana && fecha <= finSemana && diaSemana >= 1 && diaSemana <= 5) {
+      const indice = diaSemana - 1; // Convertir Lunes=1 a índice 0, Martes=2 a índice 1, etc.
+      conteo[indice]++;
     }
   });
   
-  // Actualizar el título con el rango de fechas
+  // Actualizar el título con el rango de fechas (solo días laborales)
   const tituloElemento = document.querySelector('#dashboard .chart-container h4');
   if (tituloElemento) {
     const formatoFecha = { day: 'numeric', month: 'short' };
@@ -421,7 +425,6 @@ function renderGraficaSemanal() {
     }
   });
 }
-
 // Gráfica por tipo de usuario
 function renderGraficaTipo() {
   const ctx = document.getElementById("graficaTipo").getContext("2d");
