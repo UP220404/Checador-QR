@@ -353,7 +353,66 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     String(ahora.getDate()).padStart(2, '0')
   ].join('-');
 
-  // Solo validar QR y ubicación si NO es remoto
+  // PRIMERO: Verificar registros existentes
+  const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
+  const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
+
+  // Definir límites según tipo
+  const inicioEntrada = new Date();
+  inicioEntrada.setHours(7, 0, 0, 0);
+  const finEntrada = new Date();
+  const horaSalida = new Date();
+  if (datosUsuario.tipo === "becario") {
+    finEntrada.setHours(13, 0, 0, 0); // 13:00
+    horaSalida.setHours(13, 0, 0, 0); // 13:00
+  } else {
+    finEntrada.setHours(16, 0, 0, 0); // 16:00
+    horaSalida.setHours(16, 0, 0, 0); // 16:00
+  }
+
+  // SEGUNDO: Verificar horarios y lógica de negocio
+  let tipoEvento;
+  let mensajeTipo = "";
+
+  if (!yaRegistroEntrada) {
+    if (ahora < inicioEntrada) {
+      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
+      return;
+    }
+    if (ahora >= finEntrada) {
+      mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
+      return;
+    }
+    // Es una entrada
+    const horaActual = ahora.getHours();
+    const minutosActual = ahora.getMinutes();
+    const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
+    const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
+
+    let esPuntual = false;
+    if (horaActual < limiteHora) {
+      esPuntual = true;
+    } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
+      esPuntual = true;
+    } else {
+      esPuntual = false;
+    }
+    tipoEvento = esPuntual ? "puntual" : "retardo";
+    mensajeTipo = "entrada";
+  } else if (!yaRegistroSalida) {
+    if (ahora < horaSalida) {
+      mostrarEstado("error", `⏳ Espera a la hora de salida (${horaSalida.getHours()}:00) para registrar tu salida.`);
+      return;
+    }
+    // Es una salida
+    tipoEvento = "salida";
+    mensajeTipo = "salida";
+  } else {
+    mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
+    return;
+  }
+
+  // TERCERO: Solo validar QR y ubicación si NO es remoto Y si pasó las validaciones anteriores
   if (!esRemoto) {
     if (!validarQR()) {
       mostrarEstado("error", "⛔ Debes escanear el QR de la oficina para registrar tu entrada.");
@@ -403,142 +462,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     }
   }
 
-  // Definir límites según tipo
-  const inicioEntrada = new Date();
-  inicioEntrada.setHours(7, 0, 0, 0);
-  const finEntrada = new Date();
-  const horaSalida = new Date();
-  if (datosUsuario.tipo === "becario") {
-    finEntrada.setHours(13, 0, 0, 0); // 13:00
-    horaSalida.setHours(13, 0, 0, 0); // 13:00
-  } else {
-    finEntrada.setHours(16, 0, 0, 0); // 16:00
-    horaSalida.setHours(16, 0, 0, 0); // 16:00
-  }
-
-  // MODO PRUEBAS: Permite registrar todas las veces que quieras, pero respeta la lógica de entrada/salida según la hora
-  if (CONFIG.MODO_PRUEBAS) {
-    let tipoEvento = "";
-    let mensajeTipo = "";
-
-    if (ahora >= inicioEntrada && ahora < finEntrada) {
-      // Entrada puntual o retardo
-      const horaActual = ahora.getHours();
-      const minutosActual = ahora.getMinutes();
-      const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
-      const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
-
-      let esPuntual = false;  
-      if (horaActual < limiteHora) {
-        esPuntual = true;
-      } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
-        esPuntual = true;
-      } else {
-        esPuntual = false;
-      }
-      tipoEvento = esPuntual ? "puntual" : "retardo";
-      mensajeTipo = "entrada";
-    } else if (ahora >= horaSalida) {
-      tipoEvento = "salida";
-      mensajeTipo = "salida";
-    } else {
-      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
-      return;
-    }
-
-    // Crear registro en Firestore
-    try {
-      const docRef = await addDoc(collection(db, "registros"), {
-        uid: user.uid,
-        nombre: datosUsuario.nombre,
-        email: user.email,
-        tipo: datosUsuario.tipo,
-        fecha,
-        hora,
-        tipoEvento: mensajeTipo,
-        estado: tipoEvento,
-        ubicacion: coords || null,
-        timestamp: serverTimestamp()
-      });
-
-      setTimeout(async () => {
-        await cargarHistorial(user.uid);
-      }, 1200);
-
-      actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
-
-      let mensaje = "";
-      if (tipoEvento === "puntual") {
-        mensaje = `✅ Entrada puntual a las ${hora}`;
-      } else if (tipoEvento === "retardo") {
-        mensaje = `⚠️ Entrada con retardo a las ${hora}`;
-      } else if (tipoEvento === "salida") {
-        mensaje = `📤 Salida registrada a las ${hora}`;
-      }
-      const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
-      if (mensajeEspecial) {
-        mensaje += `\n${mensajeEspecial}`;
-      }
-      mostrarEstado(tipoEvento, mensaje);
-      setTimeout(() => {
-        window.close();
-      }, 7000);
-
-    } catch (error) {
-      console.error("Error al registrar asistencia:", error);
-      mostrarEstado("error", "❌ Error al registrar asistencia");
-    }
-    return;
-  }
-
-  // MODO NORMAL: Solo una entrada y una salida por día
-  let tipoEvento;
-  let mensajeTipo = "";
-
-  // Verificar si ya registró entrada hoy
-  const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
-  const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
-
-  // --- BLOQUE CORREGIDO ---
-  if (!yaRegistroEntrada) {
-    if (ahora < inicioEntrada) {
-      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
-      return;
-    }
-    if (ahora >= finEntrada) {
-      mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
-      return;
-    }
-    // Entrada puntual o retardo
-    const horaActual = ahora.getHours();
-    const minutosActual = ahora.getMinutes();
-    const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
-    const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
-
-    let esPuntual = false;
-    if (horaActual < limiteHora) {
-      esPuntual = true;
-    } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
-      esPuntual = true;
-    } else {
-      esPuntual = false;
-    }
-    tipoEvento = esPuntual ? "puntual" : "retardo";
-    mensajeTipo = "entrada";
-  } else if (!yaRegistroSalida) {
-    if (ahora < horaSalida) {
-      mostrarEstado("error", `⏳ Espera a la hora de salida (${horaSalida.getHours()}:00) para registrar tu salida.`);
-      return;
-    }
-    tipoEvento = "salida";
-    mensajeTipo = "salida";
-  } else {
-    mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
-    return;
-  }
-  // --- FIN BLOQUE CORREGIDO ---
-
-  // Crear registro en Firestore
+  // CUARTO: Crear registro en Firestore
   try {
     const docRef = await addDoc(collection(db, "registros"), {
       uid: user.uid,
@@ -581,7 +505,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
-    mostrarEstado("error", "❌ Error al registrar asistencia"); 
+    mostrarEstado("error", "❌ Error al registrar asistencia");
   }
 }
 
