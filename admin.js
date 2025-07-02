@@ -13,7 +13,9 @@ import {
   addDoc,
   updateDoc,
   orderBy,
-  query
+  query,
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1136,19 +1138,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function renderRankingPuntualidad() {
+// Función para calcular y guardar ranking mensual
+async function calcularYGuardarRankingMensual() {
   const ahora = new Date();
   const mesActual = ahora.getMonth();
   const anioActual = ahora.getFullYear();
-
-  // Solo entradas del mes actual y que sean puntuales o retardo (para puntaje)
+  
+  // Solo entradas del mes actual
   const entradasMes = registros.filter(r =>
     r.tipoEvento === "entrada" &&
     new Date(r.timestamp.seconds * 1000).getMonth() === mesActual &&
     new Date(r.timestamp.seconds * 1000).getFullYear() === anioActual
   );
 
-  // Puntaje por usuario
+  // Calcular puntaje del mes actual
   const puntaje = {};
   entradasMes.forEach(r => {
     const fecha = new Date(r.timestamp.seconds * 1000);
@@ -1157,19 +1160,121 @@ function renderRankingPuntualidad() {
     let puntos = 0;
 
     if (hora === 7 && minutos <= 45) {
-      puntos = 4; // Entrada entre  7:00 y 7:45 
-    }else if (hora < 8) {
+      puntos = 4; // Entrada entre 7:00 y 7:45 
+    } else if (hora < 8) {
       puntos = 3; // Entrada antes de las 8:00
     } else if (hora === 8 && minutos <= 5) {
       puntos = 2; // Entrada entre 8:00 y 8:05
     } else if (hora === 8 && minutos <= 10) {
       puntos = 1; // Entrada entre 8:06 y 8:10
-    } 
-    // después de 8:10 no suma puntos
+    }
+    
     if (puntos > 0) {
       puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
     }
   });
+
+  // Verificar si ya existe un ranking para este mes
+  const rankingId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}`;
+  
+  try {
+    const rankingRef = doc(db, "rankings-mensuales", rankingId);
+    const rankingDoc = await getDoc(rankingRef);
+    
+    // Si no existe o es el mes actual, actualizar
+    if (!rankingDoc.exists() || (mesActual === ahora.getMonth() && anioActual === ahora.getFullYear())) {
+      await setDoc(rankingRef, {
+        mes: mesActual,
+        anio: anioActual,
+        ranking: puntaje,
+        fechaActualizacion: new Date(),
+        top5: Object.entries(puntaje)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([nombre, puntos], index) => ({
+            posicion: index + 1,
+            nombre,
+            puntos
+          }))
+      });
+    }
+  } catch (error) {
+    console.error("Error al guardar ranking mensual:", error);
+  }
+}
+
+// Función para cargar ranking de un mes específico
+async function cargarRankingMensual(mes, anio) {
+  const rankingId = `${anio}-${String(mes + 1).padStart(2, '0')}`;
+  
+  try {
+    const rankingRef = doc(db, "rankings-mensuales", rankingId);
+    const rankingDoc = await getDoc(rankingRef);
+    
+    if (rankingDoc.exists()) {
+      return rankingDoc.data().ranking;
+    } else {
+      // Si no existe en BD, calcularlo en tiempo real (solo para mes actual)
+      const ahora = new Date();
+      if (mes === ahora.getMonth() && anio === ahora.getFullYear()) {
+        const entradasMes = registros.filter(r =>
+          r.tipoEvento === "entrada" &&
+          new Date(r.timestamp.seconds * 1000).getMonth() === mes &&
+          new Date(r.timestamp.seconds * 1000).getFullYear() === anio
+        );
+
+        const puntaje = {};
+        entradasMes.forEach(r => {
+          const fecha = new Date(r.timestamp.seconds * 1000);
+          const hora = fecha.getHours();
+          const minutos = fecha.getMinutes();
+          let puntos = 0;
+
+          if (hora === 7 && minutos <= 45) {
+            puntos = 4;
+          } else if (hora < 8) {
+            puntos = 3;
+          } else if (hora === 8 && minutos <= 5) {
+            puntos = 2;
+          } else if (hora === 8 && minutos <= 10) {
+            puntos = 1;
+          }
+          
+          if (puntos > 0) {
+            puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
+          }
+        });
+        
+        return puntaje;
+      }
+    }
+    
+    return {};
+  } catch (error) {
+    console.error("Error al cargar ranking mensual:", error);
+    return {};
+  }
+}
+
+// Función principal para renderizar ranking
+async function renderRankingPuntualidad() {
+  // Obtener mes y año seleccionados
+  const selectorMes = document.getElementById("selectorMesPuntualidad");
+  const selectorAnio = document.getElementById("selectorAnioPuntualidad");
+  
+  let mesSeleccionado, anioSeleccionado;
+  
+  if (selectorMes && selectorAnio) {
+    mesSeleccionado = parseInt(selectorMes.value);
+    anioSeleccionado = parseInt(selectorAnio.value);
+  } else {
+    const ahora = new Date();
+    mesSeleccionado = ahora.getMonth();
+    anioSeleccionado = ahora.getFullYear();
+  }
+
+  // Cargar ranking del mes seleccionado
+  const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
 
   // Top 5 por puntaje
   const top = Object.entries(puntaje)
@@ -1179,15 +1284,25 @@ function renderRankingPuntualidad() {
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) return;
 
+  // Actualizar título del mes
+  const tituloRanking = document.querySelector('.card:has(#ranking-puntualidad) .card-header h5');
+  if (tituloRanking) {
+    const nombreMes = new Date(anioSeleccionado, mesSeleccionado).toLocaleDateString("es-MX", { 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    tituloRanking.innerHTML = `<i class="bi bi-trophy-fill"></i> Ranking de Puntualidad - ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)}`;
+  }
+
   rankingList.innerHTML = "";
 
   // Configuración de íconos y estilos para cada puesto
   const estilos = [
-    { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", nombre: "Diamante" }, // Top 1
-    { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", nombre: "Rubí" },     // Top 2
-    { icon: '<i class="bi bi-award-fill"></i>', color: "#ffc107", nombre: "Oro" }, // Top 3
-    { icon: '<i class="bi bi-award-fill"></i>', color: "#adb5bd", nombre: "Plata" }, // Top 4
-    { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", nombre: "Bronce" } // Top 5
+    { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", nombre: "Diamante" },
+    { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", nombre: "Rubí" },
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#ffc107", nombre: "Oro" },
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#adb5bd", nombre: "Plata" },
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", nombre: "Bronce" }
   ];
 
   const medallaClases = [
@@ -1199,7 +1314,11 @@ function renderRankingPuntualidad() {
   ];
 
   if (top.length === 0) {
-    rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad este mes</li>`;
+    const nombreMes = new Date(anioSeleccionado, mesSeleccionado).toLocaleDateString("es-MX", { 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad en ${nombreMes}</li>`;
     return;
   }
 
@@ -1216,6 +1335,113 @@ function renderRankingPuntualidad() {
       <span class="badge bg-success rounded-pill">${puntos} punto${puntos > 1 ? 's' : ''}</span>`;
     rankingList.appendChild(li);
   });
+}
+
+// Función para inicializar selectores
+function inicializarSelectoresPuntualidad() {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
+  
+  const rankingContainer = document.querySelector('.card:has(#ranking-puntualidad)');
+  if (!rankingContainer) return;
+  
+  let selectorContainer = rankingContainer.querySelector('.selector-mes-container');
+  
+  if (!selectorContainer) {
+    selectorContainer = document.createElement('div');
+    selectorContainer.className = 'selector-mes-container p-3 border-bottom';
+    selectorContainer.innerHTML = `
+      <div class="row g-2 align-items-center">
+        <div class="col-auto">
+          <label class="form-label mb-0 small text-muted">Ver mes:</label>
+        </div>
+        <div class="col-auto">
+          <select id="selectorMesPuntualidad" class="form-select form-select-sm">
+            <option value="0">Enero</option>
+            <option value="1">Febrero</option>
+            <option value="2">Marzo</option>
+            <option value="3">Abril</option>
+            <option value="4">Mayo</option>
+            <option value="5">Junio</option>
+            <option value="6">Julio</option>
+            <option value="7">Agosto</option>
+            <option value="8">Septiembre</option>
+            <option value="9">Octubre</option>
+            <option value="10">Noviembre</option>
+            <option value="11">Diciembre</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <select id="selectorAnioPuntualidad" class="form-select form-select-sm">
+            ${generarOpcionesAnio(anioActual)}
+          </select>
+        </div>
+        <div class="col-auto">
+          <button id="btnActualizarRanking" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const cardBody = rankingContainer.querySelector('.card-body');
+    rankingContainer.insertBefore(selectorContainer, cardBody);
+  }
+  
+  document.getElementById("selectorMesPuntualidad").value = mesActual;
+  document.getElementById("selectorAnioPuntualidad").value = anioActual;
+  
+  document.getElementById("selectorMesPuntualidad").addEventListener('change', renderRankingPuntualidad);
+  document.getElementById("selectorAnioPuntualidad").addEventListener('change', renderRankingPuntualidad);
+  document.getElementById("btnActualizarRanking").addEventListener('click', renderRankingPuntualidad);
+}
+
+// Función auxiliar para generar opciones de año
+function generarOpcionesAnio(anioActual) {
+  let opciones = '';
+  for (let i = anioActual - 2; i <= anioActual; i++) {
+    opciones += `<option value="${i}" ${i === anioActual ? 'selected' : ''}>${i}</option>`;
+  }
+  return opciones;
+}
+
+// Función que se ejecuta automáticamente cada día para cerrar el mes anterior
+async function verificarCierreMensual() {
+  const ahora = new Date();
+  const diaDelMes = ahora.getDate();
+  
+  // Si es día 1 del mes, cerrar el mes anterior
+  if (diaDelMes === 1) {
+    const mesAnterior = ahora.getMonth() === 0 ? 11 : ahora.getMonth() - 1;
+    const anioAnterior = ahora.getMonth() === 0 ? ahora.getFullYear() - 1 : ahora.getFullYear();
+    
+    await calcularYGuardarRankingMensual();
+  }
+}
+
+
+// Modificar la función cargarRegistros para inicializar los selectores
+async function cargarRegistros() {
+  try {
+    const snap = await getDocs(collection(db, "registros"));
+    registros = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Calcular KPIs
+    await calcularKPIs();
+    
+    // Renderizar elementos
+    renderTabla();
+    renderGraficas();
+    
+    // Inicializar selectores antes de renderizar ranking
+    inicializarSelectoresPuntualidad();
+    renderRankingPuntualidad();
+    
+  } catch (error) {
+    console.error("Error al cargar registros:", error);
+    mostrarNotificacion("Error al cargar los registros", "danger");
+  }
 }
 
 
