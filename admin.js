@@ -1264,6 +1264,7 @@ async function cargarRankingMensual(mes, anio) {
 }
 
 // Función principal para renderizar ranking
+// Función principal para renderizar ranking
 async function renderRankingPuntualidad() {
   // Obtener mes y año seleccionados
   const selectorMes = document.getElementById("selectorMesPuntualidad");
@@ -1283,10 +1284,9 @@ async function renderRankingPuntualidad() {
   // Cargar ranking del mes seleccionado
   const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
 
-  // Top 5 por puntaje
-  const top = Object.entries(puntaje)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  // Ordenar por puntaje y manejar empates
+  const usuarios = Object.entries(puntaje)
+    .sort((a, b) => b[1] - a[1]); // Ordenar por puntos descendente
 
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) return;
@@ -1303,7 +1303,7 @@ async function renderRankingPuntualidad() {
 
   rankingList.innerHTML = "";
 
-  // Configuración de íconos y estilos para cada puesto
+  // Configuración de íconos y estilos para cada posición
   const estilos = [
     { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", nombre: "Diamante" },
     { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", nombre: "Rubí" },
@@ -1320,7 +1320,7 @@ async function renderRankingPuntualidad() {
     "ranking-medalla ranking-bronce"
   ];
 
-  if (top.length === 0) {
+  if (usuarios.length === 0) {
     const nombreMes = new Date(anioSeleccionado, mesSeleccionado).toLocaleDateString("es-MX", { 
       month: 'long', 
       year: 'numeric' 
@@ -1329,18 +1329,34 @@ async function renderRankingPuntualidad() {
     return;
   }
 
-  top.forEach(([nombre, puntos], idx) => {
-    const { icon, color, nombre: nombreMedalla } = estilos[idx];
+  // Asignar posiciones considerando empates
+  let posicionActual = 0;
+  let puntajeAnterior = null;
+  
+  usuarios.forEach(([nombre, puntos], indice) => {
+    // Si el puntaje es diferente al anterior, actualizar la posición
+    if (puntajeAnterior !== puntos) {
+      posicionActual = indice;
+    }
+    
+    // Solo mostrar los primeros 5 lugares (posiciones 0-4)
+    if (posicionActual >= 5) return;
+    
+    const { icon, color, nombre: nombreMedalla } = estilos[posicionActual];
+    const clasesMedalla = medallaClases[posicionActual];
+    
     const li = document.createElement("li");
     li.className = "list-group-item d-flex justify-content-between align-items-center";
     li.innerHTML = `
       <span class="d-flex align-items-center">
         <span style="font-size:1.7em; color:${color}; margin-right:10px;">${icon}</span>
         <strong style="color:${color};">${nombre}</strong>
-        <span class="${medallaClases[idx]} ms-2">${nombreMedalla}</span>
+        <span class="${clasesMedalla} ms-2">${nombreMedalla}</span>
       </span>
       <span class="badge bg-success rounded-pill">${puntos} punto${puntos > 1 ? 's' : ''}</span>`;
     rankingList.appendChild(li);
+    
+    puntajeAnterior = puntos;
   });
 }
 
