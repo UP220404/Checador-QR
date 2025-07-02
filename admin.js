@@ -1428,29 +1428,6 @@ async function verificarCierreMensual() {
 }
 
 
-// Modificar la función cargarRegistros para inicializar los selectores
-async function cargarRegistros() {
-  try {
-    const snap = await getDocs(collection(db, "registros"));
-    registros = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    // Calcular KPIs
-    await calcularKPIs();
-    
-    // Renderizar elementos
-    renderTabla();
-    renderGraficas();
-    
-    // Inicializar selectores antes de renderizar ranking
-    inicializarSelectoresPuntualidad();
-    renderRankingPuntualidad();
-    
-  } catch (error) {
-    console.error("Error al cargar registros:", error);
-    mostrarNotificacion("Error al cargar los registros", "danger");
-  }
-}
-
 
 // ================== GESTIÓN DE AUSENCIAS ==================
 
