@@ -330,6 +330,7 @@ function renderGraficas() {
   renderGraficaUsuarios();
 }
 
+
 // Gráfica semanal
 function renderGraficaSemanal() {
   const ctx = document.getElementById("graficaSemanal").getContext("2d");
@@ -340,14 +341,37 @@ function renderGraficaSemanal() {
   
   const dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const conteo = Array(7).fill(0);
-  const ahora = new Date();
   
+  // Calcular el inicio y fin de la semana actual (Lunes a Domingo)
+  const ahora = new Date();
+  const diaActual = ahora.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+  const diasHastaLunes = diaActual === 0 ? 6 : diaActual - 1; // Ajustar para que Lunes sea el inicio
+  
+  const inicioSemana = new Date(ahora);
+  inicioSemana.setDate(ahora.getDate() - diasHastaLunes);
+  inicioSemana.setHours(0, 0, 0, 0);
+  
+  const finSemana = new Date(inicioSemana);
+  finSemana.setDate(inicioSemana.getDate() + 6);
+  finSemana.setHours(23, 59, 59, 999);
+  
+  // Filtrar registros solo de la semana actual
   registros.forEach(r => {
     const fecha = new Date(r.timestamp.seconds * 1000);
-    if (fecha > new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 7)) {
-      conteo[fecha.getDay() === 0 ? 6 : fecha.getDay() - 1]++;
+    if (fecha >= inicioSemana && fecha <= finSemana) {
+      const diaSemana = fecha.getDay() === 0 ? 6 : fecha.getDay() - 1; // Convertir Domingo=0 a índice 6
+      conteo[diaSemana]++;
     }
   });
+  
+  // Actualizar el título con el rango de fechas
+  const tituloElemento = document.querySelector('#dashboard .chart-container h4');
+  if (tituloElemento) {
+    const formatoFecha = { day: 'numeric', month: 'short' };
+    const fechaInicio = inicioSemana.toLocaleDateString("es-MX", formatoFecha);
+    const fechaFin = finSemana.toLocaleDateString("es-MX", formatoFecha);
+    tituloElemento.innerHTML = `<i class="bi bi-calendar-week"></i> Actividad Semanal (${fechaInicio} - ${fechaFin})`;
+  }
   
   // Color según modo oscuro
   const isDarkMode = document.body.classList.contains('dark-mode');
