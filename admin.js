@@ -1263,8 +1263,7 @@ async function cargarRankingMensual(mes, anio) {
   }
 }
 
-// Función principal para renderizar ranking
-// Función principal para renderizar ranking
+// Reemplaza SOLO la función renderRankingPuntualidad() (línea 1268) con esta:
 async function renderRankingPuntualidad() {
   // Obtener mes y año seleccionados
   const selectorMes = document.getElementById("selectorMesPuntualidad");
@@ -1303,13 +1302,13 @@ async function renderRankingPuntualidad() {
 
   rankingList.innerHTML = "";
 
-  // Configuración de íconos y estilos para cada posición
+  // Configuración de íconos y estilos para cada posición (TUS ICONOS ORIGINALES)
   const estilos = [
-    { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", nombre: "Diamante" },
-    { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", nombre: "Rubí" },
-    { icon: '<i class="bi bi-award-fill"></i>', color: "#ffc107", nombre: "Oro" },
-    { icon: '<i class="bi bi-award-fill"></i>', color: "#adb5bd", nombre: "Plata" },
-    { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", nombre: "Bronce" }
+    { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", bgGradient: "linear-gradient(135deg, #0dcaf0, #17a2b8)", nombre: "Diamante", emoji: "💎" },
+    { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", bgGradient: "linear-gradient(135deg, #dc3545, #c82333)", nombre: "Rubí", emoji: "🔴" },
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#ffc107", bgGradient: "linear-gradient(135deg, #ffc107, #e0a800)", nombre: "Oro", emoji: "🥇" },
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#6c757d", bgGradient: "linear-gradient(135deg, #6c757d, #5a6268)", nombre: "Plata", emoji: "🥈" },
+    { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", bgGradient: "linear-gradient(135deg, #b87333, #996633)", nombre: "Bronce", emoji: "🥉" }
   ];
 
   const medallaClases = [
@@ -1325,7 +1324,13 @@ async function renderRankingPuntualidad() {
       month: 'long', 
       year: 'numeric' 
     });
-    rankingList.innerHTML = `<li class="list-group-item text-muted">Sin datos de puntualidad en ${nombreMes}</li>`;
+    rankingList.innerHTML = `
+      <div class="ranking-empty">
+        <i class="bi bi-trophy" style="font-size: 3rem; color: #6c757d;"></i>
+        <h5 class="mt-3 text-muted">Sin datos de puntualidad</h5>
+        <p class="text-muted">No hay registros para ${nombreMes}</p>
+      </div>
+    `;
     return;
   }
 
@@ -1342,19 +1347,33 @@ async function renderRankingPuntualidad() {
     // Solo mostrar los primeros 5 lugares (posiciones 0-4)
     if (posicionActual >= 5) return;
     
-    const { icon, color, nombre: nombreMedalla } = estilos[posicionActual];
+    const { icon, color, bgGradient, nombre: nombreMedalla, emoji } = estilos[posicionActual];
     const clasesMedalla = medallaClases[posicionActual];
+    const posicionDisplay = posicionActual + 1;
     
-    const li = document.createElement("li");
-    li.className = "list-group-item d-flex justify-content-between align-items-center";
-    li.innerHTML = `
-      <span class="d-flex align-items-center">
-        <span style="font-size:1.7em; color:${color}; margin-right:10px;">${icon}</span>
-        <strong style="color:${color};">${nombre}</strong>
-        <span class="${clasesMedalla} ms-2">${nombreMedalla}</span>
-      </span>
-      <span class="badge bg-success rounded-pill">${puntos} punto${puntos > 1 ? 's' : ''}</span>`;
-    rankingList.appendChild(li);
+    // Crear elemento con diseño mejorado
+    const rankingItem = document.createElement("li");
+    rankingItem.className = "ranking-item-nuevo";
+    rankingItem.innerHTML = `
+      <div class="ranking-card-nuevo" style="background: ${bgGradient};">
+        <div class="ranking-position-nuevo">
+          <span class="position-number-nuevo">${posicionDisplay}</span>
+          <span class="position-emoji-nuevo">${emoji}</span>
+        </div>
+        <div class="ranking-info-nuevo">
+          <div class="ranking-name-nuevo">${nombre}</div>
+          <div class="ranking-medal-nuevo">
+            ${icon} <span class="${clasesMedalla}">${nombreMedalla}</span>
+          </div>
+        </div>
+        <div class="ranking-points-nuevo">
+          <span class="points-number-nuevo">${puntos}</span>
+          <span class="points-text-nuevo">punto${puntos > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+    `;
+    
+    rankingList.appendChild(rankingItem);
     
     puntajeAnterior = puntos;
   });

@@ -585,3 +585,206 @@ body.dark-mode .selector-mes-container .form-select:focus {
   border-color: #0d6efd;
   color: #e0e0e0;
 }
+
+
+/* AGREGAR AL FINAL DEL ARCHIVO: */
+
+/* ===== RANKING DE PUNTUALIDAD MEJORADO ===== */
+.ranking-item-nuevo {
+  list-style: none;
+  margin-bottom: 0.75rem;
+  animation: slideInUp 0.5s ease-out;
+}
+
+.ranking-card-nuevo {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255,255,255,0.2);
+  position: relative;
+  overflow: hidden;
+  min-height: 70px;
+}
+
+.ranking-card-nuevo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.ranking-card-nuevo:hover::before {
+  left: 100%;
+}
+
+.ranking-card-nuevo:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+
+.ranking-position-nuevo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 1.25rem;
+  min-width: 70px;
+}
+
+.position-number-nuevo {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+}
+
+.position-emoji-nuevo {
+  font-size: 1.4rem;
+  margin-top: 0.3rem;
+  filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.3));
+}
+
+.ranking-info-nuevo {
+  flex: 1;
+  padding: 0 1rem;
+}
+
+.ranking-name-nuevo {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+  letter-spacing: 0.3px;
+}
+
+.ranking-medal-nuevo {
+  font-size: 0.95rem;
+  opacity: 0.95;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ranking-medal-nuevo i {
+  font-size: 1.1rem;
+  filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.3));
+}
+
+.ranking-points-nuevo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 90px;
+  background: rgba(0,0,0,0.1);
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.points-number-nuevo {
+  font-size: 1.7rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+}
+
+.points-text-nuevo {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  text-transform: lowercase;
+  margin-top: 0.2rem;
+}
+
+/* Estado vacío mejorado */
+.ranking-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.ranking-empty i {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Mantener las medallas existentes pero mejoradas */
+.ranking-medalla {
+  padding: 0.25em 0.8em;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.85em;
+  display: inline-block;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+/* Animaciones */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .ranking-card-nuevo {
+    padding: 0.8rem 1rem;
+    flex-direction: column;
+    text-align: center;
+    min-height: auto;
+  }
+  
+  .ranking-position-nuevo {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+  
+  .ranking-info-nuevo {
+    padding: 0;
+    margin-bottom: 0.5rem;
+  }
+  
+  .ranking-name-nuevo {
+    font-size: 1rem;
+  }
+  
+  .position-number-nuevo,
+  .points-number-nuevo {
+    font-size: 1.5rem;
+  }
+  
+  .ranking-points-nuevo {
+    min-width: 80px;
+  }
+}
+
+/* Modo oscuro */
+body.dark-mode .ranking-card-nuevo {
+  border-color: rgba(255,255,255,0.1);
+}
+
+body.dark-mode .ranking-card-nuevo:hover {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+body.dark-mode .ranking-points-nuevo {
+  background: rgba(0,0,0,0.2);
+  border-color: rgba(255,255,255,0.1);
+}
