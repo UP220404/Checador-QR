@@ -1710,6 +1710,9 @@ async function cargarAusencias() {
   }
 }
 
+/**
+ * Actualiza la tabla de ausencias de forma segura
+ */
 function actualizarTablaAusenciasSafe() {
   try {
     const tbody = document.querySelector("#tabla-ausencias tbody");
@@ -1733,51 +1736,37 @@ function actualizarTablaAusenciasSafe() {
     }
 
     // Aplicar filtros
-    let ausenciasFiltradas = [...ausenciasData];
-    
-    const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value;
-    const filtroTipo = document.getElementById("filtroTipoAusencia")?.value;
-    const filtroFecha = document.getElementById("filtroFechaAusencia")?.value;
-    const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value?.toLowerCase();
+    const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value || "";
+    const filtroTipo = document.getElementById("filtroTipoAusencia")?.value || "";
+    const filtroFecha = document.getElementById("filtroFechaAusencia")?.value || "";
+    const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value.toLowerCase() || "";
 
-    if (filtroEstado) {
-      ausenciasFiltradas = ausenciasFiltradas.filter(a => a.estado === filtroEstado);
-    }
-    if (filtroTipo) {
-      ausenciasFiltradas = ausenciasFiltradas.filter(a => a.tipo === filtroTipo);
-    }
-    
-    // 🔧 CORREGIR EL FILTRO DE FECHAS
-    if (filtroFecha) {
-      console.log("🔍 Filtrando por fecha:", filtroFecha);
+    const ausenciasFiltradas = ausenciasData.filter(ausencia => {
+      const estadoMatch = !filtroEstado || ausencia.estado === filtroEstado;
+      const tipoMatch = !filtroTipo || ausencia.tipo === filtroTipo;
       
-      ausenciasFiltradas = ausenciasFiltradas.filter(ausencia => {
-        // Convertir fechas de ausencia a formato YYYY-MM-DD
-        const fechaInicioStr = ausencia.fechaInicio.toISOString().split('T')[0];
-        const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toISOString().split('T')[0] : null;
-        
-        // Verificar si la fecha del filtro está dentro del rango de la ausencia
-        const fechaEnRango = filtroFecha >= fechaInicioStr && 
-                            (!fechaFinStr || filtroFecha <= fechaFinStr);
-        
-        console.log(`Ausencia: ${ausencia.nombreUsuario}, Inicio: ${fechaInicioStr}, Fin: ${fechaFinStr}, Filtro: ${filtroFecha}, En rango: ${fechaEnRango}`);
-        
-        return fechaEnRango;
-      });
-    }
-    
-    if (filtroBusqueda) {
-      ausenciasFiltradas = ausenciasFiltradas.filter(a => 
-        a.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
-        a.emailUsuario.toLowerCase().includes(filtroBusqueda)
-      );
-    }
+      let fechaMatch = true;
+      if (filtroFecha) {
+        const fechaFiltro = new Date(filtroFecha + 'T00:00:00');
+        fechaMatch = (
+          (ausencia.fechaInicio && ausencia.fechaInicio.toDateString() === fechaFiltro.toDateString()) ||
+          (ausencia.fechaFin && ausencia.fechaFin.toDateString() === fechaFiltro.toDateString())
+        );
+      }
+      
+      const busquedaMatch = !filtroBusqueda || 
+        ausencia.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
+        ausencia.emailUsuario.toLowerCase().includes(filtroBusqueda) ||
+        ausencia.motivo.toLowerCase().includes(filtroBusqueda);
+
+      return estadoMatch && tipoMatch && fechaMatch && busquedaMatch;
+    });
 
     if (ausenciasFiltradas.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="7" class="text-center py-4 text-muted">
-            <i class="bi bi-funnel me-2"></i>
+            <i class="bi bi-search me-2"></i>
             No se encontraron ausencias con los filtros aplicados
           </td>
         </tr>
@@ -1846,6 +1835,10 @@ function actualizarTablaAusenciasSafe() {
                     title="Rechazar" ${ausencia.estado === 'rechazada' ? 'disabled' : ''}>
               <i class="bi bi-x-lg"></i>
             </button>
+            <button class="btn btn-outline-dark" onclick="eliminarAusenciaDirecta('${ausencia.id}')" 
+                    title="Eliminar permanentemente">
+              <i class="bi bi-trash"></i>
+            </button>
           </div>
         </td>
       `;
@@ -1855,6 +1848,40 @@ function actualizarTablaAusenciasSafe() {
     
   } catch (error) {
     console.error("Error actualizando tabla de ausencias:", error);
+  }
+}
+
+/**
+ * Elimina una ausencia directamente desde la tabla
+ */
+async function eliminarAusenciaDirecta(id) {
+  const ausencia = ausenciasData.find(a => a.id === id);
+  if (!ausencia) {
+    mostrarNotificacion("Ausencia no encontrada", "warning");
+    return;
+  }
+
+  // Mostrar información de la ausencia antes de confirmar
+  const detalleEliminacion = `
+¿Estás seguro de eliminar esta ausencia?
+
+👤 Usuario: ${ausencia.nombreUsuario}
+📅 Tipo: ${formatearTipo(ausencia.tipo)}
+📅 Fecha: ${ausencia.fechaInicio.toLocaleDateString("es-MX")}
+📊 Estado: ${formatearEstado(ausencia.estado)}
+
+⚠️ Esta acción no se puede deshacer.
+  `;
+
+  if (!confirm(detalleEliminacion)) return;
+
+  try {
+    await deleteDoc(doc(db, "ausencias", id));
+    mostrarNotificacion("Ausencia eliminada correctamente", "success");
+    cargarAusencias(); // Recargar la tabla
+  } catch (error) {
+    console.error("Error eliminando ausencia:", error);
+    mostrarNotificacion("Error al eliminar la ausencia", "danger");
   }
 }
 
@@ -2181,6 +2208,7 @@ window.editarAusencia = editarAusencia;
 window.aprobarAusencia = aprobarAusencia;   
 window.rechazarAusencia = rechazarAusencia;
 window.eliminarAusencia = eliminarAusencia;
+window.eliminarAusenciaDirecta = eliminarAusenciaDirecta;
 window.verDetalleAusencia = verDetalleAusencia;
 
 // También agregar esta función para los filtros:
