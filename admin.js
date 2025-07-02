@@ -1837,7 +1837,7 @@ function actualizarTablaAusenciasSafe() {
             </button>
             <button class="btn btn-outline-dark" onclick="eliminarAusenciaDirecta('${ausencia.id}')" 
                     title="Eliminar permanentemente">
-              <i class="bi bi-trash"></i>
+              <i class="bi bi-trash test-white"></i>
             </button>
           </div>
         </td>
