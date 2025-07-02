@@ -775,3 +775,154 @@ body.dark-mode .ranking-points-nuevo {
   background: rgba(0,0,0,0.2);
   border-color: rgba(255,255,255,0.1);
 }
+
+/* AGREGAR al final del archivo admin.css, después de la línea 778: */
+
+/* ===== HEADER DEL RANKING MEJORADO ===== */
+.card:has(#ranking-puntualidad) .card-header {
+  background: linear-gradient(135deg, #198754 0%, #20c997 50%, #0dcaf0 100%) !important;
+  border: none !important;
+  border-radius: 15px 15px 0 0 !important;
+  padding: 1.5rem 2rem !important;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+}
+
+.card:has(#ranking-puntualidad) .card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  animation: shimmer 3s infinite;
+}
+
+.card:has(#ranking-puntualidad) .card-header h5 {
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 1.4rem !important;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  position: relative;
+  z-index: 2;
+}
+
+.card:has(#ranking-puntualidad) .card-header h5 i {
+  font-size: 1.6rem !important;
+  color: #ffd700 !important;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)) !important;
+  animation: trophy-glow 2s ease-in-out infinite alternate;
+}
+
+/* Animación del brillo */
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Animación del trofeo */
+@keyframes trophy-glow {
+  0% { 
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  100% { 
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(255, 215, 0, 0.4));
+  }
+}
+
+/* Mejorar toda la tarjeta del ranking */
+.card:has(#ranking-puntualidad) {
+  border: none !important;
+  border-radius: 15px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1) !important;
+  overflow: hidden !important;
+  background: white !important;
+}
+
+body.dark-mode .card:has(#ranking-puntualidad) {
+  background: #1e1e1e !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3) !important;
+}
+
+body.dark-mode .card:has(#ranking-puntualidad) .card-header {
+  background: linear-gradient(135deg, #146c43 0%, #198754 50%, #20c997 100%) !important;
+}
+
+/* Mejorar el cuerpo de la tarjeta */
+.card:has(#ranking-puntualidad) .card-body {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* Mejorar el contenedor del ranking */
+#ranking-puntualidad {
+  padding: 1.5rem !important;
+  background: transparent !important;
+  list-style: none !important;
+  margin: 0 !important;
+}
+
+/* Decoración adicional */
+.card:has(#ranking-puntualidad) .card-header::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 10px solid #0dcaf0;
+  z-index: 3;
+}
+
+/* Efecto hover en toda la tarjeta */
+.card:has(#ranking-puntualidad):hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+body.dark-mode .card:has(#ranking-puntualidad):hover {
+  box-shadow: 0 15px 40px rgba(0,0,0,0.4) !important;
+}
+
+/* Badge con el texto "Top 5" */
+.card:has(#ranking-puntualidad) .card-header::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 20px;
+  background: #ffd700;
+  color: #333;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  z-index: 4;
+  box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card:has(#ranking-puntualidad) .card-header {
+    padding: 1rem 1.5rem !important;
+  }
+  
+  .card:has(#ranking-puntualidad) .card-header h5 {
+    font-size: 1.2rem !important;
+  }
+  
+  .card:has(#ranking-puntualidad) .card-header h5 i {
+    font-size: 1.4rem !important;
+  }
+}
