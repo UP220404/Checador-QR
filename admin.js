@@ -222,10 +222,7 @@ function mostrarNotificacion(mensaje, tipo = "info") {
 }
 
 
-  
-
-
-// Cargar registros desde Firestore
+  // Cargar registros desde Firestore
 async function cargarRegistros() {
   try {
     const snap = await getDocs(collection(db, "registros"));
@@ -237,13 +234,23 @@ async function cargarRegistros() {
     // Renderizar elementos
     renderTabla();
     renderGraficas();
-    renderRankingPuntualidad();
+    
+    // Calcular y guardar ranking mensual automáticamente
+    await calcularYGuardarRankingMensual();
+    
+    // Inicializar selectores ANTES de renderizar ranking
+    inicializarSelectoresPuntualidad();
+    
+    // Ahora sí renderizar ranking
+    await renderRankingPuntualidad();
     
   } catch (error) {
     console.error("Error al cargar registros:", error);
     mostrarNotificacion("Error al cargar los registros", "danger");
   }
 }
+
+
 
 function getFechaHoyMX() {
   const now = new Date();
