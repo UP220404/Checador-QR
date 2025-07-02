@@ -1404,7 +1404,7 @@ function inicializarSelectoresPuntualidad() {
   document.getElementById("btnActualizarRanking").addEventListener('click', renderRankingPuntualidad);
   
   
-  mostrarBotonMigracion();
+ 
 }
 
 // Función auxiliar para generar opciones de año
@@ -1537,29 +1537,6 @@ async function migrarDatosHistoricos() {
   }
 }
 
-// Agregar botón temporal para ejecutar migración
-function mostrarBotonMigracion() {
-  const selectorContainer = document.querySelector('.selector-mes-container');
-  if (selectorContainer && !document.getElementById('btnMigrar')) {
-    const btnMigrar = document.createElement('div');
-    btnMigrar.className = 'col-auto';
-    btnMigrar.innerHTML = `
-      <button id="btnMigrar" class="btn btn-sm btn-warning">
-        <i class="bi bi-database-up"></i> Migrar Datos
-      </button>
-    `;
-    
-    selectorContainer.querySelector('.row').appendChild(btnMigrar);
-    
-    document.getElementById('btnMigrar').addEventListener('click', async () => {
-      if (confirm('¿Migrar datos históricos? Esto puede tardar unos segundos.')) {
-        await migrarDatosHistoricos();
-        // Ocultar botón después de migrar
-        document.getElementById('btnMigrar').style.display = 'none';
-      }
-    });
-  }
-}
 
 
 
