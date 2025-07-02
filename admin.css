@@ -952,3 +952,172 @@ body.dark-mode .card:has(#ranking-puntualidad):hover {
     padding: 0.5rem 0.75rem !important;
   }
 }
+
+/* AGREGAR AL FINAL DEL ARCHIVO admin.css: */
+
+/* Contenedor del ranking que ocupe todo el ancho */
+.ranking-container-full-width {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+/* MEJORAR LOS SELECTORES DE MES Y AÑO */
+body.dark-mode .selector-mes-container {
+  background: linear-gradient(135deg, #2d2d2d, #3d3d3d);
+  border-color: #404040;
+}
+
+body.dark-mode .selector-mes-container:hover {
+  border-color: #20c997;
+  box-shadow: 0 6px 20px rgba(32, 201, 151, 0.15);
+}
+
+.selector-mes-container .row {
+  align-items: center;
+}
+
+.selector-mes-container .form-label {
+  font-weight: 600;
+  color: #198754;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.selector-mes-container .form-label::before {
+  content: "📅";
+  font-size: 1.1rem;
+}
+
+body.dark-mode .selector-mes-container .form-label {
+  color: #20c997;
+}
+
+.selector-mes-container .form-select {
+  border-radius: 10px;
+  border: 2px solid #dee2e6;
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  min-width: 140px;
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.selector-mes-container .form-select:focus {
+  border-color: #198754;
+  box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+  background-color: white;
+}
+
+.selector-mes-container .form-select:hover {
+  border-color: #198754;
+  transform: translateY(-1px);
+}
+
+body.dark-mode .selector-mes-container .form-select {
+  background-color: #404040;
+  border-color: #505050;
+  color: #e0e0e0;
+}
+
+body.dark-mode .selector-mes-container .form-select:focus {
+  background-color: #404040;
+  border-color: #20c997;
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
+  color: #e0e0e0;
+}
+
+body.dark-mode .selector-mes-container .form-select:hover {
+  border-color: #20c997;
+}
+
+.selector-mes-container .btn {
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border: 2px solid #198754;
+  background: linear-gradient(135deg, #198754, #20c997);
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.selector-mes-container .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
+  background: linear-gradient(135deg, #157347, #1aa085);
+}
+
+.selector-mes-container .btn:active {
+  transform: translateY(0);
+}
+
+body.dark-mode .selector-mes-container .btn {
+  background: linear-gradient(135deg, #20c997, #0dcaf0);
+  border-color: #20c997;
+}
+
+body.dark-mode .selector-mes-container .btn:hover {
+  background: linear-gradient(135deg, #1aa085, #0bb5d3);
+  box-shadow: 0 4px 15px rgba(32, 201, 151, 0.4);
+}
+
+/* Mejorar espaciado responsive */
+@media (max-width: 768px) {
+  .selector-mes-container {
+    padding: 1rem;
+  }
+  
+  .selector-mes-container .row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .selector-mes-container .col-auto {
+    width: 100%;
+  }
+  
+  .selector-mes-container .form-select {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .selector-mes-container .btn {
+    width: 100%;
+  }
+}
+
+/* Icono de actualización animado */
+.selector-mes-container .btn i {
+  transition: transform 0.3s ease;
+}
+
+.selector-mes-container .btn:hover i {
+  transform: rotate(180deg);
+}
+
+/* Gradientes adicionales para mejor visual */
+.selector-mes-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #198754, #20c997, #0dcaf0);
+  border-radius: 15px 15px 0 0;
+}
+
+.selector-mes-container {
+  position: relative;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.dark-mode .selector-mes-container::before {
+  background: linear-gradient(90deg, #20c997, #0dcaf0, #0bb5d3);
+}
