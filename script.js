@@ -80,6 +80,113 @@ const USUARIOS_REMOTOS = [
   "operacionescielitoh@gmail.com"
 ];
 
+let ubicacionPrecargada = null;
+let ubicacionObteniendo = false;
+
+// ✅ AGREGAR AQUÍ ESTAS FUNCIONES:
+
+/**
+ * Precarga la ubicación del usuario en segundo plano
+ */
+async function precargarUbicacion() {
+  if (ubicacionObteniendo || ubicacionPrecargada) return;
+  
+  ubicacionObteniendo = true;
+  console.log("🔄 Precargando ubicación...");
+  
+  try {
+    const posicion = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        reject,
+        {
+          enableHighAccuracy: false, // Más rápido
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutos de caché
+        }
+      );
+    });
+    
+    ubicacionPrecargada = {
+      lat: posicion.coords.latitude,
+      lng: posicion.coords.longitude,
+      accuracy: posicion.coords.accuracy,
+      timestamp: Date.now()
+    };
+    
+    console.log("✅ Ubicación precargada:", ubicacionPrecargada);
+  } catch (error) {
+    console.warn("⚠️ No se pudo precargar ubicación:", error);
+  } finally {
+    ubicacionObteniendo = false;
+  }
+}
+
+/**
+ * Obtiene la ubicación (usa la precargada si está disponible)
+ */
+async function obtenerUbicacion() {
+  // Si tenemos ubicación precargada y es reciente (menos de 5 minutos)
+  if (ubicacionPrecargada && (Date.now() - ubicacionPrecargada.timestamp) < 300000) {
+    console.log("📍 Usando ubicación precargada");
+    return ubicacionPrecargada;
+  }
+  
+  // Intentar obtener nueva ubicación
+  try {
+    const posicion = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        reject,
+        {
+          enableHighAccuracy: true,
+          timeout: 8000, // Reducido de 15 a 8 segundos
+          maximumAge: 60000 // 1 minuto de caché
+        }
+      );
+    });
+    
+    const nuevaUbicacion = {
+      lat: posicion.coords.latitude,
+      lng: posicion.coords.longitude,
+      accuracy: posicion.coords.accuracy,
+      timestamp: Date.now()
+    };
+    
+    ubicacionPrecargada = nuevaUbicacion; // Actualizar caché
+    return nuevaUbicacion;
+    
+  } catch (error) {
+    console.warn("⚠️ Error obteniendo ubicación nueva:", error);
+    
+    // Fallback: usar ubicación precargada aunque sea antigua
+    if (ubicacionPrecargada) {
+      console.log("📍 Usando ubicación precargada (antigua)");
+      return ubicacionPrecargada;
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Actualiza periódicamente la ubicación en segundo plano
+ */
+function iniciarActualizacionUbicacion() {
+  // Precargar inmediatamente
+  precargarUbicacion();
+  
+  // Actualizar cada 2 minutos
+  setInterval(() => {
+    precargarUbicacion();
+  }, 120000); // 2 minutos
+}
+
+
+/**
+ * Muestra un mensaje de estado en la interfaz
+
+
 /**
  * Muestra un mensaje de estado en la interfaz
  * @param {string} tipo - Tipo de mensaje (puntual, retardo, salida, error)
@@ -527,24 +634,26 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
+      // ...existing code...
       const userData = userDoc.data();
       
-      // Obtener ubicación
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          registrarAsistencia(user, userData, {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: pos.coords.accuracy
-          });
-        },
-        (err) => {
-          console.warn("Geolocalización no disponible:", err);
-          registrarAsistencia(user, userData, null);
-        },
-        { timeout: 5000 }
-      );
+      // Verificar si es usuario remoto ANTES de obtener ubicación
+      const esRemoto = USUARIOS_REMOTOS.includes(user.email);
       
+      if (esRemoto) {
+        // Usuario remoto: registrar sin ubicación
+        registrarAsistencia(user, userData, null);
+      } else {
+        // Usuario presencial: obtener ubicación
+        try {
+          mostrarEstado("info", "📍 Obteniendo ubicación...");
+          const coords = await obtenerUbicacion();
+          registrarAsistencia(user, userData, coords);
+        } catch (error) {
+          console.warn("Geolocalización no disponible:", error);
+          mostrarEstado("error", "❌ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
+        }
+      }
     } catch (error) {
       console.error("Error al obtener datos de usuario:", error);
       mostrarEstado("error", "❌ Error al cargar datos de usuario");
@@ -566,4 +675,7 @@ DOM.btnLogout?.addEventListener("click", () => {
 });
 
 // Inicialización
-document.addEventListener("DOMContentLoaded", () => {});
+document.addEventListener("DOMContentLoaded", () => {
+  // Iniciar precarga de ubicación inmediatamente
+  iniciarActualizacionUbicacion();
+});
