@@ -1402,6 +1402,9 @@ function inicializarSelectoresPuntualidad() {
   document.getElementById("selectorMesPuntualidad").addEventListener('change', renderRankingPuntualidad);
   document.getElementById("selectorAnioPuntualidad").addEventListener('change', renderRankingPuntualidad);
   document.getElementById("btnActualizarRanking").addEventListener('click', renderRankingPuntualidad);
+  
+  
+  mostrarBotonMigracion();
 }
 
 // Función auxiliar para generar opciones de año
@@ -1426,6 +1429,128 @@ async function verificarCierreMensual() {
     await calcularYGuardarRankingMensual();
   }
 }
+
+// ✅ AGREGAR AQUÍ EL CÓDIGO DE MIGRACIÓN:
+
+// Función para migrar datos históricos (ejecutar una sola vez)
+async function migrarDatosHistoricos() {
+  try {
+    console.log("🔄 Iniciando migración de datos históricos...");
+    
+    // Obtener todos los meses únicos de los registros
+    const mesesUnicos = new Set();
+    registros.forEach(r => {
+      const fecha = new Date(r.timestamp.seconds * 1000);
+      const mesAnio = `${fecha.getFullYear()}-${String(fecha.getMonth()).padStart(2, '0')}`;
+      mesesUnicos.add(mesAnio);
+    });
+
+    console.log("📅 Meses encontrados:", Array.from(mesesUnicos));
+
+    // Procesar cada mes
+    for (const mesAnio of mesesUnicos) {
+      const [anio, mes] = mesAnio.split('-').map(Number);
+      
+      // Filtrar registros del mes
+      const entradasMes = registros.filter(r => {
+        const fecha = new Date(r.timestamp.seconds * 1000);
+        return r.tipoEvento === "entrada" &&
+               fecha.getMonth() === mes &&
+               fecha.getFullYear() === anio;
+      });
+
+      // Calcular puntajes
+      const puntaje = {};
+      entradasMes.forEach(r => {
+        const fecha = new Date(r.timestamp.seconds * 1000);
+        const hora = fecha.getHours();
+        const minutos = fecha.getMinutes();
+        let puntos = 0;
+
+        if (hora === 7 && minutos <= 45) {
+          puntos = 4;
+        } else if (hora < 8) {
+          puntos = 3;
+        } else if (hora === 8 && minutos <= 5) {
+          puntos = 2;
+        } else if (hora === 8 && minutos <= 10) {
+          puntos = 1;
+        }
+        
+        if (puntos > 0) {
+          puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
+        }
+      });
+
+      // Solo crear si hay datos
+      if (Object.keys(puntaje).length > 0) {
+        const rankingId = `${anio}-${String(mes + 1).padStart(2, '0')}`;
+        
+        // Verificar si ya existe
+        const rankingRef = doc(db, "rankings-mensuales", rankingId);
+        const rankingDoc = await getDoc(rankingRef);
+        
+        if (!rankingDoc.exists()) {
+          await setDoc(rankingRef, {
+            mes: mes,
+            anio: anio,
+            ranking: puntaje,
+            fechaActualizacion: new Date(),
+            top5: Object.entries(puntaje)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([nombre, puntos], index) => ({
+                posicion: index + 1,
+                nombre,
+                puntos
+              })),
+            migrado: true // Marca para identificar datos migrados
+          });
+          
+          console.log(`✅ Ranking creado para ${rankingId}`);
+        } else {
+          console.log(`⚠️ Ranking ya existe para ${rankingId}`);
+        }
+      }
+    }
+    
+    console.log("🎉 Migración completada");
+    mostrarNotificacion("Datos históricos migrados correctamente", "success");
+    
+    // Recargar el ranking
+    await renderRankingPuntualidad();
+    
+  } catch (error) {
+    console.error("❌ Error en migración:", error);
+    mostrarNotificacion("Error en la migración de datos", "danger");
+  }
+}
+
+// Agregar botón temporal para ejecutar migración
+function mostrarBotonMigracion() {
+  const selectorContainer = document.querySelector('.selector-mes-container');
+  if (selectorContainer && !document.getElementById('btnMigrar')) {
+    const btnMigrar = document.createElement('div');
+    btnMigrar.className = 'col-auto';
+    btnMigrar.innerHTML = `
+      <button id="btnMigrar" class="btn btn-sm btn-warning">
+        <i class="bi bi-database-up"></i> Migrar Datos
+      </button>
+    `;
+    
+    selectorContainer.querySelector('.row').appendChild(btnMigrar);
+    
+    document.getElementById('btnMigrar').addEventListener('click', async () => {
+      if (confirm('¿Migrar datos históricos? Esto puede tardar unos segundos.')) {
+        await migrarDatosHistoricos();
+        // Ocultar botón después de migrar
+        document.getElementById('btnMigrar').style.display = 'none';
+      }
+    });
+  }
+}
+
+
 
 
 
