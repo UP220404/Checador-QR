@@ -1263,7 +1263,7 @@ async function cargarRankingMensual(mes, anio) {
   }
 }
 
-// Reemplaza SOLO la función renderRankingPuntualidad() (línea 1268) con esta:
+// REEMPLAZA la función renderRankingPuntualidad() completa con esta versión corregida:
 async function renderRankingPuntualidad() {
   // Obtener mes y año seleccionados
   const selectorMes = document.getElementById("selectorMesPuntualidad");
@@ -1283,9 +1283,9 @@ async function renderRankingPuntualidad() {
   // Cargar ranking del mes seleccionado
   const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
 
-  // Ordenar por puntaje y manejar empates
+  // Ordenar por puntaje descendente
   const usuarios = Object.entries(puntaje)
-    .sort((a, b) => b[1] - a[1]); // Ordenar por puntos descendente
+    .sort((a, b) => b[1] - a[1]);
 
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) return;
@@ -1302,7 +1302,7 @@ async function renderRankingPuntualidad() {
 
   rankingList.innerHTML = "";
 
-  // Configuración de íconos y estilos para cada posición (TUS ICONOS ORIGINALES)
+  // Configuración de íconos y estilos para cada MEDALLA
   const estilos = [
     { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", bgGradient: "linear-gradient(135deg, #0dcaf0, #17a2b8)", nombre: "Diamante", emoji: "💎" },
     { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", bgGradient: "linear-gradient(135deg, #dc3545, #c82333)", nombre: "Rubí", emoji: "🔴" },
@@ -1313,7 +1313,7 @@ async function renderRankingPuntualidad() {
 
   const medallaClases = [
     "ranking-medalla ranking-diamante",
-    "ranking-medalla ranking-rubi",
+    "ranking-medalla ranking-rubi", 
     "ranking-medalla ranking-oro",
     "ranking-medalla ranking-plata",
     "ranking-medalla ranking-bronce"
@@ -1334,22 +1334,25 @@ async function renderRankingPuntualidad() {
     return;
   }
 
-  // Asignar posiciones considerando empates
-  let posicionActual = 0;
+  // LÓGICA CORREGIDA: Asignar medallas considerando empates
+  let indiceMedalla = 0; // Índice de la medalla actual (0=Diamante, 1=Rubí, etc.)
   let puntajeAnterior = null;
   
   usuarios.forEach(([nombre, puntos], indice) => {
-    // Si el puntaje es diferente al anterior, actualizar la posición
-    if (puntajeAnterior !== puntos) {
-      posicionActual = indice;
+    // Solo mostrar los primeros 5 lugares
+    if (indice >= 5) return;
+    
+    // Si el puntaje es diferente al anterior, avanzar a la siguiente medalla
+    if (puntajeAnterior !== null && puntajeAnterior !== puntos) {
+      indiceMedalla++;
     }
     
-    // Solo mostrar los primeros 5 lugares (posiciones 0-4)
-    if (posicionActual >= 5) return;
+    // Asegurar que no exceda el array de medallas
+    const medallaActual = Math.min(indiceMedalla, estilos.length - 1);
     
-    const { icon, color, bgGradient, nombre: nombreMedalla, emoji } = estilos[posicionActual];
-    const clasesMedalla = medallaClases[posicionActual];
-    const posicionDisplay = posicionActual + 1;
+    const { icon, color, bgGradient, nombre: nombreMedalla, emoji } = estilos[medallaActual];
+    const clasesMedalla = medallaClases[medallaActual];
+    const posicionDisplay = indice + 1;
     
     // Crear elemento con diseño mejorado
     const rankingItem = document.createElement("li");
