@@ -2237,6 +2237,45 @@ window.verDetalleAusencia = verDetalleAusencia;
 function actualizarTablaAusencias() {
   actualizarTablaAusenciasSafe();
 }
+
+// AGREGAR esta función antes de cargarAccesosSospechosos()
+async function obtenerNombreRealUsuario(email) {
+  try {
+    // Buscar en la colección "usuarios" por email
+    const usuariosQuery = query(
+      collection(db, "usuarios"), 
+      where("email", "==", email)
+    );
+    
+    const querySnapshot = await getDocs(usuariosQuery);
+    
+    if (!querySnapshot.empty) {
+      const userData = querySnapshot.docs[0].data();
+      return `<strong>${userData.nombre}</strong><br><small class="text-muted">${email}</small>`;
+    } else {
+      // Si no existe en usuarios, buscar en registros
+      const registrosQuery = query(
+        collection(db, "registros"),
+        where("email", "==", email)
+      );
+      
+      const registrosSnapshot = await getDocs(registrosQuery);
+      
+      if (!registrosSnapshot.empty) {
+        const registroData = registrosSnapshot.docs[0].data();
+        return `<strong>${registroData.nombre}</strong><br><small class="text-muted">${email}</small>`;
+      }
+    }
+    
+    // Si no se encuentra en ninguna colección
+    return `<strong>Usuario no encontrado</strong><br><small class="text-muted">${email}</small>`;
+    
+  } catch (error) {
+    console.error("Error obteniendo nombre real:", error);
+    return `<strong>Error al cargar</strong><br><small class="text-muted">${email}</small>`;
+  }
+}
+
 async function cargarAccesosSospechosos() {
   try {
     const hace24h = new Date();
@@ -2270,8 +2309,9 @@ async function cargarAccesosSospechosos() {
     const ahora = new Date();
     const hace1h = new Date(ahora.getTime() - 60 * 60 * 1000);
     
-    querySnapshot.forEach((doc) => {
-      const acceso = doc.data();
+    // CAMBIO AQUÍ: usar for...of en lugar de forEach para manejar async/await
+    for (const docSnapshot of querySnapshot.docs) {
+      const acceso = docSnapshot.data();
       const fecha = acceso.timestamp.toDate();
       
       // Contar métricas
@@ -2283,12 +2323,17 @@ async function cargarAccesosSospechosos() {
       }
       
       // Mostrar solo los últimos 20
-      if (tbody.children.length >= 20) return;
+      if (tbody.children.length >= 20) continue;
       
       const row = document.createElement("tr");
       row.className = acceso.tipo === 'recarga_pagina' ? 'table-warning' : 
                      acceso.tipo === 'acceso_directo' ? 'table-danger' : '';
       
+      // CAMBIO AQUÍ: await funciona correctamente con for...of
+      const nombreUsuario = acceso.usuario ? 
+        await obtenerNombreRealUsuario(acceso.usuario.email) : 
+        '<span class="text-muted">No autenticado</span>';
+
       row.innerHTML = `
         <td>
           <small>
@@ -2297,10 +2342,7 @@ async function cargarAccesosSospechosos() {
           </small>
         </td>
         <td>
-          ${acceso.usuario ? 
-            `<strong>${acceso.usuario.nombre}</strong><br><small class="text-muted">${acceso.usuario.email}</small>` : 
-            '<span class="text-muted">No autenticado</span>'
-          }
+          ${nombreUsuario}
         </td>
         <td>
           <span class="badge ${acceso.tipo === 'recarga_pagina' ? 'bg-warning text-dark' : 'bg-danger'}">
@@ -2326,7 +2368,7 @@ async function cargarAccesosSospechosos() {
       `;
       
       tbody.appendChild(row);
-    });
+    }
     
     // Actualizar métricas
     document.getElementById("accesos-24h").textContent = accesos24h;
