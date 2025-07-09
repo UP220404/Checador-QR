@@ -2345,7 +2345,18 @@ async function cargarAccesosSospechosos() {
 // Función global
 window.cargarAccesosSospechosos = cargarAccesosSospechosos;
 
+
 // Cargar automáticamente al inicio
-setTimeout(cargarAccesosSospechosos, 2000);
 
 window.actualizarTablaAusencias = actualizarTablaAusencias;
+
+// Modificar la función mostrarSeccion para cargar automáticamente
+const mostrarSeccionOriginal = window.mostrarSeccion;
+window.mostrarSeccion = function(seccionId) {
+  mostrarSeccionOriginal(seccionId);
+  
+  // Si se abre la sección de seguridad, cargar los datos
+  if (seccionId === 'seguridad') {
+    setTimeout(cargarAccesosSospechosos, 500);
+  }
+};
