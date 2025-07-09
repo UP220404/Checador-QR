@@ -38,7 +38,32 @@ const CONFIG = {
 
 function validarQR() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('qr') === 'OFICINA2025';
+  const qrParam = params.get('qr');
+  
+  // Verificar acceso sospechoso ANTES de validar QR
+  const accesoSospechoso = verificarAccesoSospechoso();
+  if (accesoSospechoso) {
+    registrarIntentoSospechoso(accesoSospechoso, usuarioActual);
+    
+    if (usuarioActual) {
+      mostrarEstado("error", "⚠️ Acceso no autorizado detectado. Debes escanear el QR.");
+      return false;
+    }
+  }
+  
+  // Validación normal del QR
+  if (qrParam !== 'OFICINA2025') {
+    return false;
+  }
+  
+  // Si todo está bien, marcar sesión como válida
+  sesionValidada = true;
+  
+  // Limpiar URL para evitar reuso
+  const nuevaUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+  window.history.replaceState({}, document.title, nuevaUrl);
+  
+  return true;
 }
 
 // Inicialización de Firebase
@@ -82,6 +107,97 @@ const USUARIOS_REMOTOS = [
 
 let ubicacionPrecargada = null;
 let ubicacionObteniendo = false;
+
+// Sistema de detección de accesos sospechosos
+let sesionValidada = false;
+let usuarioActual = null;
+
+function detectarTipoAcceso() {
+  const params = new URLSearchParams(window.location.search);
+  const tieneQR = params.has('qr');
+  
+  let tipoNavegacion = 'desconocido';
+  
+  if (performance.navigation) {
+    switch (performance.navigation.type) {
+      case 0: tipoNavegacion = tieneQR ? 'qr_escaneado' : 'acceso_directo'; break;
+      case 1: tipoNavegacion = 'recarga_pagina'; break;
+      case 2: tipoNavegacion = 'navegacion_historial'; break;
+    }
+  } else if (performance.getEntriesByType) {
+    const navegacion = performance.getEntriesByType('navigation')[0];
+    if (navegacion) {
+      switch (navegacion.type) {
+        case 'navigate': tipoNavegacion = tieneQR ? 'qr_escaneado' : 'acceso_directo'; break;
+        case 'reload': tipoNavegacion = 'recarga_pagina'; break;
+        case 'back_forward': tipoNavegacion = 'navegacion_historial'; break;
+      }
+    }
+  }
+  
+  return {
+    tipo: tipoNavegacion,
+    tieneQR: tieneQR,
+    url: window.location.href,
+    timestamp: new Date(),
+    userAgent: navigator.userAgent
+  };
+}
+
+async function registrarIntentoSospechoso(tipoAcceso, usuario = null) {
+  try {
+    const datosIntento = {
+      tipo: tipoAcceso.tipo,
+      tieneQR: tipoAcceso.tieneQR,
+      url: tipoAcceso.url,
+      timestamp: tipoAcceso.timestamp,
+      userAgent: tipoAcceso.userAgent,
+      usuario: usuario ? {
+        email: usuario.email,
+        nombre: usuario.displayName || usuario.email,
+        uid: usuario.uid
+      } : null,
+      ip: await obtenerIP(),
+      sesionId: generarSesionId()
+    };
+    
+    await addDoc(collection(db, "accesos_sospechosos"), datosIntento);
+    console.warn("🚨 INTENTO SOSPECHOSO REGISTRADO:", datosIntento);
+    
+  } catch (error) {
+    console.error("Error registrando intento sospechoso:", error);
+  }
+}
+
+function generarSesionId() {
+  return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+async function obtenerIP() {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip;
+  } catch {
+    return 'desconocida';
+  }
+}
+
+function verificarAccesoSospechoso() {
+  const tipoAcceso = detectarTipoAcceso();
+  
+  const esSospechoso = 
+    tipoAcceso.tipo === 'recarga_pagina' ||
+    tipoAcceso.tipo === 'acceso_directo' ||
+    tipoAcceso.tipo === 'navegacion_historial';
+  
+  if (esSospechoso) {
+    console.warn("🚨 ACCESO SOSPECHOSO DETECTADO:", tipoAcceso);
+    return tipoAcceso;
+  }
+  
+  return null;
+}
 
 // ✅ AGREGAR AQUÍ ESTAS FUNCIONES:
 
@@ -435,7 +551,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
     // Coordenadas de la oficina
     const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
-    const RADIO_METROS = 100; // Radio permitido en metros
+    const RADIO_METROS = 40; // Radio permitido en metros
 
     function distanciaMetros(lat1, lng1, lat2, lng2) {
       const R = 6371e3; // metros
@@ -543,6 +659,16 @@ function getMensajeDefault(tipoEvento, hora) {
 // Observador de estado de autenticación
 onAuthStateChanged(auth, async (user) => {
   if (user) {
+    usuarioActual = user;
+    
+    // Verificar acceso sospechoso con usuario identificado
+    const accesoSospechoso = verificarAccesoSospechoso();
+    if (accesoSospechoso && !sesionValidada) {
+      await registrarIntentoSospechoso(accesoSospechoso, user);
+      mostrarEstado("error", `⚠️ ${user.displayName || user.email}, debes escanear el QR para registrar asistencia.`);
+      return;
+    }
+    
     // Usuario autenticado
     DOM.btnGoogle?.classList.add(CSS_CLASSES.dNone);
     DOM.btnLogout?.classList.remove(CSS_CLASSES.dNone);
@@ -558,7 +684,6 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // ...existing code...
       const userData = userDoc.data();
       
       // Verificar si es usuario remoto ANTES de obtener ubicación
@@ -582,6 +707,17 @@ onAuthStateChanged(auth, async (user) => {
       console.error("Error al obtener datos de usuario:", error);
       mostrarEstado("error", "❌ Error al cargar datos de usuario");
     }
+  } else {
+    usuarioActual = null;
+    
+    const accesoSospechoso = verificarAccesoSospechoso();
+    if (accesoSospechoso) {
+      await registrarIntentoSospechoso(accesoSospechoso, null);
+    }
+    
+    DOM.btnGoogle?.classList.remove(CSS_CLASSES.dNone);
+    DOM.btnLogout?.classList.add(CSS_CLASSES.dNone);
+    DOM.userName.textContent = "Por favor, inicia sesión";
   }
 });
 
@@ -599,7 +735,34 @@ DOM.btnLogout?.addEventListener("click", () => {
 });
 
 // Inicialización
+// Inicialización de detección al cargar la página
 document.addEventListener("DOMContentLoaded", () => {
-  // Iniciar precarga de ubicación inmediatamente
+  const accesoSospechoso = verificarAccesoSospechoso();
+  if (accesoSospechoso) {
+    console.warn("🚨 Acceso sospechoso detectado al cargar:", accesoSospechoso.tipo);
+  }
+  
   iniciarActualizacionUbicacion();
+});
+
+window.addEventListener('beforeunload', () => {
+  const ahora = Date.now();
+  localStorage.setItem('ch_ultima_salida', ahora.toString());
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    console.warn("⚠️ Página mostrada desde caché");
+    const accesoSospechoso = {
+      tipo: 'cache_navegacion',
+      tieneQR: new URLSearchParams(window.location.search).has('qr'),
+      url: window.location.href,
+      timestamp: new Date(),
+      userAgent: navigator.userAgent
+    };
+    
+    if (usuarioActual) {
+      registrarIntentoSospechoso(accesoSospechoso, usuarioActual);
+    }
+  }
 });

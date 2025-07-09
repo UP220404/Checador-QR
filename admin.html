@@ -194,6 +194,80 @@
       </div>
     </div>
 
+<!-- Panel de Monitoreo de Seguridad -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+          <i class="bi bi-shield-exclamation me-2"></i>
+          Monitor de Seguridad - Accesos Sospechosos
+          <button class="btn btn-sm btn-outline-dark ms-2" onclick="cargarAccesosSospechosos()">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+          </button>
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- Métricas rápidas -->
+        <div class="row mb-3 g-3">
+          <div class="col-md-3">
+            <div class="alert alert-danger text-center mb-0">
+              <h6>Últimas 24h</h6>
+              <h4 id="accesos-24h">0</h4>
+              <small>intentos sospechosos</small>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="alert alert-warning text-center mb-0">
+              <h6>Última hora</h6>
+              <h4 id="accesos-1h">0</h4>
+              <small>intentos recientes</small>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="alert alert-info text-center mb-0">
+              <h6>Recargas</h6>
+              <h4 id="total-recargas">0</h4>
+              <small>páginas recargadas</small>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="alert alert-secondary text-center mb-0">
+              <h6>Accesos directos</h6>
+              <h4 id="total-directos">0</h4>
+              <small>sin QR</small>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tabla de accesos -->
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead class="table-dark">
+              <tr>
+                <th width="15%">Fecha/Hora</th>
+                <th width="20%">Usuario</th>
+                <th width="15%">Tipo</th>
+                <th width="20%">URL</th>
+                <th width="15%">IP</th>
+                <th width="15%">Navegador</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-accesos-sospechosos">
+              <tr>
+                <td colspan="6" class="text-center py-3">
+                  <i class="bi bi-shield-check text-success" style="font-size: 2rem;"></i>
+                  <p class="mt-2 mb-0">Cargando datos de seguridad...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
     <!-- Justificantes, Permisos y Vacaciones -->
 <div id="justificantes" class="seccion d-none">
   <div class="section-header">

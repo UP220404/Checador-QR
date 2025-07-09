@@ -2237,4 +2237,115 @@ window.verDetalleAusencia = verDetalleAusencia;
 function actualizarTablaAusencias() {
   actualizarTablaAusenciasSafe();
 }
+async function cargarAccesosSospechosos() {
+  try {
+    const hace24h = new Date();
+    hace24h.setHours(hace24h.getHours() - 24);
+    
+    const q = query(
+      collection(db, "accesos_sospechosos"),
+      orderBy("timestamp", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const tbody = document.getElementById("tabla-accesos-sospechosos");
+    
+    if (!tbody) return;
+    
+    tbody.innerHTML = "";
+    
+    if (querySnapshot.empty) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center text-success">
+            <i class="bi bi-shield-check"></i> No hay accesos sospechosos registrados
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    // Contadores para métricas
+    let accesos24h = 0, accesos1h = 0, recargas = 0, directos = 0;
+    const ahora = new Date();
+    const hace1h = new Date(ahora.getTime() - 60 * 60 * 1000);
+    
+    querySnapshot.forEach((doc) => {
+      const acceso = doc.data();
+      const fecha = acceso.timestamp.toDate();
+      
+      // Contar métricas
+      if (fecha >= hace24h) {
+        accesos24h++;
+        if (fecha >= hace1h) accesos1h++;
+        if (acceso.tipo === 'recarga_pagina') recargas++;
+        if (acceso.tipo === 'acceso_directo') directos++;
+      }
+      
+      // Mostrar solo los últimos 20
+      if (tbody.children.length >= 20) return;
+      
+      const row = document.createElement("tr");
+      row.className = acceso.tipo === 'recarga_pagina' ? 'table-warning' : 
+                     acceso.tipo === 'acceso_directo' ? 'table-danger' : '';
+      
+      row.innerHTML = `
+        <td>
+          <small>
+            ${fecha.toLocaleDateString("es-MX")}<br>
+            ${fecha.toLocaleTimeString("es-MX")}
+          </small>
+        </td>
+        <td>
+          ${acceso.usuario ? 
+            `<strong>${acceso.usuario.nombre}</strong><br><small class="text-muted">${acceso.usuario.email}</small>` : 
+            '<span class="text-muted">No autenticado</span>'
+          }
+        </td>
+        <td>
+          <span class="badge ${acceso.tipo === 'recarga_pagina' ? 'bg-warning text-dark' : 'bg-danger'}">
+            ${acceso.tipo === 'recarga_pagina' ? 'Recarga' : 
+              acceso.tipo === 'acceso_directo' ? 'Acceso Directo' : acceso.tipo}
+          </span>
+          ${acceso.tieneQR ? '<br><small class="text-info">Con QR</small>' : '<br><small class="text-warning">Sin QR</small>'}
+        </td>
+        <td>
+          <small class="font-monospace">
+            ${acceso.url.length > 30 ? acceso.url.substring(0, 30) + '...' : acceso.url}
+          </small>
+        </td>
+        <td>
+          <small class="font-monospace">${acceso.ip || 'N/A'}</small>
+        </td>
+        <td>
+          <small class="text-muted">
+            ${acceso.userAgent.includes('Chrome') ? 'Chrome' : 
+              acceso.userAgent.includes('Firefox') ? 'Firefox' : 'Otro'}
+          </small>
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+    
+    // Actualizar métricas
+    document.getElementById("accesos-24h").textContent = accesos24h;
+    document.getElementById("accesos-1h").textContent = accesos1h;
+    document.getElementById("total-recargas").textContent = recargas;
+    document.getElementById("total-directos").textContent = directos;
+    
+    console.log(`📊 Cargados ${querySnapshot.size} accesos sospechosos`);
+    
+  } catch (error) {
+    console.error("Error cargando accesos sospechosos:", error);
+    mostrarNotificacion("Error al cargar accesos sospechosos", "danger");
+  }
+}
+
+// Función global
+window.cargarAccesosSospechosos = cargarAccesosSospechosos;
+
+// Cargar automáticamente al inicio
+setTimeout(cargarAccesosSospechosos, 2000);
+
 window.actualizarTablaAusencias = actualizarTablaAusencias;
