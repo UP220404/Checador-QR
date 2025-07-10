@@ -32,7 +32,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const adminEmails = ["sistemas16ch@gmail.com", "leticia@cielitohome.com", "sistemas@cielitohome.com"];
+const adminEmails = ["sistemas16ch@gmail.com", "direcciongeneral@cielitohome.com", "sistemas@cielitohome.com"];
 const tabla = document.querySelector("#tabla-registros tbody");const tipoFiltro = document.getElementById("filtroTipo");
 const fechaFiltro = document.getElementById("filtroFecha");
 const busquedaFiltro = document.getElementById("filtroBusqueda");
