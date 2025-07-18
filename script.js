@@ -102,7 +102,7 @@ const CSS_CLASSES = {
 // Lista blanca de correos remotos
 const USUARIOS_REMOTOS = [
   "sistemas20cielitoh@gmail.com",
-  "operacionescielitoh@gmail.com"
+  "operacionescielitoh@gmail.com", "cielitohomelimpieza@gmail.com"
 ];
 
 let ubicacionPrecargada = null;
