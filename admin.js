@@ -1296,11 +1296,10 @@ const entradasMes = registros.filter(r =>
 );
 const nombresUsuariosMes = Array.from(new Set(entradasMes.map(r => r.nombre)));
 
-// 2. Construir el ranking real (todos los usuarios con entradas en el mes, aunque tengan 0 puntos)
-let usuarios = nombresUsuariosMes.map(nombre => [nombre, puntaje[nombre] || 0]);
-
-// 3. Ordenar por puntos descendente
-usuarios.sort((a, b) => b[1] - a[1]);
+// 2. Solo incluir usuarios con puntos > 0
+let usuarios = Object.entries(puntaje)
+  .filter(([nombre, puntos]) => puntos > 0)
+  .sort((a, b) => b[1] - a[1]);
 
 // 4. Agregar SOLO a direcciongeneral@cielitohome.com si no está
 const adminEmail = "direcciongeneral@cielitohome.com";
