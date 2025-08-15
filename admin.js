@@ -1284,9 +1284,21 @@ async function renderRankingPuntualidad() {
   // Cargar ranking del mes seleccionado
   const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
 
-  // Ordenar por puntaje descendente
-  const usuarios = Object.entries(puntaje)
-    .sort((a, b) => b[1] - a[1]);
+  // ...existing code...
+// AÑADIR ADMINISTRADORES AL RANKING SI NO ESTÁN
+adminEmails.forEach(adminEmail => {
+  // Buscar nombre del admin en los registros
+  const registroAdmin = registros.find(r => r.email === adminEmail);
+  const nombreAdmin = registroAdmin ? registroAdmin.nombre : adminEmail.split('@')[0];
+
+  // Si no está en el ranking, agregarlo con 0 puntos
+  if (!puntaje[nombreAdmin]) {
+    puntaje[nombreAdmin] = 0;
+  }
+});
+
+const usuarios = Object.entries(puntaje)
+  .sort((a, b) => b[1] - a[1]);
 
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) return;
