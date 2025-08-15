@@ -1284,21 +1284,23 @@ async function renderRankingPuntualidad() {
   // Cargar ranking del mes seleccionado
   const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
 
-  // ...existing code...
-// AÑADIR ADMINISTRADORES AL RANKING SI NO ESTÁN
-adminEmails.forEach(adminEmail => {
-  // Buscar nombre del admin en los registros
-  const registroAdmin = registros.find(r => r.email === adminEmail);
-  const nombreAdmin = registroAdmin ? registroAdmin.nombre : adminEmail.split('@')[0];
+ 
+  // ...dentro de renderRankingPuntualidad(), después de obtener puntaje...
 
-  // Si no está en el ranking, agregarlo con 0 puntos
-  if (!puntaje[nombreAdmin]) {
-    puntaje[nombreAdmin] = 0;
-  }
-});
-
-const usuarios = Object.entries(puntaje)
+// 1. Construir el ranking real (usuarios con puntos o con registros de entrada)
+let usuarios = Object.entries(puntaje)
+  .filter(([nombre, puntos]) => puntos > 0 || registros.some(r => r.nombre === nombre))
   .sort((a, b) => b[1] - a[1]);
+
+// 2. Agregar SOLO a direcciongeneral@cielitohome.com si no está
+const adminEmail = "direcciongeneral@cielitohome.com";
+const registroAdmin = registros.find(r => r.email === adminEmail);
+const nombreAdmin = registroAdmin ? registroAdmin.nombre : adminEmail.split('@')[0];
+const yaEstaAdmin = usuarios.some(([nombre]) => nombre === nombreAdmin);
+
+if (!yaEstaAdmin) {
+  usuarios.push([nombreAdmin, 0]);
+}
 
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) return;
