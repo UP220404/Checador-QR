@@ -1286,13 +1286,23 @@ async function renderRankingPuntualidad() {
 
  
   // ...dentro de renderRankingPuntualidad(), después de obtener puntaje...
+  // ...dentro de renderRankingPuntualidad(), después de obtener puntaje...
 
-// 1. Construir el ranking real (usuarios con puntos o con registros de entrada)
-let usuarios = Object.entries(puntaje)
-  .filter(([nombre, puntos]) => puntos > 0 || registros.some(r => r.nombre === nombre))
-  .sort((a, b) => b[1] - a[1]);
+// 1. Obtener todos los nombres de usuarios con al menos una entrada en el mes seleccionado
+const entradasMes = registros.filter(r =>
+  r.tipoEvento === "entrada" &&
+  new Date(r.timestamp.seconds * 1000).getMonth() === mesSeleccionado &&
+  new Date(r.timestamp.seconds * 1000).getFullYear() === anioSeleccionado
+);
+const nombresUsuariosMes = Array.from(new Set(entradasMes.map(r => r.nombre)));
 
-// 2. Agregar SOLO a direcciongeneral@cielitohome.com si no está
+// 2. Construir el ranking real (todos los usuarios con entradas en el mes, aunque tengan 0 puntos)
+let usuarios = nombresUsuariosMes.map(nombre => [nombre, puntaje[nombre] || 0]);
+
+// 3. Ordenar por puntos descendente
+usuarios.sort((a, b) => b[1] - a[1]);
+
+// 4. Agregar SOLO a direcciongeneral@cielitohome.com si no está
 const adminEmail = "direcciongeneral@cielitohome.com";
 const registroAdmin = registros.find(r => r.email === adminEmail);
 const nombreAdmin = registroAdmin ? registroAdmin.nombre : adminEmail.split('@')[0];
@@ -1301,6 +1311,7 @@ const yaEstaAdmin = usuarios.some(([nombre]) => nombre === nombreAdmin);
 if (!yaEstaAdmin) {
   usuarios.push([nombreAdmin, 0]);
 }
+
 
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) return;
