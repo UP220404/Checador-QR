@@ -1264,6 +1264,7 @@ async function cargarRankingMensual(mes, anio) {
   }
 }
 
+
 // REEMPLAZA la función renderRankingPuntualidad() completa con esta versión corregida:
 async function renderRankingPuntualidad() {
   // Obtener mes y año seleccionados
@@ -1281,39 +1282,69 @@ async function renderRankingPuntualidad() {
     anioSeleccionado = ahora.getFullYear();
   }
 
+  console.log(`📊 Cargando ranking para ${mesSeleccionado + 1}/${anioSeleccionado}`);
+
   // Cargar ranking del mes seleccionado
   const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
 
- 
-  // ...dentro de renderRankingPuntualidad(), después de obtener puntaje...
-  // ...dentro de renderRankingPuntualidad(), después de obtener puntaje...
+  // Si no hay ranking guardado, calcularlo en tiempo real
+  if (Object.keys(puntaje).length === 0) {
+    console.log("⚠️ No hay ranking guardado, calculando en tiempo real...");
+    
+    // Filtrar entradas del mes seleccionado
+    const entradasMes = registros.filter(r => {
+      if (r.tipoEvento !== "entrada") return false;
+      
+      const fecha = new Date(r.timestamp.seconds * 1000);
+      return fecha.getMonth() === mesSeleccionado && 
+             fecha.getFullYear() === anioSeleccionado;
+    });
 
-// 1. Obtener todos los nombres de usuarios con al menos una entrada en el mes seleccionado
-const entradasMes = registros.filter(r =>
-  r.tipoEvento === "entrada" &&
-  new Date(r.timestamp.seconds * 1000).getMonth() === mesSeleccionado &&
-  new Date(r.timestamp.seconds * 1000).getFullYear() === anioSeleccionado
-);
-const nombresUsuariosMes = Array.from(new Set(entradasMes.map(r => r.nombre)));
+    console.log(`📝 Entradas encontradas en el mes: ${entradasMes.length}`);
 
-// 2. Solo incluir usuarios con puntos > 0
-let usuarios = Object.entries(puntaje)
-  .filter(([nombre, puntos]) => puntos > 0)
-  .sort((a, b) => b[1] - a[1]);
+    // Calcular puntaje manualmente
+    const puntajeCalculado = {};
+    entradasMes.forEach(r => {
+      const fecha = new Date(r.timestamp.seconds * 1000);
+      const hora = fecha.getHours();
+      const minutos = fecha.getMinutes();
+      let puntos = 0;
 
-// 4. Agregar SOLO a direcciongeneral@cielitohome.com si no está
-const adminEmail = "direcciongeneral@cielitohome.com";
-const registroAdmin = registros.find(r => r.email === adminEmail);
-const nombreAdmin = registroAdmin ? registroAdmin.nombre : adminEmail.split('@')[0];
-const yaEstaAdmin = usuarios.some(([nombre]) => nombre === nombreAdmin);
+      if (hora === 7 && minutos <= 45) {
+        puntos = 4; // Entrada entre 7:00 y 7:45
+      } else if (hora < 8) {
+        puntos = 3; // Entrada antes de las 8:00
+      } else if (hora === 8 && minutos <= 5) {
+        puntos = 2; // Entrada entre 8:00 y 8:05
+      } else if (hora === 8 && minutos <= 10) {
+        puntos = 1; // Entrada entre 8:06 y 8:10
+      }
+      
+      if (puntos > 0) {
+        // Usar el nombre del registro directamente
+        const nombreUsuario = r.nombre || r.nombreUsuario || 'Usuario Desconocido';
+        puntajeCalculado[nombreUsuario] = (puntajeCalculado[nombreUsuario] || 0) + puntos;
+        console.log(`➕ ${nombreUsuario}: +${puntos} puntos (Total: ${puntajeCalculado[nombreUsuario]})`);
+      }
+    });
 
-if (!yaEstaAdmin) {
-  usuarios.push([nombreAdmin, 0]);
-}
+    // Usar el puntaje calculado
+    Object.assign(puntaje, puntajeCalculado);
+  }
 
+  // Crear array de usuarios y ordenar por puntos
+  let usuarios = Object.entries(puntaje)
+    .filter(([nombre, puntos]) => puntos > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5); // Solo top 5
+
+  console.log(`👥 Usuarios en el ranking:`, usuarios);
 
   const rankingList = document.getElementById("ranking-puntualidad");
-  if (!rankingList) return;
+  if (!rankingList) {
+    console.error("❌ Elemento ranking-puntualidad no encontrado");
+    return;
+  }
 
   // Actualizar título del mes
   const tituloRanking = document.querySelector('.card:has(#ranking-puntualidad) .card-header h5');
@@ -1327,7 +1358,7 @@ if (!yaEstaAdmin) {
 
   rankingList.innerHTML = "";
 
-  // Configuración de íconos y estilos para cada MEDALLA
+  // Configuración de estilos para cada medalla
   const estilos = [
     { icon: '<i class="bi bi-gem"></i>', color: "#0dcaf0", bgGradient: "linear-gradient(135deg, #0dcaf0, #17a2b8)", nombre: "Diamante", emoji: "💎" },
     { icon: '<i class="bi bi-gem"></i>', color: "#dc3545", bgGradient: "linear-gradient(135deg, #dc3545, #c82333)", nombre: "Rubí", emoji: "🔴" },
@@ -1359,14 +1390,11 @@ if (!yaEstaAdmin) {
     return;
   }
 
-  // LÓGICA CORREGIDA: Asignar medallas considerando empates
-  let indiceMedalla = 0; // Índice de la medalla actual (0=Diamante, 1=Rubí, etc.)
+  // Renderizar usuarios en el ranking
+  let indiceMedalla = 0;
   let puntajeAnterior = null;
   
   usuarios.forEach(([nombre, puntos], indice) => {
-    // Solo mostrar los primeros 5 lugares
-    if (indice >= 5) return;
-    
     // Si el puntaje es diferente al anterior, avanzar a la siguiente medalla
     if (puntajeAnterior !== null && puntajeAnterior !== puntos) {
       indiceMedalla++;
@@ -1396,7 +1424,7 @@ if (!yaEstaAdmin) {
         </div>
         <div class="ranking-points-nuevo">
           <span class="points-number-nuevo">${puntos}</span>
-          <span class="points-text-nuevo">punto${puntos > 1 ? 's' : ''}</span>
+          <span class="points-text-nuevo">punto${puntos !== 1 ? 's' : ''}</span>
         </div>
       </div>
     `;
@@ -1405,6 +1433,120 @@ if (!yaEstaAdmin) {
     
     puntajeAnterior = puntos;
   });
+
+  console.log(`✅ Ranking renderizado con ${usuarios.length} usuarios`);
+}
+
+// También asegúrate de que la función calcularYGuardarRankingMensual esté guardando correctamente:
+async function calcularYGuardarRankingMensual() {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
+  
+  console.log(`📊 Calculando ranking para ${mesActual + 1}/${anioActual}`);
+  
+  // Solo entradas del mes actual
+  const entradasMes = registros.filter(r => {
+    if (r.tipoEvento !== "entrada") return false;
+    
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    return fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual;
+  });
+
+  console.log(`📝 Total de entradas en el mes: ${entradasMes.length}`);
+
+  // Calcular puntaje del mes actual
+  const puntaje = {};
+  entradasMes.forEach(r => {
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    const hora = fecha.getHours();
+    const minutos = fecha.getMinutes();
+    let puntos = 0;
+
+    if (hora === 7 && minutos <= 45) {
+      puntos = 4; // Entrada entre 7:00 y 7:45 
+    } else if (hora < 8) {
+      puntos = 3; // Entrada antes de las 8:00
+    } else if (hora === 8 && minutos <= 5) {
+      puntos = 2; // Entrada entre 8:00 y 8:05
+    } else if (hora === 8 && minutos <= 10) {
+      puntos = 1; // Entrada entre 8:06 y 8:10
+    }
+    
+    if (puntos > 0) {
+      // Usar el campo nombre directamente
+      const nombreUsuario = r.nombre || 'Usuario Desconocido';
+      puntaje[nombreUsuario] = (puntaje[nombreUsuario] || 0) + puntos;
+      console.log(`➕ ${nombreUsuario}: +${puntos} puntos`);
+    }
+  });
+
+  console.log("📊 Puntajes calculados:", puntaje);
+
+  // Guardar en Firebase
+  const rankingId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}`;
+  
+  try {
+    const rankingRef = doc(db, "rankings-mensuales", rankingId);
+    
+    await setDoc(rankingRef, {
+      mes: mesActual,
+      anio: anioActual,
+      ranking: puntaje,
+      fechaActualizacion: new Date(),
+      top5: Object.entries(puntaje)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([nombre, puntos], index) => ({
+          posicion: index + 1,
+          nombre,
+          puntos
+        }))
+    });
+    
+    console.log(`✅ Ranking guardado en Firebase: ${rankingId}`);
+  } catch (error) {
+    console.error("❌ Error al guardar ranking mensual:", error);
+  }
+}
+
+// Función para debug - agrégala temporalmente para verificar los datos
+window.debugRanking = async function() {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
+  
+  console.log("=== DEBUG RANKING ===");
+  console.log(`Mes actual: ${mesActual + 1}/${anioActual}`);
+  console.log(`Total registros cargados: ${registros.length}`);
+  
+  const entradasMes = registros.filter(r => {
+    if (r.tipoEvento !== "entrada") return false;
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    return fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual;
+  });
+  
+  console.log(`Entradas este mes: ${entradasMes.length}`);
+  console.log("Primeras 5 entradas:", entradasMes.slice(0, 5).map(e => ({
+    nombre: e.nombre,
+    fecha: new Date(e.timestamp.seconds * 1000).toLocaleString(),
+    hora: new Date(e.timestamp.seconds * 1000).getHours() + ':' + new Date(e.timestamp.seconds * 1000).getMinutes()
+  })));
+  
+  // Ver ranking guardado
+  const rankingId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}`;
+  try {
+    const rankingRef = doc(db, "rankings-mensuales", rankingId);
+    const rankingDoc = await getDoc(rankingRef);
+    
+    if (rankingDoc.exists()) {
+      console.log("Ranking guardado en Firebase:", rankingDoc.data());
+    } else {
+      console.log("No hay ranking guardado para este mes");
+    }
+  } catch (error) {
+    console.error("Error obteniendo ranking:", error);
+  }
 }
 
 // Función para inicializar selectores
