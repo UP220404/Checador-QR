@@ -1146,70 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Función para calcular y guardar ranking mensual
-async function calcularYGuardarRankingMensual() {
-  const ahora = new Date();
-  const mesActual = ahora.getMonth();
-  const anioActual = ahora.getFullYear();
-  
-  // Solo entradas del mes actual
-  const entradasMes = registros.filter(r =>
-    r.tipoEvento === "entrada" &&
-    new Date(r.timestamp.seconds * 1000).getMonth() === mesActual &&
-    new Date(r.timestamp.seconds * 1000).getFullYear() === anioActual
-  );
 
-  // Calcular puntaje del mes actual
-  const puntaje = {};
-  entradasMes.forEach(r => {
-    const fecha = new Date(r.timestamp.seconds * 1000);
-    const hora = fecha.getHours();
-    const minutos = fecha.getMinutes();
-    let puntos = 0;
-
-    if (hora === 7 && minutos <= 45) {
-      puntos = 4; // Entrada entre 7:00 y 7:45 
-    } else if (hora < 8) {
-      puntos = 3; // Entrada antes de las 8:00
-    } else if (hora === 8 && minutos <= 5) {
-      puntos = 2; // Entrada entre 8:00 y 8:05
-    } else if (hora === 8 && minutos <= 10) {
-      puntos = 1; // Entrada entre 8:06 y 8:10
-    }
-    
-    if (puntos > 0) {
-      puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
-    }
-  });
-
-  // Verificar si ya existe un ranking para este mes
-  const rankingId = `${anioActual}-${String(mesActual + 1).padStart(2, '0')}`;
-  
-  try {
-    const rankingRef = doc(db, "rankings-mensuales", rankingId);
-    const rankingDoc = await getDoc(rankingRef);
-    
-    // Si no existe o es el mes actual, actualizar
-    if (!rankingDoc.exists() || (mesActual === ahora.getMonth() && anioActual === ahora.getFullYear())) {
-      await setDoc(rankingRef, {
-        mes: mesActual,
-        anio: anioActual,
-        ranking: puntaje,
-        fechaActualizacion: new Date(),
-        top5: Object.entries(puntaje)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([nombre, puntos], index) => ({
-            posicion: index + 1,
-            nombre,
-            puntos
-          }))
-      });
-    }
-  } catch (error) {
-    console.error("Error al guardar ranking mensual:", error);
-  }
-}
 
 // Función para cargar ranking de un mes específico
 async function cargarRankingMensual(mes, anio) {
