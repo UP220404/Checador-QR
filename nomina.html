@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Módulo de Nómina | CH Sistema</title>
+  <title>Sistema de Nómina | Cielito Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="nomina.css">
+  
 </head>
 <body>
   <!-- Navbar -->
-  <nav class="navbar navbar-dark" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+  <nav class="navbar navbar-dark navbar-nomina">
     <div class="container-fluid">
       <span class="navbar-brand mb-0 h1">
         <i class="bi bi-calculator me-2"></i>Sistema de Nómina - Cielito Home
@@ -22,46 +23,48 @@
     </div>
   </nav>
 
-  <div class="container-fluid py-4">
+  <div class="nomina-container">
     <!-- Tabs de navegación -->
-    <ul class="nav nav-pills nav-fill mb-4" id="nominaTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="calculo-tab" data-bs-toggle="pill" data-bs-target="#calculo" type="button">
-          <i class="bi bi-calculator me-2"></i>Cálculo de Nómina
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="configuracion-tab" data-bs-toggle="pill" data-bs-target="#configuracion" type="button">
-          <i class="bi bi-gear me-2"></i>Configuración
-        </button>
-      </li>
-    </ul>
+    <div class="nomina-tabs">
+      <ul class="nav nav-pills nav-fill" id="nominaTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="calculo-tab" data-bs-toggle="pill" data-bs-target="#calculo" type="button">
+            <i class="bi bi-calculator me-2"></i>Cálculo de Nómina
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="configuracion-tab" data-bs-toggle="pill" data-bs-target="#configuracion" type="button">
+            <i class="bi bi-gear me-2"></i>Configuración
+          </button>
+        </li>
+      </ul>
+    </div>
 
     <!-- Tab Content -->
-    <div class="tab-content" id="nominaTabContent">
+    <div class="tab-content fade-in" id="nominaTabContent">
       
       <!-- CÁLCULO DE NÓMINA -->
       <div class="tab-pane fade show active" id="calculo" role="tabpanel">
         <!-- Selector de Período -->
-        <div class="selector-mes-container">
-          <div class="row align-items-center">
+        <div class="period-selector">
+          <div class="row align-items-end">
             <div class="col-md-3">
-              <label class="form-label fw-bold">Período de Nómina:</label>
+              <label class="form-label">Período de Nómina:</label>
               <select id="tipoPeriodo" class="form-select">
                 <option value="quincenal">Quincenal</option>
                 <option value="semanal">Semanal</option>
               </select>
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-bold">Fecha Inicio:</label>
+              <label class="form-label">Fecha Inicio:</label>
               <input type="date" id="fechaInicio" class="form-control">
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-bold">Fecha Fin:</label>
+              <label class="form-label">Fecha Fin:</label>
               <input type="date" id="fechaFin" class="form-control">
             </div>
             <div class="col-md-3">
-              <button class="btn btn-primary w-100 mt-4" onclick="calcularNomina()">
+              <button class="btn btn-calculate w-100" onclick="calcularNomina()">
                 <i class="bi bi-play-fill me-2"></i>Calcular Nómina
               </button>
             </div>
@@ -69,15 +72,21 @@
         </div>
 
         <!-- Loading -->
-        <div id="loadingNomina" class="text-center py-5 d-none">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Calculando...</span>
-          </div>
-          <p class="mt-3 text-muted">Calculando nómina...</p>
+        <div id="loadingNomina" class="loading-container d-none">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Calculando nómina...</p>
+        </div>
+
+        <!-- Warning por permisos -->
+        <div id="warningPermisos" class="warning-container d-none">
+          <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+          <h5 class="mt-3">Configuración Manual Requerida</h5>
+          <p>El sistema está usando solo los registros de asistencia disponibles.<br>
+          Para cálculos completos, configura los salarios en la pestaña "Configuración".</p>
         </div>
 
         <!-- Resumen de Nómina -->
-        <div id="resumenNomina" class="chart-container d-none mb-4" style="background: linear-gradient(135deg, var(--secondary-color), var(--accent-color)); color: white;">
+        <div id="resumenNomina" class="payroll-summary d-none">
           <div class="row text-center">
             <div class="col-md-3">
               <h4 id="totalEmpleados">0</h4>
@@ -107,32 +116,48 @@
 
       <!-- CONFIGURACIÓN -->
       <div class="tab-pane fade" id="configuracion" role="tabpanel">
-        <div class="chart-container mb-4">
-          <h4 class="mb-4"><i class="bi bi-person-gear me-2"></i>Configuración de Empleados</h4>
+        <div class="config-card mb-4">
+          <h4 class="mb-4 text-gradient">
+            <i class="bi bi-person-gear me-2"></i>Configuración de Empleados
+          </h4>
           
-          <!-- Filtro de usuarios -->
+          <!-- Info sobre configuración manual -->
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Configuración Manual:</strong> Debido a los permisos de Firebase, debes configurar manualmente los salarios por empleado. Los registros de asistencia se cargan automáticamente.
+          </div>
+
+          <!-- Agregar empleado manual -->
+          <div class="mb-4 p-3 bg-light rounded" id="agregarEmpleadoManual">
+            <h6>Agregar Empleado para Nómina:</h6>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <input type="text" class="form-control" id="nuevoEmpleadoNombre" placeholder="Nombre completo">
+              </div>
+              <div class="col-md-3">
+                <input type="email" class="form-control" id="nuevoEmpleadoEmail" placeholder="Email">
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="nuevoEmpleadoTipo">
+                  <option value="becario">Becario</option>
+                  <option value="tiempo_completo">Tiempo Completo</option>
+                  <option value="nayeli">Especial Nayeli</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button class="btn btn-success w-100" onclick="agregarEmpleadoManual()">
+                  <i class="bi bi-plus"></i> Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="mb-3">
             <input type="text" id="filtroUsuarios" class="form-control" placeholder="Buscar empleado...">
           </div>
 
           <!-- Lista de configuraciones -->
           <div id="configUsuarios" class="row">
-            <!-- Se llenará dinámicamente -->
-          </div>
-        </div>
-
-        <div class="chart-container">
-          <h4 class="mb-4"><i class="bi bi-clock me-2"></i>Horarios Especiales</h4>
-          <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            Configura horarios especiales para períodos específicos (vacaciones, proyectos especiales, etc.)
-          </div>
-          
-          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalHorarioEspecial">
-            <i class="bi bi-plus-circle me-2"></i>Nuevo Horario Especial
-          </button>
-
-          <div id="horariosEspeciales" class="mt-3">
             <!-- Se llenará dinámicamente -->
           </div>
         </div>
@@ -173,12 +198,12 @@
             
             <div class="mb-3">
               <label class="form-label">Nombre</label>
-              <input type="text" id="configNombre" class="form-control" readonly>
+              <input type="text" id="configNombre" class="form-control">
             </div>
 
             <div class="mb-3">
               <label class="form-label">Email</label>
-              <input type="email" id="configEmail" class="form-control" readonly>
+              <input type="email" id="configEmail" class="form-control">
             </div>
 
             <div class="mb-3">
@@ -226,60 +251,10 @@
     </div>
   </div>
 
-  <!-- Modal Horario Especial -->
-  <div class="modal fade" id="modalHorarioEspecial" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="bi bi-calendar-plus me-2"></i>Horario Especial
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="formHorarioEspecial">
-            <div class="mb-3">
-              <label class="form-label">Empleado</label>
-              <select id="especialEmpleado" class="form-select" required>
-                <option value="">Seleccionar empleado...</option>
-              </select>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Fecha Inicio</label>
-              <input type="date" id="especialFechaInicio" class="form-control" required>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Fecha Fin</label>
-              <input type="date" id="especialFechaFin" class="form-control" required>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Horario Especial</label>
-              <select id="especialTipoHorario" class="form-select" required>
-                <option value="tiempo_completo">Tiempo Completo (8 horas)</option>
-                <option value="becario">Becario (5 horas)</option>
-                <option value="nayeli">Especial (6 horas)</option>
-              </select>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Motivo</label>
-              <input type="text" id="especialMotivo" class="form-control" 
-                     placeholder="Ej: Vacaciones, proyecto especial..." required>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" onclick="guardarHorarioEspecial()">
-            <i class="bi bi-save me-2"></i>Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Toggle modo oscuro -->
+  <button class="theme-toggle-nomina" id="themeToggle">
+    <i class="bi bi-moon-fill"></i>
+  </button>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
@@ -289,13 +264,7 @@
       collection,
       getDocs,
       doc,
-      getDoc,
       setDoc,
-      updateDoc,
-      addDoc,
-      query,
-      where,
-      orderBy,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -312,18 +281,35 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Variables globales
-    let usuariosData = [];
-    let usuariosConfig = {};
+    // Variables globales - usar localStorage para persistencia
+    let empleadosLocales = JSON.parse(localStorage.getItem('nomina_empleados')) || [];
     let registrosAsistencia = [];
-    let ausencias = [];
 
-    // Configuración exacta de horarios según tu sistema
+    // Configuración exacta de horarios
     const HORARIOS_BASE = {
       becario: { horasDiarias: 5, entrada: '08:00', salida: '13:00' },
       tiempo_completo: { horasDiarias: 8, entrada: '08:00', salida: '16:00' },
       nayeli: { horasDiarias: 6, entrada: '08:00', salida: '14:00' }
     };
+
+    // MODO OSCURO PERSISTENTE
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (localStorage.getItem('nomina-theme') === 'dark' || (!localStorage.getItem('nomina-theme') && prefersDarkScheme.matches)) {
+      document.body.classList.add('dark-mode');
+      document.getElementById('themeToggle').innerHTML = '<i class="bi bi-sun-fill"></i>';
+    }
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      if (document.body.classList.contains('dark-mode')) {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('nomina-theme', 'light');
+        document.getElementById('themeToggle').innerHTML = '<i class="bi bi-moon-fill"></i>';
+      } else {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('nomina-theme', 'dark');
+        document.getElementById('themeToggle').innerHTML = '<i class="bi bi-sun-fill"></i>';
+      }
+    });
 
     // Inicialización
     document.addEventListener('DOMContentLoaded', function() {
@@ -332,15 +318,9 @@
     });
 
     async function inicializarSistema() {
-      try {
-        mostrarNotificacion('Cargando sistema de nómina...', 'info');
-        await cargarUsuarios();
-        await cargarConfiguraciones();
-        mostrarNotificacion('Sistema de nómina listo', 'success');
-      } catch (error) {
-        console.error('Error inicializando sistema:', error);
-        mostrarNotificacion('Error al inicializar el sistema', 'danger');
-      }
+      mostrarNotificacion('Iniciando sistema de nómina...', 'info');
+      renderizarEmpleadosLocales();
+      mostrarNotificacion('Sistema listo - configuración manual disponible', 'success');
     }
 
     function configurarFechasPorDefecto() {
@@ -350,11 +330,9 @@
       let fechaInicio, fechaFin;
       
       if (dia <= 15) {
-        // Primera quincena
         fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
         fechaFin = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
       } else {
-        // Segunda quincena
         fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 16);
         fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
       }
@@ -363,159 +341,138 @@
       document.getElementById('fechaFin').value = fechaFin.toISOString().split('T')[0];
     }
 
-    // USAR TUS COLECCIONES EXACTAS
-    async function cargarUsuarios() {
-      try {
-        const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
-        usuariosData = [];
-        
-        usuariosSnapshot.forEach(doc => {
-          const data = doc.data();
-          usuariosData.push({
-            id: doc.id,
-            email: data.correo || data.email, // Tu estructura usa "correo"
-            nombre: data.nombre,
-            tipo: data.tipo
-          });
-        });
+    // AGREGAR EMPLEADO MANUAL
+    window.agregarEmpleadoManual = function() {
+      const nombre = document.getElementById('nuevoEmpleadoNombre').value.trim();
+      const email = document.getElementById('nuevoEmpleadoEmail').value.trim();
+      const tipo = document.getElementById('nuevoEmpleadoTipo').value;
 
-        console.log(`Cargados ${usuariosData.length} usuarios:`, usuariosData);
-        renderizarConfigUsuarios();
-        llenarSelectEmpleados();
-        
-      } catch (error) {
-        console.error('Error cargando usuarios:', error);
-        mostrarNotificacion('Error cargando usuarios', 'danger');
+      if (!nombre || !email) {
+        mostrarNotificacion('Completa nombre y email', 'warning');
+        return;
       }
-    }
 
-    async function cargarConfiguraciones() {
-      try {
-        const configSnapshot = await getDocs(collection(db, "configuracion_nomina"));
-        usuariosConfig = {};
-        
-        configSnapshot.forEach(doc => {
-          usuariosConfig[doc.id] = doc.data();
-        });
-        
-        console.log('Configuraciones cargadas:', usuariosConfig);
-      } catch (error) {
-        console.error('Error cargando configuraciones:', error);
-      }
-    }
+      const nuevoEmpleado = {
+        id: 'manual_' + Date.now(),
+        nombre: nombre,
+        email: email,
+        tipo: tipo,
+        salarioHora: 50, // Valor por defecto
+        tipoPago: 'quincenal',
+        activo: true
+      };
 
-    function renderizarConfigUsuarios() {
+      empleadosLocales.push(nuevoEmpleado);
+      localStorage.setItem('nomina_empleados', JSON.stringify(empleadosLocales));
+      
+      // Limpiar formulario
+      document.getElementById('nuevoEmpleadoNombre').value = '';
+      document.getElementById('nuevoEmpleadoEmail').value = '';
+      
+      renderizarEmpleadosLocales();
+      mostrarNotificacion('Empleado agregado correctamente', 'success');
+    };
+
+    function renderizarEmpleadosLocales() {
       const container = document.getElementById('configUsuarios');
       container.innerHTML = '';
 
-      usuariosData.forEach(usuario => {
-        // CONFIGURACIÓN OPCIONAL - usa valores por defecto inteligentes
-        const config = usuariosConfig[usuario.id] || {
-          salarioHora: 0, // Se configura cuando sea necesario
-          tipoPago: 'quincenal',
-          horarioBase: usuario.tipo || 'becario', // Usa el tipo existente
-          activo: true
-        };
+      if (empleadosLocales.length === 0) {
+        container.innerHTML = `
+          <div class="col-12">
+            <div class="text-center p-4">
+              <i class="bi bi-people" style="font-size: 3rem; color: #6c757d;"></i>
+              <h5 class="mt-3 text-muted">No hay empleados configurados</h5>
+              <p class="text-muted">Agrega empleados usando el formulario de arriba</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
 
+      empleadosLocales.forEach(empleado => {
         const card = document.createElement('div');
         card.className = 'col-md-6 mb-3';
         card.innerHTML = `
-          <div class="card metric-card">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h6 class="card-title">${usuario.nombre}</h6>
-                  <p class="text-muted small mb-1">${usuario.email}</p>
-                  <span class="badge ${config.activo && config.salarioHora > 0 ? 'bg-success' : 'bg-secondary'}">
-                    ${config.salarioHora > 0 ? 'Configurado' : 'Sin configurar'}
-                  </span>
-                  <small class="d-block text-muted mt-1">
-                    Tipo: ${usuario.tipo || 'No definido'}
-                  </small>
-                </div>
-                <div class="text-end">
-                  <div class="h5 text-success mb-0">${config.salarioHora || 0}/hr</div>
-                  <small class="text-muted">${config.tipoPago}</small>
-                </div>
-              </div>
-              <div class="mt-2">
-                <small class="text-muted">
-                  ${HORARIOS_BASE[config.horarioBase]?.horasDiarias || 0} horas diarias
+          <div class="config-card">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="employee-name">${empleado.nombre}</h6>
+                <p class="text-muted small mb-1">${empleado.email}</p>
+                <span class="config-badge ${empleado.activo ? 'bg-success' : 'bg-secondary'} text-white">
+                  ${empleado.activo ? 'Activo' : 'Inactivo'}
+                </span>
+                <small class="d-block text-muted mt-1">
+                  Tipo: ${empleado.tipo}
                 </small>
               </div>
-              <button class="btn btn-sm btn-outline-primary mt-2 w-100" 
-                      onclick="abrirConfigUsuario('${usuario.id}', '${usuario.nombre}', '${usuario.email}')">
-                <i class="bi bi-gear me-1"></i>Configurar
-              </button>
+              <div class="text-end">
+                <div class="salary-display">$${empleado.salarioHora || 0}/hr</div>
+                <small class="text-muted">${empleado.tipoPago}</small>
+              </div>
             </div>
+            <div class="mt-2">
+              <small class="text-muted">
+                ${HORARIOS_BASE[empleado.tipo]?.horasDiarias || 0} horas diarias
+              </small>
+            </div>
+            <button class="btn btn-sm btn-outline-primary mt-2 w-100" 
+                    onclick="editarEmpleadoLocal('${empleado.id}')">
+              <i class="bi bi-gear me-1"></i>Configurar
+            </button>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    function llenarSelectEmpleados() {
-      const select = document.getElementById('especialEmpleado');
-      select.innerHTML = '<option value="">Seleccionar empleado...</option>';
-      
-      usuariosData.forEach(usuario => {
-        const option = document.createElement('option');
-        option.value = usuario.id;
-        option.textContent = usuario.nombre;
-        select.appendChild(option);
-      });
-    }
+    window.editarEmpleadoLocal = function(empleadoId) {
+      const empleado = empleadosLocales.find(e => e.id === empleadoId);
+      if (!empleado) return;
 
-    // FUNCIONES GLOBALES
-    window.abrirConfigUsuario = function(userId, nombre, email) {
-      const config = usuariosConfig[userId] || {
-        salarioHora: 0,
-        tipoPago: 'quincenal',
-        horarioBase: 'becario',
-        activo: true
-      };
-
-      document.getElementById('configUserId').value = userId;
-      document.getElementById('configNombre').value = nombre;
-      document.getElementById('configEmail').value = email;
-      document.getElementById('configSalarioHora').value = config.salarioHora;
-      document.getElementById('configTipoPago').value = config.tipoPago;
-      document.getElementById('configHorarioBase').value = config.horarioBase;
-      document.getElementById('configActivo').checked = config.activo;
+      document.getElementById('configUserId').value = empleado.id;
+      document.getElementById('configNombre').value = empleado.nombre;
+      document.getElementById('configEmail').value = empleado.email;
+      document.getElementById('configSalarioHora').value = empleado.salarioHora || 50;
+      document.getElementById('configTipoPago').value = empleado.tipoPago || 'quincenal';
+      document.getElementById('configHorarioBase').value = empleado.tipo;
+      document.getElementById('configActivo').checked = empleado.activo !== false;
 
       new bootstrap.Modal(document.getElementById('modalConfigUsuario')).show();
     };
 
-    window.guardarConfigUsuario = async function() {
-      try {
-        const userId = document.getElementById('configUserId').value;
-        const config = {
-          salarioHora: parseFloat(document.getElementById('configSalarioHora').value),
-          tipoPago: document.getElementById('configTipoPago').value,
-          horarioBase: document.getElementById('configHorarioBase').value,
-          activo: document.getElementById('configActivo').checked,
-          fechaActualizacion: serverTimestamp()
-        };
+    window.guardarConfigUsuario = function() {
+      const empleadoId = document.getElementById('configUserId').value;
+      const empleado = empleadosLocales.find(e => e.id === empleadoId);
+      
+      if (!empleado) return;
 
-        await setDoc(doc(db, "configuracion_nomina", userId), config);
-        usuariosConfig[userId] = config;
+      empleado.nombre = document.getElementById('configNombre').value;
+      empleado.email = document.getElementById('configEmail').value;
+      empleado.salarioHora = parseFloat(document.getElementById('configSalarioHora').value);
+      empleado.tipoPago = document.getElementById('configTipoPago').value;
+      empleado.tipo = document.getElementById('configHorarioBase').value;
+      empleado.activo = document.getElementById('configActivo').checked;
 
-        bootstrap.Modal.getInstance(document.getElementById('modalConfigUsuario')).hide();
-        mostrarNotificacion('Configuración guardada correctamente', 'success');
-        renderizarConfigUsuarios();
+      localStorage.setItem('nomina_empleados', JSON.stringify(empleadosLocales));
 
-      } catch (error) {
-        console.error('Error guardando configuración:', error);
-        mostrarNotificacion('Error al guardar configuración', 'danger');
-      }
+      bootstrap.Modal.getInstance(document.getElementById('modalConfigUsuario')).hide();
+      mostrarNotificacion('Configuración guardada correctamente', 'success');
+      renderizarEmpleadosLocales();
     };
 
+    // CÁLCULO DE NÓMINA - RESISTENTE A ERRORES
     window.calcularNomina = async function() {
       const fechaInicio = document.getElementById('fechaInicio').value;
       const fechaFin = document.getElementById('fechaFin').value;
       
       if (!fechaInicio || !fechaFin) {
         mostrarNotificacion('Selecciona las fechas del período', 'warning');
+        return;
+      }
+
+      if (empleadosLocales.length === 0) {
+        mostrarNotificacion('Primero agrega empleados en Configuración', 'warning');
         return;
       }
 
@@ -527,10 +484,12 @@
         console.log(`Calculando nómina del ${fechaInicio} al ${fechaFin}`);
         
         await cargarRegistrosAsistencia(fechaInicio, fechaFin);
-        await cargarAusencias(fechaInicio, fechaFin);
         
-        const resultados = await procesarNominaEmpleados(fechaInicio, fechaFin);
+        const resultados = procesarNominaEmpleados(fechaInicio, fechaFin);
         mostrarResultadosNomina(resultados);
+        
+        // Mostrar warning sobre configuración manual
+        document.getElementById('warningPermisos').classList.remove('d-none');
 
       } catch (error) {
         console.error('Error calculando nómina:', error);
@@ -540,7 +499,6 @@
       }
     };
 
-    // USAR TU ESTRUCTURA EXACTA DE REGISTROS (usa email, no uid)
     async function cargarRegistrosAsistencia(fechaInicio, fechaFin) {
       try {
         const registrosSnapshot = await getDocs(collection(db, "registros"));
@@ -548,14 +506,10 @@
         
         registrosSnapshot.forEach(doc => {
           const data = doc.data();
-          
-          // Usar tu formato exacto de fecha YYYY-MM-DD
           if (data.fecha >= fechaInicio && data.fecha <= fechaFin) {
             registrosAsistencia.push({
               id: doc.id,
-              ...data,
-              // Convertir timestamp si existe
-              fechaCompleta: data.timestamp ? new Date(data.timestamp.seconds * 1000) : null
+              ...data
             });
           }
         });
@@ -563,176 +517,48 @@
         console.log(`Cargados ${registrosAsistencia.length} registros de asistencia`);
       } catch (error) {
         console.error('Error cargando registros:', error);
-        throw new Error('Error cargando registros de asistencia');
+        throw new Error('Error cargando registros de asistencia. Verifica los permisos de Firebase.');
       }
     }
 
-    // USAR TU ESTRUCTURA EXACTA DE AUSENCIAS
-    async function cargarAusencias(fechaInicio, fechaFin) {
-      try {
-        const ausenciasSnapshot = await getDocs(collection(db, "ausencias"));
-        ausencias = [];
-        
-        ausenciasSnapshot.forEach(doc => {
-          const data = doc.data();
-          
-          // Solo ausencias aprobadas
-          if (data.estado === 'aprobada') {
-            // Convertir fechas según tu formato
-            let fechaInicioAusencia, fechaFinAusencia;
-            
-            if (data.fechaInicio.toDate) {
-              fechaInicioAusencia = data.fechaInicio.toDate().toISOString().split('T')[0];
-              fechaFinAusencia = data.fechaFin ? data.fechaFin.toDate().toISOString().split('T')[0] : fechaInicioAusencia;
-            } else {
-              fechaInicioAusencia = data.fechaInicio;
-              fechaFinAusencia = data.fechaFin || data.fechaInicio;
-            }
-            
-            // Verificar si se solapa con el período
-            if (fechaInicioAusencia <= fechaFin && fechaFinAusencia >= fechaInicio) {
-              ausencias.push({
-                id: doc.id,
-                ...data,
-                fechaInicioStr: fechaInicioAusencia,
-                fechaFinStr: fechaFinAusencia
-              });
-            }
-          }
-        });
-        
-        console.log(`Cargadas ${ausencias.length} ausencias aprobadas`);
-      } catch (error) {
-        console.error('Error cargando ausencias:', error);
-        throw new Error('Error cargando ausencias');
-      }
-    }
-
-    async function procesarNominaEmpleados(fechaInicio, fechaFin) {
-      // SOLO usuarios con salario configurado (sin necesidad de crear tabla)
-      const usuariosActivos = usuariosData.filter(usuario => {
-        const config = usuariosConfig[usuario.id];
-        return (config && config.activo && config.salarioHora > 0) || 
-               (!config && usuario.tipo); // O usuarios sin configurar que tienen tipo definido
-      });
-
-      console.log(`Procesando nómina para ${usuariosActivos.length} empleados activos`);
+    function procesarNominaEmpleados(fechaInicio, fechaFin) {
+      const empleadosActivos = empleadosLocales.filter(e => e.activo && e.salarioHora > 0);
+      console.log(`Procesando nómina para ${empleadosActivos.length} empleados activos`);
 
       const resultados = [];
-      for (const usuario of usuariosActivos) {
-        const resultado = await calcularNominaIndividual(usuario, fechaInicio, fechaFin);
+      empleadosActivos.forEach(empleado => {
+        const resultado = calcularNominaIndividual(empleado, fechaInicio, fechaFin);
         resultados.push(resultado);
-      }
+      });
 
       return resultados;
     }
 
-    // NUEVA FUNCIÓN: Progreso diario acumulado
-    function calcularProgresoDiario(registros, config, fechaInicio, fechaFin) {
-      const progreso = [];
-      let acumuladoHoras = 0;
-      let acumuladoPago = 0;
+    function calcularNominaIndividual(empleado, fechaInicio, fechaFin) {
+      const registrosUsuario = registrosAsistencia.filter(r => r.email === empleado.email);
       
-      // Crear lista de días laborales
-      const diasLaborales = [];
-      const inicio = new Date(fechaInicio);
-      const fin = new Date(fechaFin);
-      
-      for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
-        const diaSemana = d.getDay();
-        if (diaSemana !== 0 && diaSemana !== 6) { // Solo lunes a viernes
-          diasLaborales.push(d.toISOString().split('T')[0]);
-        }
-      }
+      console.log(`${empleado.nombre}: ${registrosUsuario.length} registros`);
 
-      // Calcular progreso por día
-      diasLaborales.forEach(dia => {
-        const registrosDia = registros.filter(r => r.fecha === dia);
-        let horasDia = 0;
-
-        // Verificar si trabajó ese día
-        const entrada = registrosDia.find(r => r.tipoEvento === 'entrada');
-        const salida = registrosDia.find(r => r.tipoEvento === 'salida');
-
-        if (entrada && salida) {
-          const [hEntrada, mEntrada] = entrada.hora.split(':').map(Number);
-          const [hSalida, mSalida] = salida.hora.split(':').map(Number);
-          
-          const minutosEntrada = hEntrada * 60 + mEntrada;
-          const minutosSalida = hSalida * 60 + mSalida;
-          
-          horasDia = Math.max(0, Math.min((minutosSalida - minutosEntrada) / 60, 
-            HORARIOS_BASE[config.horarioBase].horasDiarias));
-        } else if (entrada) {
-          // Solo entrada, asignar horas completas
-          horasDia = HORARIOS_BASE[config.horarioBase].horasDiarias;
-        }
-
-        acumuladoHoras += horasDia;
-        acumuladoPago += horasDia * config.salarioHora;
-
-        progreso.push({
-          fecha: dia,
-          horasDia: horasDia,
-          acumuladoHoras: acumuladoHoras,
-          acumuladoPago: acumuladoPago,
-          trabajoHoy: horasDia > 0
-        });
-      });
-
-      return progreso;
-    }
-
-    async function calcularNominaIndividual(usuario, fechaInicio, fechaFin) {
-      // CONFIGURACIÓN OPCIONAL - usa valores por defecto si no existe configuración
-      const config = usuariosConfig[usuario.id] || {
-        salarioHora: 50, // Valor por defecto temporal
-        tipoPago: 'quincenal',
-        horarioBase: usuario.tipo || 'becario',
-        activo: true
-      };
-      
-      // Filtrar registros del usuario usando EMAIL (no uid)
-      const registrosUsuario = registrosAsistencia.filter(r => r.email === usuario.email);
-      
-      // Filtrar ausencias del usuario usando email
-      const ausenciasUsuario = ausencias.filter(a => 
-        a.emailUsuario === usuario.email
-      );
-
-      console.log(`${usuario.nombre}: ${registrosUsuario.length} registros, ${ausenciasUsuario.length} ausencias`);
-
-      // Calcular SOLO días laborales (lunes a viernes)
       const diasLaborales = calcularDiasLaborales(fechaInicio, fechaFin);
+      const horasInfo = calcularHorasTrabajadas(registrosUsuario, empleado.tipo);
       
-      // Calcular horas trabajadas
-      const horasInfo = calcularHorasTrabajadas(registrosUsuario, config.horarioBase);
-      
-      // Calcular retardos (3 retardos = 1 día menos)
       const retardos = registrosUsuario.filter(r => r.estado === 'retardo').length;
       const diasPenalizacion = Math.floor(retardos / 3);
       
-      // Calcular días de ausencias
-      const diasAusencia = calcularDiasAusencia(ausenciasUsuario, fechaInicio, fechaFin);
+      const diasEfectivos = Math.max(0, diasLaborales - diasPenalizacion);
       
-      // Días efectivos trabajados
-      const diasEfectivos = Math.max(0, diasLaborales - diasPenalizacion - diasAusencia);
-      
-      // Cálculo de pago
-      const horasDiarias = HORARIOS_BASE[config.horarioBase].horasDiarias;
+      const horasDiarias = HORARIOS_BASE[empleado.tipo].horasDiarias;
       const horasEsperadas = diasLaborales * horasDiarias;
       const horasAPagar = Math.min(horasInfo.horasReales, diasEfectivos * horasDiarias);
-      const totalPago = horasAPagar * config.salarioHora;
+      const totalPago = horasAPagar * empleado.salarioHora;
 
-      // CALCULAR PROGRESO DIARIO
-      const progresoDiario = calcularProgresoDiario(registrosUsuario, config, fechaInicio, fechaFin);
+      const progresoDiario = calcularProgresoDiario(registrosUsuario, empleado, fechaInicio, fechaFin);
 
       return {
-        usuario: usuario,
-        config: config,
+        empleado: empleado,
         diasLaborales: diasLaborales,
         diasEfectivos: diasEfectivos,
-        diasAusencia: diasAusencia,
+        diasAusencia: 0, // Sin acceso a ausencias
         diasPenalizacion: diasPenalizacion,
         horasEsperadas: horasEsperadas,
         horasTrabajadas: horasInfo.horasReales,
@@ -740,7 +566,7 @@
         retardos: retardos,
         totalPago: totalPago,
         detalleHoras: horasInfo.detalle,
-        progresoDiario: progresoDiario // NUEVO: progreso día a día
+        progresoDiario: progresoDiario
       };
     }
 
@@ -751,7 +577,7 @@
       
       for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
         const diaSemana = d.getDay();
-        if (diaSemana !== 0 && diaSemana !== 6) { // No domingo ni sábado
+        if (diaSemana !== 0 && diaSemana !== 6) {
           dias++;
         }
       }
@@ -764,7 +590,6 @@
       let horasReales = 0;
       const detalle = [];
 
-      // Agrupar por fecha usando tu formato YYYY-MM-DD
       registros.forEach(registro => {
         const fecha = registro.fecha;
         if (!registrosPorDia[fecha]) {
@@ -778,7 +603,6 @@
         }
       });
 
-      // Calcular horas por día
       Object.entries(registrosPorDia).forEach(([fecha, reg]) => {
         let horasDia = 0;
         let estado = 'Incompleto';
@@ -796,7 +620,6 @@
           horasReales += horasDia;
           estado = 'Completo';
         } else if (reg.entrada) {
-          // Solo entrada, asignar horas base
           horasDia = HORARIOS_BASE[horarioBase].horasDiarias;
           horasReales += horasDia;
           estado = 'Sin salida';
@@ -814,27 +637,55 @@
       return { horasReales, detalle };
     }
 
-    function calcularDiasAusencia(ausenciasUsuario, fechaInicio, fechaFin) {
-      let diasTotal = 0;
-
-      ausenciasUsuario.forEach(ausencia => {
-        // Calcular días de solapamiento con el período
-        const inicioAusencia = new Date(Math.max(new Date(ausencia.fechaInicioStr), new Date(fechaInicio)));
-        const finAusencia = new Date(Math.min(new Date(ausencia.fechaFinStr), new Date(fechaFin)));
-        
-        if (inicioAusencia <= finAusencia) {
-          const dias = Math.ceil((finAusencia - inicioAusencia) / (1000 * 60 * 60 * 24)) + 1;
-          // Solo contar días laborales
-          for (let d = new Date(inicioAusencia); d <= finAusencia; d.setDate(d.getDate() + 1)) {
-            const diaSemana = d.getDay();
-            if (diaSemana !== 0 && diaSemana !== 6) {
-              diasTotal++;
-            }
-          }
+    function calcularProgresoDiario(registros, empleado, fechaInicio, fechaFin) {
+      const progreso = [];
+      let acumuladoHoras = 0;
+      let acumuladoPago = 0;
+      
+      const diasLaborales = [];
+      const inicio = new Date(fechaInicio);
+      const fin = new Date(fechaFin);
+      
+      for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+        const diaSemana = d.getDay();
+        if (diaSemana !== 0 && diaSemana !== 6) {
+          diasLaborales.push(d.toISOString().split('T')[0]);
         }
+      }
+
+      diasLaborales.forEach(dia => {
+        const registrosDia = registros.filter(r => r.fecha === dia);
+        let horasDia = 0;
+
+        const entrada = registrosDia.find(r => r.tipoEvento === 'entrada');
+        const salida = registrosDia.find(r => r.tipoEvento === 'salida');
+
+        if (entrada && salida) {
+          const [hEntrada, mEntrada] = entrada.hora.split(':').map(Number);
+          const [hSalida, mSalida] = salida.hora.split(':').map(Number);
+          
+          const minutosEntrada = hEntrada * 60 + mEntrada;
+          const minutosSalida = hSalida * 60 + mSalida;
+          
+          horasDia = Math.max(0, Math.min((minutosSalida - minutosEntrada) / 60, 
+            HORARIOS_BASE[empleado.tipo].horasDiarias));
+        } else if (entrada) {
+          horasDia = HORARIOS_BASE[empleado.tipo].horasDiarias;
+        }
+
+        acumuladoHoras += horasDia;
+        acumuladoPago += horasDia * empleado.salarioHora;
+
+        progreso.push({
+          fecha: dia,
+          horasDia: horasDia,
+          acumuladoHoras: acumuladoHoras,
+          acumuladoPago: acumuladoPago,
+          trabajoHoy: horasDia > 0
+        });
       });
 
-      return diasTotal;
+      return progreso;
     }
 
     function mostrarResultadosNomina(resultados) {
@@ -849,61 +700,56 @@
         totalHoras += resultado.horasTrabajadas;
         totalPago += resultado.totalPago;
 
-        // Obtener progreso más reciente
         const ultimoProgreso = resultado.progresoDiario[resultado.progresoDiario.length - 1] || 
           { acumuladoPago: 0, acumuladoHoras: 0 };
 
         const card = document.createElement('div');
-        card.className = 'col-md-6 col-lg-4 mb-4';
+        card.className = 'col-md-6 col-lg-4 mb-4 fade-in';
         card.innerHTML = `
-          <div class="card metric-card" style="cursor: pointer;" onclick="verDetalleEmpleado('${resultado.usuario.id}')">
-            <div class="card-body">
+          <div class="employee-card" onclick="verDetalleEmpleado('${resultado.empleado.id}')">
+            <div class="employee-card-body">
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                  <h6 class="card-title mb-1">${resultado.usuario.nombre}</h6>
-                  <small class="text-muted">${resultado.config.horarioBase} - ${resultado.config.salarioHora}/hr</small>
+                  <h6 class="employee-name">${resultado.empleado.nombre}</h6>
+                  <small class="employee-type">${resultado.empleado.tipo} - $${resultado.empleado.salarioHora}/hr</small>
                 </div>
-                <span class="badge ${resultado.retardos > 0 ? 'bg-warning text-dark' : 'bg-success'}">
+                <span class="delay-badge ${resultado.retardos > 0 ? 'bg-warning text-dark' : 'bg-success text-white'}">
                   ${resultado.retardos} retardo${resultado.retardos !== 1 ? 's' : ''}
                 </span>
               </div>
               
-              <!-- PROGRESO DIARIO ACUMULADO -->
-              <div class="hours-breakdown mb-3">
+              <div class="progress-section">
                 <div class="text-center">
-                  <div class="h4 text-success mb-1">${ultimoProgreso.acumuladoPago.toFixed(2)}</div>
+                  <div class="accumulated-amount">$${ultimoProgreso.acumuladoPago.toFixed(2)}</div>
                   <small class="text-muted">Acumulado hasta hoy</small>
                 </div>
-                <div class="progress mt-2" style="height: 8px;">
-                  <div class="progress-bar bg-success" role="progressbar" 
-                       style="width: ${(resultado.horasTrabajadas / resultado.horasEsperadas) * 100}%" 
-                       aria-valuenow="${resultado.horasTrabajadas}" 
-                       aria-valuemin="0" 
-                       aria-valuemax="${resultado.horasEsperadas}">
-                  </div>
+                <div class="progress-custom mt-2">
+                  <div class="progress-bar" style="width: ${(resultado.horasTrabajadas / resultado.horasEsperadas) * 100}%"></div>
                 </div>
                 <small class="text-muted d-block mt-1">
                   ${resultado.horasTrabajadas.toFixed(1)} / ${resultado.horasEsperadas} horas esperadas
                 </small>
               </div>
 
-              <div class="row text-center small">
-                <div class="col-4">
-                  <div class="fw-bold">${resultado.diasEfectivos}</div>
-                  <small class="text-muted">Días trabajados</small>
-                </div>
-                <div class="col-4">
-                  <div class="fw-bold">${resultado.diasAusencia}</div>
-                  <small class="text-muted">Ausencias</small>
-                </div>
-                <div class="col-4">
-                  <div class="fw-bold">${resultado.diasPenalizacion}</div>
-                  <small class="text-muted">Penalizaciones</small>
+              <div class="stats-grid">
+                <div class="row text-center small">
+                  <div class="col-4">
+                    <div class="stat-number">${resultado.diasEfectivos}</div>
+                    <small class="text-muted">Días trabajados</small>
+                  </div>
+                  <div class="col-4">
+                    <div class="stat-number">${resultado.diasAusencia}</div>
+                    <small class="text-muted">Ausencias</small>
+                  </div>
+                  <div class="col-4">
+                    <div class="stat-number">${resultado.diasPenalizacion}</div>
+                    <small class="text-muted">Penalizaciones</small>
+                  </div>
                 </div>
               </div>
 
               <div class="text-center mt-3">
-                <div class="h5 text-primary">${resultado.totalPago.toFixed(2)}</div>
+                <div class="final-amount">$${resultado.totalPago.toFixed(2)}</div>
                 <small class="text-muted">Total final proyectado</small>
               </div>
             </div>
@@ -912,18 +758,16 @@
         container.appendChild(card);
       });
 
-      // Actualizar resumen
       document.getElementById('totalEmpleados').textContent = totalEmpleados;
       document.getElementById('totalHoras').textContent = totalHoras.toFixed(1);
-      document.getElementById('totalPago').textContent = `${totalPago.toFixed(2)}`;
+      document.getElementById('totalPago').textContent = `$${totalPago.toFixed(2)}`;
       document.getElementById('resumenNomina').classList.remove('d-none');
 
-      // Guardar resultados globalmente para el detalle
       window.ultimosResultados = resultados;
     }
 
-    window.verDetalleEmpleado = function(usuarioId) {
-      const resultado = window.ultimosResultados?.find(r => r.usuario.id === usuarioId);
+    window.verDetalleEmpleado = function(empleadoId) {
+      const resultado = window.ultimosResultados?.find(r => r.empleado.id === empleadoId);
       if (!resultado) return;
       
       const content = document.getElementById('detalleEmpleadoContent');
@@ -931,17 +775,16 @@
       let detalleHtml = `
         <div class="row mb-3">
           <div class="col-md-6">
-            <h6>${resultado.usuario.nombre}</h6>
-            <p class="text-muted">${resultado.usuario.email}</p>
-            <p class="small">Tipo: ${resultado.usuario.tipo}</p>
-            <p class="small">Horario: ${resultado.config.horarioBase}</p>
-            <p class="small">Salario/hora: ${resultado.config.salarioHora}</p>
+            <h6>${resultado.empleado.nombre}</h6>
+            <p class="text-muted">${resultado.empleado.email}</p>
+            <p class="small">Tipo: ${resultado.empleado.tipo}</p>
+            <p class="small">Salario/hora: $${resultado.empleado.salarioHora}</p>
           </div>
           <div class="col-md-6">
             <div class="alert alert-info">
-              <strong>Total final: ${resultado.totalPago.toFixed(2)}</strong><br>
+              <strong>Total final: $${resultado.totalPago.toFixed(2)}</strong><br>
               <small>
-                ${resultado.horasAPagar.toFixed(1)} horas × ${resultado.config.salarioHora}/hr
+                ${resultado.horasAPagar.toFixed(1)} horas × $${resultado.empleado.salarioHora}/hr
                 ${resultado.diasPenalizacion > 0 ? `<br>(${resultado.retardos} retardos = ${resultado.diasPenalizacion} día${resultado.diasPenalizacion !== 1 ? 's' : ''} de penalización)` : ''}
               </small>
             </div>
@@ -955,7 +798,6 @@
           <div class="col-3"><strong>Penalizaciones:</strong> ${resultado.diasPenalizacion}</div>
         </div>
 
-        <!-- PROGRESO DIARIO ACUMULADO -->
         <h6><i class="bi bi-graph-up me-2"></i>Progreso Diario Acumulado</h6>
         <div class="table-responsive mb-4">
           <table class="table table-sm">
@@ -971,9 +813,8 @@
             <tbody>
       `;
 
-      // Mostrar progreso día a día como pidió el usuario
       resultado.progresoDiario.forEach(dia => {
-        const pagoDia = dia.horasDia * resultado.config.salarioHora;
+        const pagoDia = dia.horasDia * resultado.empleado.salarioHora;
         detalleHtml += `
           <tr class="${dia.trabajoHoy ? '' : 'table-light'}">
             <td>${new Date(dia.fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}</td>
@@ -982,46 +823,10 @@
                 ${dia.horasDia.toFixed(1)}h
               </span>
             </td>
-            <td>${pagoDia.toFixed(2)}</td>
+            <td>$${pagoDia.toFixed(2)}</td>
             <td><strong>${dia.acumuladoHoras.toFixed(1)}h</strong></td>
             <td class="text-end">
-              <strong class="text-success">${dia.acumuladoPago.toFixed(2)}</strong>
-            </td>
-          </tr>
-        `;
-      });
-
-      detalleHtml += `
-            </tbody>
-          </table>
-        </div>
-
-        <h6>Detalle de registros:</h6>
-        <div class="table-responsive">
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Entrada</th>
-                <th>Salida</th>
-                <th>Horas</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      resultado.detalleHoras.forEach(dia => {
-        detalleHtml += `
-          <tr>
-            <td>${new Date(dia.fecha + 'T00:00:00').toLocaleDateString('es-MX')}</td>
-            <td>${dia.entrada || '-'}</td>
-            <td>${dia.salida || '-'}</td>
-            <td>${dia.horas.toFixed(1)}</td>
-            <td>
-              <span class="badge ${dia.estado === 'Completo' ? 'bg-success' : 'bg-warning text-dark'}">
-                ${dia.estado}
-              </span>
+              <strong class="text-success">$${dia.acumuladoPago.toFixed(2)}</strong>
             </td>
           </tr>
         `;
@@ -1033,7 +838,6 @@
     };
 
     function mostrarNotificacion(mensaje, tipo = 'info') {
-      // Crear notificación temporal
       const alert = document.createElement('div');
       alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
       alert.style.top = '20px';
@@ -1060,7 +864,8 @@
     };
 
     // Hacer funciones globales
-    window.abrirConfigUsuario = abrirConfigUsuario;
+    window.agregarEmpleadoManual = agregarEmpleadoManual;
+    window.editarEmpleadoLocal = editarEmpleadoLocal;
     window.guardarConfigUsuario = guardarConfigUsuario;
     window.calcularNomina = calcularNomina;
     window.verDetalleEmpleado = verDetalleEmpleado;
