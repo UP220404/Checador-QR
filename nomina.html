@@ -209,8 +209,17 @@
               <label class="form-label">Salario por Hora</label>
               <div class="input-group">
                 <span class="input-group-text">$</span>
-                <input type="number" id="configSalarioHora" class="form-control" step="0.01" required>
+                <input type="number" id="configSalarioHora" class="form-control" step="0.01">
               </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Salario Mensual (opcional)</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="configSalarioMensual" class="form-control" step="0.01">
+              </div>
+              <small class="form-text text-muted">Si se especifica, se calculará automáticamente el salario por hora según el período</small>
             </div>
 
             <div class="mb-3">
@@ -265,7 +274,9 @@
       setDoc,
       serverTimestamp,
       query,
-      where
+      where,
+      orderBy,
+      limit
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // TU configuración Firebase exacta
@@ -315,9 +326,31 @@
 
     // Inicialización
     document.addEventListener('DOMContentLoaded', function() {
+      limpiarCacheAntiguo();
       inicializarSistema();
       configurarFechasPorDefecto();
     });
+
+    // Función para limpiar cache antiguo
+    function limpiarCacheAntiguo() {
+      const ahora = new Date().getTime();
+      const umbral = 24 * 60 * 60 * 1000; // 24 horas
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('asistencia_')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            if (ahora - data.timestamp > umbral) {
+              localStorage.removeItem(key);
+            }
+          } catch (e) {
+            // Si hay error, eliminar la clave
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    }
 
     async function inicializarSistema() {
       mostrarNotificacion('Iniciando sistema de nómina...', 'info');
@@ -359,7 +392,8 @@
         nombre: nombre,
         email: email,
         tipo: tipo,
-        salarioHora: 50, // Valor por defecto
+        salarioHora: null,
+        salarioMensual: null,
         tipoPago: 'quincenal',
         activo: true
       };
@@ -409,7 +443,9 @@
                 </small>
               </div>
               <div class="text-end">
-                <div class="salary-display">$${empleado.salarioHora || 0}/hr</div>
+                <div class="salary-display">
+                  ${empleado.salarioMensual ? `$${empleado.salarioMensual}/mes` : (empleado.salarioHora ? `$${empleado.salarioHora}/hr` : 'Sin salario')}
+                </div>
                 <small class="text-muted">${empleado.tipoPago}</small>
               </div>
             </div>
@@ -435,7 +471,8 @@
       document.getElementById('configUserId').value = empleado.id;
       document.getElementById('configNombre').value = empleado.nombre;
       document.getElementById('configEmail').value = empleado.email;
-      document.getElementById('configSalarioHora').value = empleado.salarioHora || 50;
+      document.getElementById('configSalarioHora').value = empleado.salarioHora || '';
+      document.getElementById('configSalarioMensual').value = empleado.salarioMensual || '';
       document.getElementById('configTipoPago').value = empleado.tipoPago || 'quincenal';
       document.getElementById('configHorarioBase').value = empleado.tipo;
       document.getElementById('configActivo').checked = empleado.activo !== false;
@@ -451,7 +488,14 @@
 
       empleado.nombre = document.getElementById('configNombre').value;
       empleado.email = document.getElementById('configEmail').value;
-      empleado.salarioHora = parseFloat(document.getElementById('configSalarioHora').value);
+      
+      // Obtener valores de salario (puede ser por hora o mensual)
+      const salarioHora = document.getElementById('configSalarioHora').value;
+      const salarioMensual = document.getElementById('configSalarioMensual').value;
+      
+      empleado.salarioHora = salarioHora ? parseFloat(salarioHora) : null;
+      empleado.salarioMensual = salarioMensual ? parseFloat(salarioMensual) : null;
+      
       empleado.tipoPago = document.getElementById('configTipoPago').value;
       empleado.tipo = document.getElementById('configHorarioBase').value;
       empleado.activo = document.getElementById('configActivo').checked;
@@ -503,13 +547,35 @@
 
     async function cargarRegistrosAsistencia(fechaInicio, fechaFin) {
       try {
+        // VERIFICAR PRIMERO SI YA TENEMOS LOS DATOS EN CACHE
+        const cacheKey = `asistencia_${fechaInicio}_${fechaFin}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        
+        // Usar cache si existe y es menor a 5 minutos
+        if (cachedData) {
+          const cache = JSON.parse(cachedData);
+          const now = new Date().getTime();
+          if (now - cache.timestamp < 5 * 60 * 1000) { // 5 minutos
+            console.log('Usando datos en caché para', fechaInicio, 'a', fechaFin);
+            registrosAsistencia = cache.data;
+            return;
+          }
+        }
+
+        console.log('Cargando registros desde Firebase...');
+        
+        // LIMITAR la consulta para evitar sobrecarga
         const q = query(
           collection(db, "registros"),
           where("fecha", ">=", fechaInicio),
-          where("fecha", "<=", fechaFin)
+          where("fecha", "<=", fechaFin),
+          orderBy("fecha"), // Ordenar para eficiencia
+          limit(1000) // LIMITAR a 1000 registros máximo
         );
+        
         const registrosSnapshot = await getDocs(q);
         registrosAsistencia = [];
+        
         registrosSnapshot.forEach(doc => {
           const data = doc.data();
           registrosAsistencia.push({
@@ -517,15 +583,35 @@
             ...data
           });
         });
+        
         console.log(`Cargados ${registrosAsistencia.length} registros de asistencia`);
+        
+        // GUARDAR EN CACHE
+        localStorage.setItem(cacheKey, JSON.stringify({
+          timestamp: new Date().getTime(),
+          data: registrosAsistencia
+        }));
+        
       } catch (error) {
         console.error('Error cargando registros:', error);
-        throw new Error('Error cargando registros de asistencia. Verifica los permisos de Firebase.');
+        
+        // Intentar usar cache como respaldo
+        const cacheKey = `asistencia_${fechaInicio}_${fechaFin}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        
+        if (cachedData) {
+          const cache = JSON.parse(cachedData);
+          registrosAsistencia = cache.data;
+          console.log('Usando caché como respaldo debido a error de Firebase');
+          mostrarNotificacion('Usando datos en caché. Algunos datos pueden no estar actualizados.', 'warning');
+        } else {
+          throw new Error('Error cargando registros de asistencia. Verifica los permisos de Firebase.');
+        }
       }
     }
 
     function procesarNominaEmpleados(fechaInicio, fechaFin) {
-      const empleadosActivos = empleadosLocales.filter(e => e.activo && e.salarioHora > 0);
+      const empleadosActivos = empleadosLocales.filter(e => e.activo && (e.salarioHora > 0 || e.salarioMensual > 0));
       console.log(`Procesando nómina para ${empleadosActivos.length} empleados activos`);
 
       const resultados = [];
@@ -542,18 +628,55 @@
       
       console.log(`${empleado.nombre}: ${registrosUsuario.length} registros`);
 
+      // Calcular días laborales excluyendo fines de semana
       const diasLaborales = calcularDiasLaborales(fechaInicio, fechaFin);
+      
+      // Calcular horas trabajadas basadas en registros
       const horasInfo = calcularHorasTrabajadas(registrosUsuario, empleado.tipo);
       
+      // Calcular retardos y penalizaciones (3 retardos = 1 día de penalización)
       const retardos = registrosUsuario.filter(r => r.estado === 'retardo').length;
       const diasPenalizacion = Math.floor(retardos / 3);
       
+      // Días efectivos de trabajo (días laborales - penalizaciones)
       const diasEfectivos = Math.max(0, diasLaborales - diasPenalizacion);
       
+      // Horas diarias según tipo de empleado
       const horasDiarias = HORARIOS_BASE[empleado.tipo].horasDiarias;
+      
+      // Horas esperadas (días laborales * horas diarias)
       const horasEsperadas = diasLaborales * horasDiarias;
+      
+      // Horas a pagar (mínimo entre horas reales y horas efectivas)
       const horasAPagar = Math.min(horasInfo.horasReales, diasEfectivos * horasDiarias);
-      const totalPago = horasAPagar * empleado.salarioHora;
+      
+      // Obtener el tipo de período seleccionado
+      const tipoPeriodo = document.getElementById('tipoPeriodo').value;
+      
+      // Calcular salario por hora basado en el período seleccionado
+      let salarioPorHora = empleado.salarioHora;
+      if (!salarioPorHora && empleado.salarioMensual) {
+        if (tipoPeriodo === 'quincenal') {
+          // Para pago quincenal: salario mensual / 2
+          const pagoQuincenal = empleado.salarioMensual / 2;
+          // Horas esperadas en la quincena (días laborales * horas diarias)
+          salarioPorHora = pagoQuincenal / horasEsperadas;
+        } else if (tipoPeriodo === 'semanal') {
+          // Para pago semanal: salario mensual / 4.33 (promedio de semanas por mes)
+          const pagoSemanal = empleado.salarioMensual / 4.33;
+          // Días laborales en una semana (asumiendo 5 días laborales)
+          const diasPorSemana = 5;
+          const horasPorSemana = diasPorSemana * horasDiarias;
+          salarioPorHora = pagoSemanal / horasPorSemana;
+        } else {
+          // Por defecto, cálculo mensual
+          const horasPorMes = horasDiarias * 5 * 4.33; // 5 días por semana, 4.33 semanas por mes
+          salarioPorHora = empleado.salarioMensual / horasPorMes;
+        }
+      }
+      
+      // Total a pagar
+      const totalPago = horasAPagar * salarioPorHora;
 
       const progresoDiario = calcularProgresoDiario(registrosUsuario, empleado, fechaInicio, fechaFin);
 
@@ -561,7 +684,7 @@
         empleado: empleado,
         diasLaborales: diasLaborales,
         diasEfectivos: diasEfectivos,
-        diasAusencia: 0, // Sin acceso a ausencias
+        diasAusencia: diasLaborales - diasEfectivos, // Días que no trabajó
         diasPenalizacion: diasPenalizacion,
         horasEsperadas: horasEsperadas,
         horasTrabajadas: horasInfo.horasReales,
@@ -569,7 +692,8 @@
         retardos: retardos,
         totalPago: totalPago,
         detalleHoras: horasInfo.detalle,
-        progresoDiario: progresoDiario
+        progresoDiario: progresoDiario,
+        salarioPorHora: salarioPorHora
       };
     }
 
@@ -578,11 +702,23 @@
       const fin = new Date(fechaFin);
       let dias = 0;
       
-      for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
-        const diaSemana = d.getDay();
+      // Asegurarse de que las fechas sean válidas
+      if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+        console.error("Fechas inválidas:", fechaInicio, fechaFin);
+        return 0;
+      }
+      
+      // Crear una copia para no modificar la fecha original
+      const current = new Date(inicio);
+      
+      // Iterar día por día
+      while (current <= fin) {
+        const diaSemana = current.getDay();
+        // Lunes a Viernes (1-5), Domingo=0, Sábado=6
         if (diaSemana !== 0 && diaSemana !== 6) {
           dias++;
         }
+        current.setDate(current.getDate() + 1);
       }
       
       return dias;
@@ -714,7 +850,7 @@
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                   <h6 class="employee-name">${resultado.empleado.nombre}</h6>
-                  <small class="employee-type">${resultado.empleado.tipo} - $${resultado.empleado.salarioHora}/hr</small>
+                  <small class="employee-type">${resultado.empleado.tipo} - $${resultado.salarioPorHora.toFixed(2)}/hr</small>
                 </div>
                 <span class="delay-badge ${resultado.retardos > 0 ? 'bg-warning text-dark' : 'bg-success text-white'}">
                   ${resultado.retardos} retardo${resultado.retardos !== 1 ? 's' : ''}
@@ -781,13 +917,13 @@
             <h6>${resultado.empleado.nombre}</h6>
             <p class="text-muted">${resultado.empleado.email}</p>
             <p class="small">Tipo: ${resultado.empleado.tipo}</p>
-            <p class="small">Salario/hora: $${resultado.empleado.salarioHora}</p>
+            <p class="small">Salario/hora: $${resultado.salarioPorHora.toFixed(2)}</p>
           </div>
           <div class="col-md-6">
             <div class="alert alert-info">
               <strong>Total final: $${resultado.totalPago.toFixed(2)}</strong><br>
               <small>
-                ${resultado.horasAPagar.toFixed(1)} horas × $${resultado.empleado.salarioHora}/hr
+                ${resultado.horasAPagar.toFixed(1)} horas × $${resultado.salarioPorHora.toFixed(2)}/hr
                 ${resultado.diasPenalizacion > 0 ? `<br>(${resultado.retardos} retardos → ${resultado.diasPenalizacion} días penalizados)` : ''}
               </small>
             </div>
