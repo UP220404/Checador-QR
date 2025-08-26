@@ -262,14 +262,14 @@
       getFirestore,
       collection,
       getDocs,
-      doc,
       setDoc,
-      serverTimestamp
+      serverTimestamp,
+      query,
+      where
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // TU configuración Firebase exacta
     const firebaseConfig = {
-      apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
       authDomain: "qr-acceso-cielito-home.firebaseapp.com",
       projectId: "qr-acceso-cielito-home",
       storageBucket: "qr-acceso-cielito-home.appspot.com",
@@ -288,11 +288,10 @@
     let empleadosLocales = JSON.parse(localStorage.getItem('nomina_empleados')) || [];
     let registrosAsistencia = [];
 
-    // Configuración exacta de horarios
     const HORARIOS_BASE = {
-      becario: { horasDiarias: 5, entrada: '08:00', salida: '13:00' },
-      tiempo_completo: { horasDiarias: 8, entrada: '08:00', salida: '16:00' },
-      nayeli: { horasDiarias: 6, entrada: '08:00', salida: '14:00' }
+      becario: { horasDiarias: 5, inicio: "08:00", fin: "13:00" },
+      tiempo_completo: { horasDiarias: 8, inicio: "08:00", fin: "16:00" },
+      nayeli: { horasDiarias: 6, inicio: "08:00", fin: "14:00" }
     };
 
     // MODO OSCURO PERSISTENTE
@@ -504,19 +503,20 @@
 
     async function cargarRegistrosAsistencia(fechaInicio, fechaFin) {
       try {
-        const registrosSnapshot = await getDocs(collection(db, "registros"));
+        const q = query(
+          collection(db, "registros"),
+          where("fecha", ">=", fechaInicio),
+          where("fecha", "<=", fechaFin)
+        );
+        const registrosSnapshot = await getDocs(q);
         registrosAsistencia = [];
-        
         registrosSnapshot.forEach(doc => {
           const data = doc.data();
-          if (data.fecha >= fechaInicio && data.fecha <= fechaFin) {
-            registrosAsistencia.push({
-              id: doc.id,
-              ...data
-            });
-          }
+          registrosAsistencia.push({
+            id: doc.id,
+            ...data
+          });
         });
-        
         console.log(`Cargados ${registrosAsistencia.length} registros de asistencia`);
       } catch (error) {
         console.error('Error cargando registros:', error);
@@ -788,128 +788,90 @@
               <strong>Total final: $${resultado.totalPago.toFixed(2)}</strong><br>
               <small>
                 ${resultado.horasAPagar.toFixed(1)} horas × $${resultado.empleado.salarioHora}/hr
-                ${resultado.diasPenalizacion > 0 ? `<br>(${resultado.retardos} retardos = ${resultado.diasPenalizacion} día${resultado.diasPenalizacion !== 1 ? 's' : ''} de penalización)` : ''}
+                ${resultado.diasPenalizacion > 0 ? `<br>(${resultado.retardos} retardos → ${resultado.diasPenalizacion} días penalizados)` : ''}
               </small>
             </div>
           </div>
         </div>
         
-        <div class="row mb-3">
-          <div class="col-3"><strong>Días laborales:</strong> ${resultado.diasLaborales}</div>
-          <div class="col-3"><strong>Días efectivos:</strong> ${resultado.diasEfectivos}</div>
-          <div class="col-3"><strong>Ausencias:</strong> ${resultado.diasAusencia}</div>
-          <div class="col-3"><strong>Penalizaciones:</strong> ${resultado.diasPenalizacion}</div>
-        </div>
-
-        <h6><i class="bi bi-graph-up me-2"></i>Progreso Diario Acumulado</h6>
-        <div class="table-responsive mb-4">
+        <h6 class="mb-3">Detalle de horas trabajadas:</h6>
+        <div class="table-responsive">
           <table class="table table-sm">
             <thead>
               <tr>
                 <th>Fecha</th>
-                <th>Horas del día</th>
-                <th>Pago del día</th>
-                <th>Horas acumuladas</th>
-                <th class="text-end">Pago acumulado</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Horas</th>
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
       `;
 
-      resultado.progresoDiario.forEach(dia => {
-        const pagoDia = dia.horasDia * resultado.empleado.salarioHora;
+      resultado.detalleHoras.forEach(dia => {
         detalleHtml += `
-          <tr class="${dia.trabajoHoy ? '' : 'table-light'}">
-            <td>${new Date(dia.fecha + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}</td>
-            <td>
-              <span class="badge ${dia.trabajoHoy ? 'bg-success' : 'bg-secondary'}">
-                ${dia.horasDia.toFixed(1)}h
-              </span>
-            </td>
-            <td>$${pagoDia.toFixed(2)}</td>
-            <td><strong>${dia.acumuladoHoras.toFixed(1)}h</strong></td>
-            <td class="text-end">
-              <strong class="text-success">$${dia.acumuladoPago.toFixed(2)}</strong>
-            </td>
+          <tr>
+            <td>${dia.fecha}</td>
+            <td>${dia.entrada || '-'}</td>
+            <td>${dia.salida || '-'}</td>
+            <td>${dia.horas.toFixed(1)}</td>
+            <td><span class="badge ${dia.estado === 'Completo' ? 'bg-success' : 'bg-warning text-dark'}">${dia.estado}</span></td>
           </tr>
         `;
       });
 
-      detalleHtml += `</tbody></table></div>`;
+      detalleHtml += `
+            </tbody>
+          </table>
+        </div>
+        
+        <h6 class="mt-4 mb-3">Progreso acumulado:</h6>
+        <div class="progress-graph">
+      `;
+
+      resultado.progresoDiario.forEach(dia => {
+        const porcentaje = (dia.acumuladoPago / resultado.totalPago) * 100;
+        detalleHtml += `
+          <div class="progress-day ${dia.trabajoHoy ? 'worked' : ''}" style="width: ${100 / resultado.progresoDiario.length}%">
+            <div class="progress-bar-day" style="height: ${Math.min(100, porcentaje)}%"></div>
+            <div class="day-label">${new Date(dia.fecha).getDate()}</div>
+          </div>
+        `;
+      });
+
+      detalleHtml += `
+        </div>
+        <div class="text-center mt-2">
+          <small class="text-muted">Progreso diario del período</small>
+        </div>
+      `;
+
       content.innerHTML = detalleHtml;
       new bootstrap.Modal(document.getElementById('modalDetalleEmpleado')).show();
     };
 
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-      const alert = document.createElement('div');
-      alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-      alert.style.top = '20px';
-      alert.style.right = '20px';
-      alert.style.zIndex = '9999';
-      alert.style.maxWidth = '400px';
-      alert.innerHTML = `
+    window.generarReporteNomina = function() {
+      mostrarNotificacion('Función de generación de PDF en desarrollo', 'info');
+    };
+
+    function mostrarNotificacion(mensaje, tipo) {
+      const notificacion = document.createElement('div');
+      notificacion.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+      notificacion.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+      notificacion.innerHTML = `
         ${mensaje}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       `;
-      document.body.appendChild(alert);
+      
+      document.body.appendChild(notificacion);
       
       setTimeout(() => {
-        if (alert.parentNode) {
-          alert.parentNode.removeChild(alert);
+        if (notificacion.parentNode) {
+          notificacion.remove();
         }
       }, 5000);
-      
-      console.log(`${tipo.toUpperCase()}: ${mensaje}`);
     }
-
-    // FUNCIÓN PARA INTENTAR CARGAR USUARIOS DESDE FIREBASE
-    window.intentarCargarFirebase = async function() {
-      mostrarNotificacion('Intentando cargar usuarios desde Firebase...', 'info');
-      
-      try {
-        const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
-        let usuariosCargados = 0;
-        
-        usuariosSnapshot.forEach(doc => {
-          const data = doc.data();
-          const usuario = {
-            id: doc.id,
-            nombre: data.nombre,
-            email: data.correo || data.email,
-            tipo: data.tipo || 'becario',
-            salarioHora: 50, // Valor por defecto
-            tipoPago: 'quincenal',
-            activo: true
-          };
-          
-          // Solo agregar si no existe ya
-          const existe = empleadosLocales.find(e => e.email === usuario.email);
-          if (!existe) {
-            empleadosLocales.push(usuario);
-            usuariosCargados++;
-          }
-        });
-        
-        if (usuariosCargados > 0) {
-          localStorage.setItem('nomina_empleados', JSON.stringify(empleadosLocales));
-          renderizarEmpleadosLocales();
-          mostrarNotificacion(`✅ ${usuariosCargados} usuarios cargados desde Firebase`, 'success');
-        } else {
-          mostrarNotificacion('Todos los usuarios ya están agregados', 'info');
-        }
-        
-      } catch (error) {
-        console.error('Error cargando usuarios desde Firebase:', error);
-        mostrarNotificacion('❌ Error: Requiere autenticación como administrador', 'warning');
-      }
-    };
-
-    // Hacer funciones globales
-    window.agregarEmpleadoManual = agregarEmpleadoManual;
-    window.editarEmpleadoLocal = editarEmpleadoLocal;
-    window.guardarConfigUsuario = guardarConfigUsuario;
-    window.calcularNomina = calcularNomina;
-    window.verDetalleEmpleado = verDetalleEmpleado;
   </script>
 </body>
 </html>
