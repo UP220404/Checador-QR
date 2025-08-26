@@ -1,696 +1,592 @@
-/* nomina.css - Estilos específicos para el sistema de nómina */
-
-:root {
-  --primary-color: #0f5132;
-  --secondary-color: #198754;
-  --accent-color: #20c997;
-  --light-color: #f8f9fa;
-  --dark-color: #212529;
-  --danger-color: #dc3545;
-  --warning-color: #ffc107;
-  --success-color: #198754;
-  --info-color: #0dcaf0;
-  
-  /* Nómina específicos */
-  --salary-color: #28a745;
-  --hours-color: #17a2b8;
-  --progress-color: #20c997;
-  --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  --card-hover-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-/* Modo oscuro */
-body.dark-mode {
-  --light-color: #1a1a1a;
-  --dark-color: #e0e0e0;
-  --card-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  --card-hover-shadow: 0 8px 25px rgba(0,0,0,0.4);
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  margin: 0;
-  color: #495057;
-  transition: all 0.3s ease;
-  min-height: 100vh;
-}
-
-body.dark-mode {
-  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
-  color: #e0e0e0;
-}
-
-/* Navbar mejorado */
-.navbar-nomina {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.navbar-brand {
-  font-weight: 700;
-  font-size: 1.4rem;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
-
-/* Contenedor principal */
-.nomina-container {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-/* Tabs mejorados */
-.nomina-tabs {
-  background: white;
-  border-radius: 15px;
-  padding: 1rem;
-  margin-bottom: 2rem;
-  box-shadow: var(--card-shadow);
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
-body.dark-mode .nomina-tabs {
-  background: #1e1e1e;
-  border-color: #333;
-}
-
-.nomina-tabs .nav-link {
-  border-radius: 10px;
-  font-weight: 600;
-  padding: 1rem 1.5rem;
-  color: #6c757d;
-  border: none;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.nomina-tabs .nav-link::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s;
-}
-
-.nomina-tabs .nav-link:hover::before {
-  left: 100%;
-}
-
-.nomina-tabs .nav-link:hover {
-  color: var(--secondary-color);
-  background: rgba(25, 135, 84, 0.1);
-  transform: translateY(-2px);
-}
-
-.nomina-tabs .nav-link.active {
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  color: white;
-  box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
-}
-
-body.dark-mode .nomina-tabs .nav-link {
-  color: #9e9e9e;
-}
-
-body.dark-mode .nomina-tabs .nav-link:hover {
-  color: var(--accent-color);
-  background: rgba(32, 201, 151, 0.1);
-}
-
-/* Selector de período mejorado */
-.period-selector {
-  background: linear-gradient(135deg, white, #f8f9fa);
-  border-radius: 20px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: var(--card-shadow);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  position: relative;
-  overflow: hidden;
-}
-
-.period-selector::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
-  border-radius: 20px 20px 0 0;
-}
-
-body.dark-mode .period-selector {
-  background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
-}
-
-.period-selector .form-label {
-  font-weight: 700;
-  color: var(--secondary-color);
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.8rem;
-}
-
-body.dark-mode .period-selector .form-label {
-  color: var(--accent-color);
-}
-
-.period-selector .form-control,
-.period-selector .form-select {
-  border-radius: 12px;
-  border: 2px solid #e9ecef;
-  padding: 0.8rem 1.2rem;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  background: white;
-}
-
-.period-selector .form-control:focus,
-.period-selector .form-select:focus {
-  border-color: var(--secondary-color);
-  box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
-  transform: translateY(-1px);
-}
-
-body.dark-mode .period-selector .form-control,
-body.dark-mode .period-selector .form-select {
-  background: #2d2d2d;
-  border-color: #404040;
-  color: #e0e0e0;
-}
-
-body.dark-mode .period-selector .form-control:focus,
-body.dark-mode .period-selector .form-select:focus {
-  background: #2d2d2d;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 0.25rem rgba(32, 201, 151, 0.25);
-}
-
-.btn-calculate {
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  border: none;
-  border-radius: 12px;
-  padding: 0.8rem 2rem;
-  font-weight: 700;
-  color: white;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.btn-calculate:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
-  color: white;
-}
-
-.btn-calculate:active {
-  transform: translateY(-1px);
-}
-
-/* Loading mejorado */
-.loading-container {
-  padding: 4rem;
-  text-align: center;
-}
-
-.loading-spinner {
-  width: 3rem;
-  height: 3rem;
-  border: 0.3rem solid rgba(25, 135, 84, 0.1);
-  border-top: 0.3rem solid var(--secondary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1.5rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 1.1rem;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-body.dark-mode .loading-text {
-  color: #9e9e9e;
-}
-
-/* Resumen de nómina mejorado */
-.payroll-summary {
-  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 50%, var(--info-color) 100%);
-  color: white;
-  border-radius: 20px;
-  padding: 2.5rem 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 8px 30px rgba(25, 135, 84, 0.2);
-  position: relative;
-  overflow: hidden;
-}
-
-.payroll-summary::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  animation: float-bg 6s ease-in-out infinite;
-}
-
-@keyframes float-bg {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(5deg); }
-}
-
-.payroll-summary h4 {
-  font-size: 2.2rem;
-  font-weight: 900;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-  margin: 0;
-}
-
-.payroll-summary p {
-  font-size: 1rem;
-  opacity: 0.9;
-  margin: 0;
-  font-weight: 500;
-}
-
-/* Tarjetas de empleados mejoradas */
-.employee-card {
-  background: white;
-  border-radius: 20px;
-  padding: 0;
-  border: none;
-  box-shadow: var(--card-shadow);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-}
-
-.employee-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.employee-card:hover::before {
-  opacity: 1;
-}
-
-.employee-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: var(--card-hover-shadow);
-}
-
-body.dark-mode .employee-card {
-  background: #1e1e1e;
-  border: 1px solid #333;
-}
-
-.employee-card-body {
-  padding: 1.8rem;
-}
-
-.employee-name {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--dark-color);
-  margin-bottom: 0.5rem;
-}
-
-body.dark-mode .employee-name {
-  color: var(--light-color);
-}
-
-.employee-type {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-body.dark-mode .employee-type {
-  color: #9e9e9e;
-}
-
-/* Badge de retardos mejorado */
-.delay-badge {
-  border-radius: 20px;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Progress section mejorada */
-.progress-section {
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
-body.dark-mode .progress-section {
-  background: linear-gradient(135deg, #2d2d2d, #3d3d3d);
-  border-color: #404040;
-}
-
-.accumulated-amount {
-  font-size: 2rem;
-  font-weight: 900;
-  color: var(--success-color);
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
-}
-
-.progress-custom {
-  height: 12px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.1);
-  overflow: hidden;
-  position: relative;
-}
-
-.progress-custom .progress-bar {
-  background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
-  border-radius: 10px;
-  position: relative;
-  overflow: hidden;
-}
-
-.progress-custom .progress-bar::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  animation: progress-shine 2s infinite;
-}
-
-@keyframes progress-shine {
-  0% { left: -100%; }
-  100% { left: 100%; }
-}
-
-/* Stats grid mejorado */
-.stats-grid {
-  background: rgba(255,255,255,0.7);
-  border-radius: 12px;
-  padding: 1rem;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-body.dark-mode .stats-grid {
-  background: rgba(0,0,0,0.2);
-  border-color: rgba(255,255,255,0.1);
-}
-
-.stat-number {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--secondary-color);
-}
-
-body.dark-mode .stat-number {
-  color: var(--accent-color);
-}
-
-/* Final amount destacado */
-.final-amount {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--secondary-color);
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
-}
-
-/* Configuración mejorada */
-.config-card {
-  background: white;
-  border-radius: 15px;
-  padding: 1.5rem;
-  box-shadow: var(--card-shadow);
-  border-left: 4px solid var(--secondary-color);
-  transition: all 0.3s ease;
-}
-
-.config-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--card-hover-shadow);
-}
-
-body.dark-mode .config-card {
-  background: #1e1e1e;
-  border-color: var(--accent-color);
-}
-
-.config-badge {
-  border-radius: 20px;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.salary-display {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--success-color);
-}
-
-/* Modal mejorado */
-.modal-content {
-  border-radius: 20px;
-  border: none;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-}
-
-.modal-header {
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  border-radius: 20px 20px 0 0;
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  color: white;
-}
-
-.modal-title {
-  font-weight: 700;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-}
-
-body.dark-mode .modal-content {
-  background: #1e1e1e;
-  color: #e0e0e0;
-}
-
-body.dark-mode .modal-header {
-  border-color: #333;
-}
-
-/* Tabla mejorada */
-.table-custom {
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow: var(--card-shadow);
-}
-
-.table-custom thead th {
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  color: white;
-  font-weight: 700;
-  border: none;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 0.9rem;
-}
-
-.table-custom tbody tr {
-  transition: all 0.3s ease;
-  background: white;
-}
-
-.table-custom tbody tr:hover {
-  background: rgba(25, 135, 84, 0.05);
-  transform: scale(1.01);
-}
-
-body.dark-mode .table-custom tbody tr {
-  background: #1e1e1e;
-  border-color: #333;
-}
-
-body.dark-mode .table-custom tbody tr:hover {
-  background: rgba(32, 201, 151, 0.1);
-}
-
-/* Botones mejorados */
-.btn-custom {
-  border-radius: 12px;
-  font-weight: 600;
-  padding: 0.6rem 1.5rem;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 0.9rem;
-}
-
-.btn-custom:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-/* Error y estados */
-.error-container {
-  background: linear-gradient(135deg, #f8d7da, #f5c2c7);
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  color: var(--danger-color);
-}
-
-.success-container {
-  background: linear-gradient(135deg, #d1e7dd, #badbcc);
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  color: var(--success-color);
-}
-
-/* Animaciones */
-@keyframes fadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(20px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.6s ease-out;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.pulse {
-  animation: pulse 2s infinite;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .nomina-container {
-    padding: 1rem;
-  }
-  
-  .period-selector {
-    padding: 1.5rem;
-  }
-  
-  .payroll-summary {
-    padding: 2rem 1.5rem;
-  }
-  
-  .payroll-summary h4 {
-    font-size: 1.8rem;
-  }
-  
-  .employee-card-body {
-    padding: 1.5rem;
-  }
-  
-  .accumulated-amount {
-    font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .nomina-tabs .nav-link {
-    padding: 0.8rem 1rem;
-    font-size: 0.9rem;
-  }
-  
-  .employee-card:hover {
-    transform: translateY(-4px) scale(1.01);
-  }
-}
-
-/* Utilidades */
-.text-gradient {
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-}
-
-.glass-effect {
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-body.dark-mode .glass-effect {
-  background: rgba(0,0,0,0.2);
-  border-color: rgba(255,255,255,0.1);
-}
-
-/* Toggle modo oscuro integrado */
-.theme-toggle-nomina {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  color: white;
-  border: none;
-  box-shadow: 0 8px 25px rgba(25, 135, 84, 0.3);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  z-index: 1000;
-}
-
-.theme-toggle-nomina:hover {
-  transform: scale(1.1) rotate(10deg);
-  box-shadow: 0 12px 35px rgba(25, 135, 84, 0.4);
-}
-
-.theme-toggle-nomina i {
-  font-size: 1.5rem;
-  transition: transform 0.3s ease;
-}
-
-.theme-toggle-nomina:hover i {
-  transform: rotate(180deg);
-}
+
+    /* nomina.css - Estilos específicos para el sistema de nómina */
+
+    :root {
+      --primary-color: #0f5132;
+      --secondary-color: #198754;
+      --accent-color: #20c997;
+      --light-color: #f8f9fa;
+      --dark-color: #212529;
+      --danger-color: #dc3545;
+      --warning-color: #ffc107;
+      --success-color: #198754;
+      --info-color: #0dcaf0;
+      
+      /* Nómina específicos */
+      --salary-color: #28a745;
+      --hours-color: #17a2b8;
+      --progress-color: #20c997;
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --card-hover-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+
+    /* Modo oscuro */
+    body.dark-mode {
+      --light-color: #1a1a1a;
+      --dark-color: #e0e0e0;
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      --card-hover-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      margin: 0;
+      color: #495057;
+      transition: all 0.3s ease;
+      min-height: 100vh;
+    }
+
+    body.dark-mode {
+      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+      color: #e0e0e0;
+    }
+
+    /* Navbar mejorado */
+    .navbar-nomina {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.4rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Contenedor principal */
+    .nomina-container {
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Tabs mejorados */
+    .nomina-tabs {
+      background: white;
+      border-radius: 15px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    body.dark-mode .nomina-tabs {
+      background: #1e1e1e;
+      border-color: #333;
+    }
+
+    .nomina-tabs .nav-link {
+      border-radius: 10px;
+      font-weight: 600;
+      padding: 1rem 1.5rem;
+      color: #6c757d;
+      border: none;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nomina-tabs .nav-link::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .nomina-tabs .nav-link:hover::before {
+      left: 100%;
+    }
+
+    .nomina-tabs .nav-link:hover {
+      color: var(--secondary-color);
+      background: rgba(25, 135, 84, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .nomina-tabs .nav-link.active {
+      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+      color: white;
+      box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+    }
+
+    body.dark-mode .nomina-tabs .nav-link {
+      color: #9e9e9e;
+    }
+
+    body.dark-mode .nomina-tabs .nav-link:hover {
+      color: var(--accent-color);
+      background: rgba(32, 201, 151, 0.1);
+    }
+
+    /* Selector de período mejorado */
+    .period-selector {
+      background: linear-gradient(135deg, white, #f8f9fa);
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--card-shadow);
+      border: 2px solid transparent;
+      background-clip: padding-box;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .period-selector::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+      border-radius: 20px 20px 0 0;
+    }
+
+    body.dark-mode .period-selector {
+      background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+    }
+
+    .period-selector .form-label {
+      font-weight: 700;
+      color: var(--secondary-color);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.8rem;
+    }
+
+    body.dark-mode .period-selector .form-label {
+      color: var(--accent-color);
+    }
+
+    .period-selector .form-control,
+    .period-selector .form-select {
+      border-radius: 12px;
+      border: 2px solid #e9ecef;
+      padding: 0.8rem 1.2rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    .period-selector .form-control:focus,
+    .period-selector .form-select:focus {
+      border-color: var(--secondary-color);
+      box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+      transform: translateY(-1px);
+    }
+
+    body.dark-mode .period-selector .form-control,
+    body.dark-mode .period-selector .form-select {
+      background: #2d2d2d;
+      border-color: #404040;
+      color: #e0e0e0;
+    }
+
+    body.dark-mode .period-selector .form-control:focus,
+    body.dark-mode .period-selector .form-select:focus {
+      background: #2d2d2d;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 0.25rem rgba(32, 201, 151, 0.25);
+    }
+
+    .btn-calculate {
+      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+      border: none;
+      border-radius: 12px;
+      padding: 0.8rem 2rem;
+      font-weight: 700;
+      color: white;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-calculate:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
+      color: white;
+    }
+
+    .btn-calculate:active {
+      transform: translateY(-1px);
+    }
+
+    /* Loading mejorado */
+    .loading-container {
+      padding: 4rem;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      width: 3rem;
+      height: 3rem;
+      border: 0.3rem solid rgba(25, 135, 84, 0.1);
+      border-top: 0.3rem solid var(--secondary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 1.1rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    body.dark-mode .loading-text {
+      color: #9e9e9e;
+    }
+
+    /* Resumen de nómina mejorado */
+    .payroll-summary {
+      background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 50%, var(--info-color) 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 30px rgba(25, 135, 84, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .payroll-summary::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: float-bg 6s ease-in-out infinite;
+    }
+
+    @keyframes float-bg {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(5deg); }
+    }
+
+    .payroll-summary h4 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      margin: 0;
+    }
+
+    .payroll-summary p {
+      font-size: 1rem;
+      opacity: 0.9;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    /* Tarjetas de empleados mejoradas */
+    .employee-card {
+      background: white;
+      border-radius: 20px;
+      padding: 0;
+      border: none;
+      box-shadow: var(--card-shadow);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .employee-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .employee-card:hover::before {
+      opacity: 1;
+    }
+
+    .employee-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: var(--card-hover-shadow);
+    }
+
+    body.dark-mode .employee-card {
+      background: #1e1e1e;
+      border: 1px solid #333;
+    }
+
+    .employee-card-body {
+      padding: 1.8rem;
+    }
+
+    .employee-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--dark-color);
+      margin-bottom: 0.5rem;
+    }
+
+    body.dark-mode .employee-name {
+      color: var(--light-color);
+    }
+
+    .employee-type {
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    body.dark-mode .employee-type {
+      color: #b0b0b0;
+    }
+    
+    body.dark-mode .loading-text {
+      color: #b0b0b0;
+    }
+    
+    body.dark-mode .text-muted {
+      color: #a0a0a0 !important;
+    }
+    
+    body.dark-mode small.text-muted {
+      color: #b0b0b0 !important;
+    }
+
+    /* Badge de retardos mejorado */
+    .delay-badge {
+      border-radius: 20px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Progress section mejorada */
+    .progress-section {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    body.dark-mode .progress-section {
+      background: linear-gradient(135deg, #2d2d2d, #3d3d3d);
+      border-color: #404040;
+    }
+
+    .accumulated-amount {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--success-color);
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .progress-custom {
+      height: 12px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-custom .progress-bar {
+      background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-custom .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: progress-shine 2s infinite;
+    }
+
+    @keyframes progress-shine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Stats grid mejorado */
+    .stats-grid {
+      background: rgba(255,255,255,0.7);
+      border-radius: 12px;
+      padding: 1rem;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    body.dark-mode .stats-grid {
+      background: rgba(0,0,0,0.2);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .stat-number {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--secondary-color);
+    }
+
+    body.dark-mode .stat-number {
+      color: var(--accent-color);
+    }
+
+    /* Final amount destacado */
+    .final-amount {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--secondary-color);
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Configuración mejorada */
+    .config-card {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      border-left: 4px solid var(--secondary-color);
+      transition: all 0.3s ease;
+    }
+
+    .config-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--card-hover-shadow);
+    }
+
+    body.dark-mode .config-card {
+      background: #1e1e1e;
+      border-color: var(--accent-color);
+    }
+
+    .config-badge {
+      border-radius: 20px;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .salary-display {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--success-color);
+    }
+
+    /* Error container mejorado */
+    .error-container {
+      background: linear-gradient(135deg, #f8d7da, #f5c2c7);
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: center;
+      color: var(--danger-color);
+      border: 1px solid rgba(220, 53, 69, 0.2);
+      margin: 2rem 0;
+    }
+
+    .warning-container {
+      background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: center;
+      color: #856404;
+      border: 1px solid rgba(255, 193, 7, 0.2);
+      margin: 2rem 0;
+    }
+
+    /* Toggle modo oscuro */
+    .theme-toggle-nomina {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+      color: white;
+      border: none;
+      box-shadow: 0 8px 25px rgba(25, 135, 84, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .theme-toggle-nomina:hover {
+      transform: scale(1.1) rotate(10deg);
+      box-shadow: 0 12px 35px rgba(25, 135, 84, 0.4);
+    }
+
+    .theme-toggle-nomina i {
+      font-size: 1.5rem;
+      transition: transform 0.3s ease;
+    }
+
+    .theme-toggle-nomina:hover i {
+      transform: rotate(180deg);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nomina-container {
+        padding: 1rem;
+      }
+      
+      .period-selector {
+        padding: 1.5rem;
+      }
+      
+      .payroll-summary {
+        padding: 2rem 1.5rem;
+      }
+      
+      .payroll-summary h4 {
+        font-size: 1.8rem;
+      }
+      
+      .employee-card-body {
+        padding: 1.5rem;
+      }
+      
+      .accumulated-amount {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* Animaciones */
+    @keyframes fadeIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }

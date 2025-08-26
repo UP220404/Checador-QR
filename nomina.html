@@ -8,7 +8,6 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="nomina.css">
-  
 </head>
 <body>
   <!-- Navbar -->
@@ -276,6 +275,10 @@
       storageBucket: "qr-acceso-cielito-home.appspot.com",
       messagingSenderId: "229634415256",
       appId: "1:229634415256:web:c576ba8879e58e441c4eed"
+    };
+
+    window.volverAdmin = function() {
+      window.location.href = 'admin.html';
     };
 
     const app = initializeApp(firebaseConfig);
@@ -859,8 +862,46 @@
       console.log(`${tipo.toUpperCase()}: ${mensaje}`);
     }
 
-    window.volverAdmin = function() {
-      window.location.href = 'admin.html';
+    // FUNCIÓN PARA INTENTAR CARGAR USUARIOS DESDE FIREBASE
+    window.intentarCargarFirebase = async function() {
+      mostrarNotificacion('Intentando cargar usuarios desde Firebase...', 'info');
+      
+      try {
+        const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
+        let usuariosCargados = 0;
+        
+        usuariosSnapshot.forEach(doc => {
+          const data = doc.data();
+          const usuario = {
+            id: doc.id,
+            nombre: data.nombre,
+            email: data.correo || data.email,
+            tipo: data.tipo || 'becario',
+            salarioHora: 50, // Valor por defecto
+            tipoPago: 'quincenal',
+            activo: true
+          };
+          
+          // Solo agregar si no existe ya
+          const existe = empleadosLocales.find(e => e.email === usuario.email);
+          if (!existe) {
+            empleadosLocales.push(usuario);
+            usuariosCargados++;
+          }
+        });
+        
+        if (usuariosCargados > 0) {
+          localStorage.setItem('nomina_empleados', JSON.stringify(empleadosLocales));
+          renderizarEmpleadosLocales();
+          mostrarNotificacion(`✅ ${usuariosCargados} usuarios cargados desde Firebase`, 'success');
+        } else {
+          mostrarNotificacion('Todos los usuarios ya están agregados', 'info');
+        }
+        
+      } catch (error) {
+        console.error('Error cargando usuarios desde Firebase:', error);
+        mostrarNotificacion('❌ Error: Requiere autenticación como administrador', 'warning');
+      }
     };
 
     // Hacer funciones globales
