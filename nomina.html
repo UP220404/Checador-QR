@@ -39,6 +39,32 @@
       </ul>
     </div>
 
+    <!-- Indicador visual de consultas -->
+    <div id="consultaStatus" class="alert alert-success">
+      <div class="row align-items-center">
+        <div class="col-lg-8 col-md-7 mb-2 mb-md-0">
+          <h6 class="mb-1"><i class="bi bi-shield-check me-2"></i>Sistema Optimizado Firebase</h6>
+          <small id="consultaInfo">Una consulta por período • Límite mensual protegido</small>
+        </div>
+        <div class="col-lg-4 col-md-5 text-md-end text-center">
+          <div class="d-flex align-items-center justify-content-center justify-content-md-end">
+            <div class="me-3">
+              <div class="fw-bold text-success" id="consultasHoy">0</div>
+              <small class="text-muted d-none d-sm-block">Consultas hoy</small>
+              <small class="text-muted d-block d-sm-none">Hoy</small>
+            </div>
+            <i class="bi bi-speedometer2 text-success" style="font-size: 1.5rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug info -->
+    <div id="debugInfo" class="alert alert-info d-none">
+      <strong>Info de optimización:</strong>
+      <div id="debugContent"></div>
+    </div>
+
     <!-- Tab Content -->
     <div class="tab-content fade-in" id="nominaTabContent">
       
@@ -47,23 +73,23 @@
         <!-- Selector de Período -->
         <div class="period-selector">
           <div class="row align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6 mb-3">
               <label class="form-label">Período de Nómina:</label>
               <select id="tipoPeriodo" class="form-select">
                 <option value="quincenal">Quincenal</option>
                 <option value="semanal">Semanal</option>
               </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6 mb-3">
               <label class="form-label">Fecha Inicio:</label>
               <input type="date" id="fechaInicio" class="form-control">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-6 mb-3">
               <label class="form-label">Fecha Fin:</label>
               <input type="date" id="fechaFin" class="form-control">
             </div>
-            <div class="col-md-3">
-              <button class="btn btn-calculate w-100" onclick="calcularNomina()">
+            <div class="col-md-3 col-sm-6 mb-3">
+              <button class="btn btn-calculate w-100" onclick="calcularNomina()" id="btnCalcular">
                 <i class="bi bi-play-fill me-2"></i>Calcular Nómina
               </button>
             </div>
@@ -74,6 +100,7 @@
         <div id="loadingNomina" class="loading-container d-none">
           <div class="loading-spinner"></div>
           <p class="loading-text">Calculando nómina...</p>
+          <small class="text-muted" id="loadingDetail"></small>
         </div>
 
         <!-- Warning por permisos -->
@@ -123,7 +150,7 @@
           <!-- Info sobre configuración manual -->
           <div class="alert alert-info">
             <i class="bi bi-info-circle me-2"></i>
-            <strong>Configuración Manual:</strong> Debido a los permisos de Firebase, debes configurar manualmente los salarios por empleado. Los registros de asistencia se cargan automáticamente.
+            <strong>Configuración Manual:</strong> Debido a los permisos de Firebase, debes configurar manualmente los salarios por empleado. Los registros de asistencia se cargan automáticamente con cache optimizado.
           </div>
 
           <!-- Agregar empleado manual -->
@@ -153,6 +180,17 @@
 
           <div class="mb-3">
             <input type="text" id="filtroUsuarios" class="form-control" placeholder="Buscar empleado...">
+          </div>
+
+          <!-- Cache controls -->
+          <div class="mb-3">
+            <button class="btn btn-warning btn-sm me-2" onclick="limpiarCacheCompleto()">
+              <i class="bi bi-trash me-1"></i>Limpiar Cache
+            </button>
+            <button class="btn btn-info btn-sm" onclick="toggleDebugInfo()">
+              <i class="bi bi-bug me-1"></i>Debug Info
+            </button>
+            <small class="text-muted ms-2" id="cacheInfo">Cache info...</small>
           </div>
 
           <!-- Lista de configuraciones -->
@@ -259,6 +297,58 @@
     </div>
   </div>
 
+  <!-- Modal Super Admin -->
+  <div class="modal fade" id="modalSuperAdmin" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title">
+            <i class="bi bi-shield-exclamation me-2"></i>Consulta Adicional - Super Administrador
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>¡Advertencia!</strong> Ya se realizó una consulta para este período.
+            <br>Consultas adicionales consumen límite mensual de Firebase.
+          </div>
+          
+          <div class="mb-3">
+            <p><strong>Período:</strong> <span id="periodoConsultado"></span></p>
+            <p><strong>Última consulta:</strong> <span id="fechaUltimaConsulta"></span></p>
+            <p><strong>Registros en cache:</strong> <span id="registrosCache"></span></p>
+          </div>
+
+          <hr>
+
+          <div class="mb-3">
+            <label class="form-label">Contraseña de Super Administrador:</label>
+            <input type="password" class="form-control" id="passwordSuperAdmin" 
+                   placeholder="Ingresa la contraseña">
+            <small class="form-text text-muted">Solo el administrador principal tiene esta contraseña</small>
+          </div>
+
+          <div class="alert alert-info">
+            <small>
+              <i class="bi bi-info-circle me-1"></i>
+              Al autorizar esta consulta adicional, se realizará una nueva consulta a Firebase 
+              y se actualizará el cache existente.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Usar Cache Actual
+          </button>
+          <button type="button" class="btn btn-warning" onclick="autorizarConsultaAdicional()">
+            <i class="bi bi-unlock me-2"></i>Autorizar Consulta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toggle modo oscuro -->
   <button class="theme-toggle-nomina" id="themeToggle">
     <i class="bi bi-moon-fill"></i>
@@ -279,7 +369,7 @@
       limit
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // TU configuración Firebase exacta
+    // Configuración Firebase
     const firebaseConfig = {
       authDomain: "qr-acceso-cielito-home.firebaseapp.com",
       projectId: "qr-acceso-cielito-home",
@@ -288,22 +378,181 @@
       appId: "1:229634415256:web:c576ba8879e58e441c4eed"
     };
 
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // **SISTEMA DE CONTROL + ANTI-SPAM**
+    let calculandoNomina = false;
+    let consultasRealizadas = 0;
+    let ultimaConsulta = 0;
+    const LIMITE_CONSULTAS_POR_MINUTO = 2;
+    const MIN_TIEMPO_ENTRE_CONSULTAS = 30000; // 30 segundos mínimo
+
+    function puedeHacerConsulta() {
+      const ahora = Date.now();
+      const tiempoTranscurrido = ahora - ultimaConsulta;
+      
+      if (tiempoTranscurrido < MIN_TIEMPO_ENTRE_CONSULTAS) {
+        console.log(`Consulta bloqueada - Esperar ${Math.ceil((MIN_TIEMPO_ENTRE_CONSULTAS - tiempoTranscurrido) / 1000)}s más`);
+        return false;
+      }
+      
+      // Reset contador cada minuto
+      if (tiempoTranscurrido > 60000) {
+        consultasRealizadas = 0;
+      }
+      
+      if (consultasRealizadas >= LIMITE_CONSULTAS_POR_MINUTO) {
+        console.log('Límite de consultas por minuto alcanzado');
+        return false;
+      }
+      
+      return true;
+    }
+
+    // **SISTEMA DE CONTROL DE CONSULTAS POR PERÍODO**
+    const SUPER_ADMIN_PASSWORD = "CielitoAdmin2024!"; // Cambiar por contraseña segura
+    let periodosConsultados = JSON.parse(localStorage.getItem('periodos_consultados')) || {};
+    
+    function obtenerPeriodoKey(fechaInicio, fechaFin) {
+      return `${fechaInicio}_${fechaFin}`;
+    }
+    
+    function yaSePidioEστePeriodo(fechaInicio, fechaFin) {
+      const periodoKey = obtenerPeriodoKey(fechaInicio, fechaFin);
+      return periodosConsultados[periodoKey] !== undefined;
+    }
+    
+    function registrarPeriodoConsultado(fechaInicio, fechaFin) {
+      const periodoKey = obtenerPeriodoKey(fechaInicio, fechaFin);
+      periodosConsultados[periodoKey] = {
+        fechaConsulta: new Date().toISOString(),
+        timestamp: Date.now()
+      };
+      localStorage.setItem('periodos_consultados', JSON.stringify(periodosConsultados));
+      actualizarIndicadorConsultas();
+    }
+    
+    function actualizarIndicadorConsultas() {
+      const hoy = new Date().toDateString();
+      const consultasHoy = Object.values(periodosConsultados).filter(p => 
+        new Date(p.fechaConsulta).toDateString() === hoy
+      ).length;
+      
+      const elementoConsultas = document.getElementById('consultasHoy');
+      if (elementoConsultas) {
+        elementoConsultas.textContent = `${consultasHoy}`;
+      }
+      
+      const statusDiv = document.getElementById('consultaStatus');
+      const infoSpan = document.getElementById('consultaInfo');
+      
+      if (statusDiv && infoSpan) {
+        if (consultasHoy === 0) {
+          statusDiv.className = 'alert alert-success';
+          infoSpan.textContent = 'Sistema listo • Una consulta disponible por período';
+        } else {
+          statusDiv.className = 'alert alert-warning';
+          infoSpan.textContent = `${consultasHoy} consulta(s) realizadas hoy • Próximas requieren autorización`;
+        }
+      }
+    }
+
+    function puedeHacerConsulta() {
+      const ahora = Date.now();
+      const tiempoTranscurrido = ahora - ultimaConsulta;
+      
+      if (tiempoTranscurrido < MIN_TIEMPO_ENTRE_CONSULTAS) {
+        console.log(`🚫 Consulta bloqueada - Esperar ${Math.ceil((MIN_TIEMPO_ENTRE_CONSULTAS - tiempoTranscurrido) / 1000)}s más`);
+        return false;
+      }
+      
+      // Reset contador cada minuto
+      if (tiempoTranscurrido > 60000) {
+        consultasRealizadas = 0;
+      }
+      
+      if (consultasRealizadas >= LIMITE_CONSULTAS_POR_MINUTO) {
+        console.log('🚫 Límite de consultas por minuto alcanzado');
+        return false;
+      }
+      
+      return true;
+    }
+
+    function registrarConsulta() {
+      consultasRealizadas++;
+      ultimaConsulta = Date.now();
+      console.log(`📊 Consulta #${consultasRealizadas} registrada`);
+    }
+
     window.volverAdmin = function() {
       window.location.href = 'admin.html';
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // Variables globales - usar localStorage para persistencia
+    // Variables globales - CACHE MEJORADO
     let empleadosLocales = JSON.parse(localStorage.getItem('nomina_empleados')) || [];
     let registrosAsistencia = [];
-
+    
     const HORARIOS_BASE = {
       becario: { horasDiarias: 5, inicio: "08:00", fin: "13:00" },
       tiempo_completo: { horasDiarias: 8, inicio: "08:00", fin: "16:00" },
       nayeli: { horasDiarias: 6, inicio: "08:00", fin: "14:00" }
     };
+
+    // **CACHE PERSISTENTE - 24 HORAS EN LUGAR DE 5 MINUTOS**
+    const CACHE_DURACION = 24 * 60 * 60 * 1000; // 24 horas
+    
+    function obtenerCacheKey(fechaInicio, fechaFin) {
+      return `asistencia_${fechaInicio}_${fechaFin}`;
+    }
+
+    function obtenerDatosCache(cacheKey) {
+      try {
+        const cachedData = localStorage.getItem(cacheKey);
+        if (!cachedData) return null;
+
+        const cache = JSON.parse(cachedData);
+        const ahora = Date.now();
+        
+        // Verificar si el cache sigue siendo válido (24 horas)
+        if (ahora - cache.timestamp < CACHE_DURACION) {
+          console.log(`✅ Cache válido encontrado para ${cacheKey} (${Math.round((ahora - cache.timestamp) / 1000 / 60)} min de antigüedad)`);
+          return cache.data;
+        }
+        
+        console.log(`⏰ Cache expirado para ${cacheKey}`);
+        localStorage.removeItem(cacheKey);
+        return null;
+        
+      } catch (error) {
+        console.error('Error leyendo cache:', error);
+        return null;
+      }
+    }
+
+    function guardarEnCache(cacheKey, data) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          timestamp: Date.now(),
+          data: data,
+          version: '1.1'
+        }));
+        console.log(`💾 Datos guardados en cache: ${cacheKey}`);
+      } catch (error) {
+        console.error('Error guardando en cache:', error);
+      }
+    }
+
+    // **DEBOUNCING PARA CÁLCULOS**
+    let timeoutCalcular = null;
+    
+    function calcularNominaDebounced() {
+      clearTimeout(timeoutCalcular);
+      timeoutCalcular = setTimeout(() => {
+        calcularNominaInternal();
+      }, 1000); // 1 segundo de debounce
+    }
 
     // MODO OSCURO PERSISTENTE
     const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
@@ -324,36 +573,45 @@
       }
     });
 
-    // Inicialización
+    // Inicialización OPTIMIZADA
     document.addEventListener('DOMContentLoaded', function() {
-      limpiarCacheAntiguo();
       inicializarSistema();
       configurarFechasPorDefecto();
+      actualizarInfoCache();
+      actualizarIndicadorConsultas(); // NUEVO: Actualizar indicadores visuales
     });
 
-    // Función para limpiar cache antiguo
+    // **LIMPIEZA DE CACHE SOLO CUANDO SEA NECESARIO**
     function limpiarCacheAntiguo() {
-      const ahora = new Date().getTime();
-      const umbral = 24 * 60 * 60 * 1000; // 24 horas
+      const claves = Object.keys(localStorage);
+      let cachesEliminados = 0;
       
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('asistencia_')) {
+      claves.forEach(key => {
+        if (key.startsWith('asistencia_')) {
           try {
             const data = JSON.parse(localStorage.getItem(key));
-            if (ahora - data.timestamp > umbral) {
+            const ahora = Date.now();
+            
+            // Solo eliminar si tiene más de 7 días (más conservador)
+            if (ahora - data.timestamp > 7 * 24 * 60 * 60 * 1000) {
               localStorage.removeItem(key);
+              cachesEliminados++;
             }
           } catch (e) {
-            // Si hay error, eliminar la clave
             localStorage.removeItem(key);
+            cachesEliminados++;
           }
         }
+      });
+      
+      if (cachesEliminados > 0) {
+        console.log(`🗑️ ${cachesEliminados} caches antiguos eliminados`);
       }
     }
 
     async function inicializarSistema() {
-      mostrarNotificacion('Iniciando sistema de nómina...', 'info');
+      mostrarNotificacion('Iniciando sistema de nómina (modo optimizado)...', 'info');
+      limpiarCacheAntiguo();
       renderizarEmpleadosLocales();
       mostrarNotificacion('Sistema listo - configuración manual disponible', 'success');
     }
@@ -407,6 +665,7 @@
       
       renderizarEmpleadosLocales();
       mostrarNotificacion('Empleado agregado correctamente', 'success');
+      actualizarInfoCache();
     };
 
     function renderizarEmpleadosLocales() {
@@ -489,7 +748,6 @@
       empleado.nombre = document.getElementById('configNombre').value;
       empleado.email = document.getElementById('configEmail').value;
       
-      // Obtener valores de salario (puede ser por hora o mensual)
       const salarioHora = document.getElementById('configSalarioHora').value;
       const salarioMensual = document.getElementById('configSalarioMensual').value;
       
@@ -507,8 +765,70 @@
       renderizarEmpleadosLocales();
     };
 
-    // CÁLCULO DE NÓMINA - RESISTENTE A ERRORES
-    window.calcularNomina = async function() {
+    // **CÁLCULO DE NÓMINA CON CONTROL DE PERÍODOS**
+    window.calcularNomina = function() {
+      if (calculandoNomina) {
+        mostrarNotificacion('Ya se está calculando una nómina. Espera...', 'warning');
+        return;
+      }
+      
+      const fechaInicio = document.getElementById('fechaInicio').value;
+      const fechaFin = document.getElementById('fechaFin').value;
+      
+      if (!fechaInicio || !fechaFin) {
+        mostrarNotificacion('Selecciona las fechas del período', 'warning');
+        return;
+      }
+
+      // VERIFICAR SI YA SE CONSULTÓ ESTE PERÍODO
+      if (yaSePidioEστePeriodo(fechaInicio, fechaFin)) {
+        mostrarModalSuperAdmin(fechaInicio, fechaFin);
+        return;
+      }
+      
+      // Primera consulta para este período - proceder normalmente
+      calcularNominaInternal();
+    };
+
+    function mostrarModalSuperAdmin(fechaInicio, fechaFin) {
+      const cacheKey = obtenerCacheKey(fechaInicio, fechaFin);
+      const cache = obtenerDatosCache(cacheKey);
+      const periodoInfo = periodosConsultados[obtenerPeriodoKey(fechaInicio, fechaFin)];
+      
+      document.getElementById('periodoConsultado').textContent = `${fechaInicio} al ${fechaFin}`;
+      document.getElementById('fechaUltimaConsulta').textContent = 
+        new Date(periodoInfo.fechaConsulta).toLocaleString();
+      document.getElementById('registrosCache').textContent = 
+        cache ? `${cache.length} registros disponibles` : 'Sin cache';
+      
+      document.getElementById('passwordSuperAdmin').value = '';
+      
+      new bootstrap.Modal(document.getElementById('modalSuperAdmin')).show();
+    }
+
+    window.autorizarConsultaAdicional = function() {
+      const password = document.getElementById('passwordSuperAdmin').value;
+      
+      if (password !== SUPER_ADMIN_PASSWORD) {
+        mostrarNotificacion('Contraseña incorrecta', 'danger');
+        return;
+      }
+      
+      // Contraseña correcta - permitir consulta adicional
+      bootstrap.Modal.getInstance(document.getElementById('modalSuperAdmin')).hide();
+      
+      mostrarNotificacion('Autorización concedida - Realizando consulta adicional', 'warning');
+      
+      // Forzar nueva consulta limpiando cache
+      const fechaInicio = document.getElementById('fechaInicio').value;
+      const fechaFin = document.getElementById('fechaFin').value;
+      const cacheKey = obtenerCacheKey(fechaInicio, fechaFin);
+      localStorage.removeItem(cacheKey);
+      
+      calcularNominaInternal();
+    };
+
+    async function calcularNominaInternal() {
       const fechaInicio = document.getElementById('fechaInicio').value;
       const fechaFin = document.getElementById('fechaFin').value;
       
@@ -522,55 +842,75 @@
         return;
       }
 
+      calculandoNomina = true;
+      document.getElementById('btnCalcular').disabled = true;
       document.getElementById('loadingNomina').classList.remove('d-none');
       document.getElementById('listaEmpleados').innerHTML = '';
       document.getElementById('resumenNomina').classList.add('d-none');
+      document.getElementById('loadingDetail').textContent = 'Verificando datos en cache...';
 
       try {
-        console.log(`Calculando nómina del ${fechaInicio} al ${fechaFin}`);
+        console.log(`📊 Calculando nómina del ${fechaInicio} al ${fechaFin}`);
         
-        await cargarRegistrosAsistencia(fechaInicio, fechaFin);
+        await cargarRegistrosAsistenciaOptimizada(fechaInicio, fechaFin);
         
-        const resultados = procesarNominaEmpleados(fechaInicio, fechaFin);
+        document.getElementById('loadingDetail').textContent = 'Procesando cálculos...';
+        const resultados = procesarNominaEmpleadosCorregida(fechaInicio, fechaFin);
         mostrarResultadosNomina(resultados);
         
-        // Mostrar warning sobre configuración manual
         document.getElementById('warningPermisos').classList.remove('d-none');
+        actualizarInfoCache();
 
       } catch (error) {
-        console.error('Error calculando nómina:', error);
+        console.error('❌ Error calculando nómina:', error);
         mostrarNotificacion('Error al calcular nómina: ' + error.message, 'danger');
       } finally {
+        calculandoNomina = false;
+        document.getElementById('btnCalcular').disabled = false;
         document.getElementById('loadingNomina').classList.add('d-none');
       }
-    };
+    }
 
-    async function cargarRegistrosAsistencia(fechaInicio, fechaFin) {
-      try {
-        // VERIFICAR PRIMERO SI YA TENEMOS LOS DATOS EN CACHE
-        const cacheKey = `asistencia_${fechaInicio}_${fechaFin}`;
+    // **UNA SOLA CONSULTA OPTIMIZADA POR PERÍODO**
+    async function cargarRegistrosAsistenciaOptimizada(fechaInicio, fechaFin) {
+      const cacheKey = obtenerCacheKey(fechaInicio, fechaFin);
+      
+      // VERIFICAR CACHE PRIMERO
+      const datosCache = obtenerDatosCache(cacheKey);
+      if (datosCache) {
+        registrosAsistencia = datosCache;
+        document.getElementById('loadingDetail').textContent = `Usando cache (${registrosAsistencia.length} registros)`;
+        console.log(`Cache hit: ${registrosAsistencia.length} registros para ${fechaInicio}-${fechaFin}`);
+        return;
+      }
+
+      // VERIFICAR LÍMITES DE CONSULTA
+      if (!puedeHacerConsulta()) {
+        // Intentar usar cache expirado como respaldo
         const cachedData = localStorage.getItem(cacheKey);
-        
-        // Usar cache si existe y es menor a 5 minutos
         if (cachedData) {
           const cache = JSON.parse(cachedData);
-          const now = new Date().getTime();
-          if (now - cache.timestamp < 5 * 60 * 1000) { // 5 minutos
-            console.log('Usando datos en caché para', fechaInicio, 'a', fechaFin);
-            registrosAsistencia = cache.data;
-            return;
-          }
+          registrosAsistencia = cache.data;
+          mostrarNotificacion('Usando cache expirado por límite de consultas', 'warning');
+          return;
         }
+        throw new Error('Límite de consultas alcanzado y no hay cache disponible. Espera un momento.');
+      }
 
-        console.log('Cargando registros desde Firebase...');
+      document.getElementById('loadingDetail').textContent = 'UNA consulta a Firebase...';
+      console.log(`Iniciando ÚNICA consulta Firebase: ${fechaInicio} a ${fechaFin}`);
+      
+      try {
+        registrarConsulta();
         
-        // LIMITAR la consulta para evitar sobrecarga
+        // UNA SOLA CONSULTA PARA TODO EL PERÍODO
+        // Sin limit() porque necesitamos TODOS los registros del período
         const q = query(
           collection(db, "registros"),
           where("fecha", ">=", fechaInicio),
           where("fecha", "<=", fechaFin),
-          orderBy("fecha"), // Ordenar para eficiencia
-          limit(1000) // LIMITAR a 1000 registros máximo
+          orderBy("fecha")
+          // NO limit() - queremos todos los registros del período
         );
         
         const registrosSnapshot = await getDocs(q);
@@ -584,107 +924,95 @@
           });
         });
         
-        console.log(`Cargados ${registrosAsistencia.length} registros de asistencia`);
+        console.log(`ÉXITO: ${registrosAsistencia.length} registros en UNA consulta`);
         
-        // GUARDAR EN CACHE
-        localStorage.setItem(cacheKey, JSON.stringify({
-          timestamp: new Date().getTime(),
-          data: registrosAsistencia
-        }));
+        // Análisis de lo que obtuvimos
+        const empleadosUnicos = [...new Set(registrosAsistencia.map(r => r.email || r.usuario))];
+        const diasUnicos = [...new Set(registrosAsistencia.map(r => r.fecha))];
+        console.log(`Datos: ${empleadosUnicos.length} empleados, ${diasUnicos.length} días`);
+        
+        // GUARDAR EN CACHE INMEDIATAMENTE
+        guardarEnCache(cacheKey, registrosAsistencia);
+        
+        document.getElementById('loadingDetail').textContent = `${registrosAsistencia.length} registros cargados`;
+        
+        // REGISTRAR QUE SE CONSULTÓ ESTE PERÍODO
+        const fechaInicio = document.getElementById('fechaInicio').value;
+        const fechaFin = document.getElementById('fechaFin').value;
+        registrarPeriodoConsultado(fechaInicio, fechaFin);
         
       } catch (error) {
-        console.error('Error cargando registros:', error);
+        console.error('Error en consulta Firebase:', error);
         
-        // Intentar usar cache como respaldo
-        const cacheKey = `asistencia_${fechaInicio}_${fechaFin}`;
+        // INTENTAR CACHE EXPIRADO COMO ÚLTIMO RECURSO
         const cachedData = localStorage.getItem(cacheKey);
-        
         if (cachedData) {
           const cache = JSON.parse(cachedData);
           registrosAsistencia = cache.data;
-          console.log('Usando caché como respaldo debido a error de Firebase');
-          mostrarNotificacion('Usando datos en caché. Algunos datos pueden no estar actualizados.', 'warning');
+          console.log('Usando cache expirado como respaldo');
+          mostrarNotificacion('Error de Firebase - usando datos en caché', 'warning');
         } else {
-          throw new Error('Error cargando registros de asistencia. Verifica los permisos de Firebase.');
+          throw new Error(`Error Firebase: ${error.message}. Sin cache disponible.`);
         }
       }
     }
 
-    function procesarNominaEmpleados(fechaInicio, fechaFin) {
-      const empleadosActivos = empleadosLocales.filter(e => e.activo && (e.salarioHora > 0 || e.salarioMensual > 0));
-      console.log(`Procesando nómina para ${empleadosActivos.length} empleados activos`);
+    // **PROCESAMIENTO DE NÓMINA CORREGIDO**
+    function procesarNominaEmpleadosCorregida(fechaInicio, fechaFin) {
+      const empleadosActivos = empleadosLocales.filter(e => 
+        e.activo && (e.salarioHora > 0 || e.salarioMensual > 0)
+      );
+      
+      console.log(`📋 Procesando nómina para ${empleadosActivos.length} empleados activos`);
 
       const resultados = [];
       empleadosActivos.forEach(empleado => {
-        const resultado = calcularNominaIndividual(empleado, fechaInicio, fechaFin);
+        const resultado = calcularNominaIndividualCorregida(empleado, fechaInicio, fechaFin);
         resultados.push(resultado);
       });
 
       return resultados;
     }
 
-    function calcularNominaIndividual(empleado, fechaInicio, fechaFin) {
-      const registrosUsuario = registrosAsistencia.filter(r => r.email === empleado.email);
+    // **CÁLCULO INDIVIDUAL CORREGIDO**
+    function calcularNominaIndividualCorregida(empleado, fechaInicio, fechaFin) {
+      const registrosUsuario = registrosAsistencia.filter(r => 
+        r.email === empleado.email || r.usuario === empleado.email
+      );
       
-      console.log(`${empleado.nombre}: ${registrosUsuario.length} registros`);
+      console.log(`👤 ${empleado.nombre}: ${registrosUsuario.length} registros encontrados`);
 
-      // Calcular días laborales excluyendo fines de semana
-      const diasLaborales = calcularDiasLaborales(fechaInicio, fechaFin);
+      // 1. CALCULAR DÍAS LABORALES CORRECTAMENTE
+      const diasLaborales = calcularDiasLaboralesCorregido(fechaInicio, fechaFin);
       
-      // Calcular horas trabajadas basadas en registros
-      const horasInfo = calcularHorasTrabajadas(registrosUsuario, empleado.tipo);
+      // 2. CALCULAR HORAS Y RETARDOS
+      const { horasInfo, retardos } = calcularHorasYRetardosCorregido(registrosUsuario, empleado.tipo);
       
-      // Calcular retardos y penalizaciones (3 retardos = 1 día de penalización)
-      const retardos = registrosUsuario.filter(r => r.estado === 'retardo').length;
+      // 3. CALCULAR PENALIZACIONES (3 retardos = 1 día)
       const diasPenalizacion = Math.floor(retardos / 3);
       
-      // Días efectivos de trabajo (días laborales - penalizaciones)
+      // 4. DÍAS EFECTIVOS
       const diasEfectivos = Math.max(0, diasLaborales - diasPenalizacion);
       
-      // Horas diarias según tipo de empleado
-      const horasDiarias = HORARIOS_BASE[empleado.tipo].horasDiarias;
-      
-      // Horas esperadas (días laborales * horas diarias)
+      // 5. HORAS ESPERADAS Y A PAGAR
+      const horasDiarias = HORARIOS_BASE[empleado.tipo]?.horasDiarias || 8;
       const horasEsperadas = diasLaborales * horasDiarias;
-      
-      // Horas a pagar (mínimo entre horas reales y horas efectivas)
       const horasAPagar = Math.min(horasInfo.horasReales, diasEfectivos * horasDiarias);
       
-      // Obtener el tipo de período seleccionado
+      // 6. CALCULAR SALARIO POR HORA SEGÚN PERÍODO
       const tipoPeriodo = document.getElementById('tipoPeriodo').value;
+      const salarioPorHora = calcularSalarioPorHoraCorregido(empleado, tipoPeriodo, horasDiarias, diasLaborales);
       
-      // Calcular salario por hora basado en el período seleccionado
-      let salarioPorHora = empleado.salarioHora;
-      if (!salarioPorHora && empleado.salarioMensual) {
-        if (tipoPeriodo === 'quincenal') {
-          // Para pago quincenal: salario mensual / 2
-          const pagoQuincenal = empleado.salarioMensual / 2;
-          // Horas esperadas en la quincena (días laborales * horas diarias)
-          salarioPorHora = pagoQuincenal / horasEsperadas;
-        } else if (tipoPeriodo === 'semanal') {
-          // Para pago semanal: salario mensual / 4.33 (promedio de semanas por mes)
-          const pagoSemanal = empleado.salarioMensual / 4.33;
-          // Días laborales en una semana (asumiendo 5 días laborales)
-          const diasPorSemana = 5;
-          const horasPorSemana = diasPorSemana * horasDiarias;
-          salarioPorHora = pagoSemanal / horasPorSemana;
-        } else {
-          // Por defecto, cálculo mensual
-          const horasPorMes = horasDiarias * 5 * 4.33; // 5 días por semana, 4.33 semanas por mes
-          salarioPorHora = empleado.salarioMensual / horasPorMes;
-        }
-      }
-      
-      // Total a pagar
+      // 7. TOTAL A PAGAR
       const totalPago = horasAPagar * salarioPorHora;
 
-      const progresoDiario = calcularProgresoDiario(registrosUsuario, empleado, fechaInicio, fechaFin);
+      const progresoDiario = calcularProgresoDiarioCorregido(registrosUsuario, empleado, fechaInicio, fechaFin, salarioPorHora);
 
       return {
         empleado: empleado,
         diasLaborales: diasLaborales,
         diasEfectivos: diasEfectivos,
-        diasAusencia: diasLaborales - diasEfectivos, // Días que no trabajó
+        diasAusencia: diasLaborales - Math.min(diasLaborales, horasInfo.diasTrabajados),
         diasPenalizacion: diasPenalizacion,
         horasEsperadas: horasEsperadas,
         horasTrabajadas: horasInfo.horasReales,
@@ -697,93 +1025,141 @@
       };
     }
 
-    function calcularDiasLaborales(fechaInicio, fechaFin) {
-      const inicio = new Date(fechaInicio);
-      const fin = new Date(fechaFin);
+    // **FUNCIONES DE CÁLCULO CORREGIDAS**
+    function calcularDiasLaboralesCorregido(fechaInicio, fechaFin) {
+      const inicio = new Date(fechaInicio + 'T00:00:00');
+      const fin = new Date(fechaFin + 'T23:59:59');
       let dias = 0;
       
-      // Asegurarse de que las fechas sean válidas
-      if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-        console.error("Fechas inválidas:", fechaInicio, fechaFin);
-        return 0;
-      }
-      
-      // Crear una copia para no modificar la fecha original
       const current = new Date(inicio);
       
-      // Iterar día por día
       while (current <= fin) {
         const diaSemana = current.getDay();
-        // Lunes a Viernes (1-5), Domingo=0, Sábado=6
         if (diaSemana !== 0 && diaSemana !== 6) {
           dias++;
         }
         current.setDate(current.getDate() + 1);
       }
       
+      console.log(`📅 Días laborales del ${fechaInicio} al ${fechaFin}: ${dias}`);
       return dias;
     }
 
-    function calcularHorasTrabajadas(registros, horarioBase) {
+    function calcularHorasYRetardosCorregido(registros, horarioBase) {
       const registrosPorDia = {};
       let horasReales = 0;
+      let retardos = 0;
       const detalle = [];
+      const horasDiarias = HORARIOS_BASE[horarioBase]?.horasDiarias || 8;
 
+      // Agrupar registros por día
       registros.forEach(registro => {
         const fecha = registro.fecha;
         if (!registrosPorDia[fecha]) {
-          registrosPorDia[fecha] = { entrada: null, salida: null };
+          registrosPorDia[fecha] = { entradas: [], salidas: [], retardo: false };
         }
         
-        if (registro.tipoEvento === 'entrada') {
-          registrosPorDia[fecha].entrada = registro.hora;
-        } else if (registro.tipoEvento === 'salida') {
-          registrosPorDia[fecha].salida = registro.hora;
+        if (registro.tipoEvento === 'entrada' || registro.tipo === 'entrada') {
+          registrosPorDia[fecha].entradas.push(registro.hora);
+          // Verificar retardos
+          if (registro.estado === 'retardo' || registro.hora > '08:15') {
+            registrosPorDia[fecha].retardo = true;
+          }
+        } else if (registro.tipoEvento === 'salida' || registro.tipo === 'salida') {
+          registrosPorDia[fecha].salidas.push(registro.hora);
         }
       });
 
       Object.entries(registrosPorDia).forEach(([fecha, reg]) => {
         let horasDia = 0;
-        let estado = 'Incompleto';
+        let estado = 'Sin registro';
 
-        if (reg.entrada && reg.salida) {
-          const [hEntrada, mEntrada] = reg.entrada.split(':').map(Number);
-          const [hSalida, mSalida] = reg.salida.split(':').map(Number);
+        if (reg.retardo) {
+          retardos++;
+        }
+
+        // Tomar la primera entrada y última salida del día
+        const primeraEntrada = reg.entradas.length > 0 ? reg.entradas.sort()[0] : null;
+        const ultimaSalida = reg.salidas.length > 0 ? reg.salidas.sort().pop() : null;
+
+        if (primeraEntrada && ultimaSalida) {
+          const [hEntrada, mEntrada] = primeraEntrada.split(':').map(Number);
+          const [hSalida, mSalida] = ultimaSalida.split(':').map(Number);
           
           const minutosEntrada = hEntrada * 60 + mEntrada;
           const minutosSalida = hSalida * 60 + mSalida;
           
-          const minutosTrabajados = minutosSalida - minutosEntrada;
-          horasDia = Math.max(0, Math.min(minutosTrabajados / 60, 
-            HORARIOS_BASE[horarioBase].horasDiarias));
-          horasReales += horasDia;
-          estado = 'Completo';
-        } else if (reg.entrada) {
-          horasDia = HORARIOS_BASE[horarioBase].horasDiarias;
+          if (minutosSalida > minutosEntrada) {
+            const minutosTrabajados = minutosSalida - minutosEntrada;
+            horasDia = Math.min(minutosTrabajados / 60, horasDiarias);
+            horasReales += horasDia;
+            estado = 'Completo';
+          }
+        } else if (primeraEntrada) {
+          // Solo entrada, asumir jornada completa
+          horasDia = horasDiarias;
           horasReales += horasDia;
           estado = 'Sin salida';
         }
 
         detalle.push({
           fecha: fecha,
-          entrada: reg.entrada,
-          salida: reg.salida,
+          entrada: primeraEntrada,
+          salida: ultimaSalida,
           horas: horasDia,
-          estado: estado
+          estado: estado,
+          retardo: reg.retardo
         });
       });
 
-      return { horasReales, detalle };
+      const diasTrabajados = detalle.filter(d => d.horas > 0).length;
+
+      return { 
+        horasInfo: { horasReales, detalle, diasTrabajados },
+        retardos 
+      };
     }
 
-    function calcularProgresoDiario(registros, empleado, fechaInicio, fechaFin) {
+    function calcularSalarioPorHoraCorregido(empleado, tipoPeriodo, horasDiarias, diasLaborales) {
+      if (empleado.salarioHora && empleado.salarioHora > 0) {
+        return empleado.salarioHora;
+      }
+      
+      if (!empleado.salarioMensual || empleado.salarioMensual <= 0) {
+        console.warn(`⚠️ Empleado ${empleado.nombre} sin salario configurado`);
+        return 0;
+      }
+
+      let salarioPorHora = 0;
+      
+      if (tipoPeriodo === 'quincenal') {
+        // Pago quincenal: salario mensual / 2
+        const pagoQuincenal = empleado.salarioMensual / 2;
+        const horasQuincenales = diasLaborales * horasDiarias;
+        salarioPorHora = horasQuincenales > 0 ? pagoQuincenal / horasQuincenales : 0;
+      } else if (tipoPeriodo === 'semanal') {
+        // Pago semanal: salario mensual / 4.33
+        const pagoSemanal = empleado.salarioMensual / 4.33;
+        const horasPorSemana = 5 * horasDiarias; // 5 días laborales
+        salarioPorHora = pagoSemanal / horasPorSemana;
+      } else {
+        // Mensual
+        const horasPorMes = horasDiarias * 22; // 22 días laborales promedio
+        salarioPorHora = empleado.salarioMensual / horasPorMes;
+      }
+      
+      console.log(`💰 ${empleado.nombre}: $${salarioPorHora.toFixed(2)}/hr (${tipoPeriodo}, ${diasLaborales} días)`);
+      return salarioPorHora;
+    }
+
+    function calcularProgresoDiarioCorregido(registros, empleado, fechaInicio, fechaFin, salarioPorHora) {
       const progreso = [];
       let acumuladoHoras = 0;
       let acumuladoPago = 0;
       
       const diasLaborales = [];
-      const inicio = new Date(fechaInicio);
-      const fin = new Date(fechaFin);
+      const inicio = new Date(fechaInicio + 'T00:00:00');
+      const fin = new Date(fechaFin + 'T23:59:59');
       
       for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
         const diaSemana = d.getDay();
@@ -792,28 +1168,36 @@
         }
       }
 
+      const horasDiarias = HORARIOS_BASE[empleado.tipo]?.horasDiarias || 8;
+
       diasLaborales.forEach(dia => {
         const registrosDia = registros.filter(r => r.fecha === dia);
         let horasDia = 0;
 
-        const entrada = registrosDia.find(r => r.tipoEvento === 'entrada');
-        const salida = registrosDia.find(r => r.tipoEvento === 'salida');
+        if (registrosDia.length > 0) {
+          const entradas = registrosDia.filter(r => r.tipoEvento === 'entrada' || r.tipo === 'entrada');
+          const salidas = registrosDia.filter(r => r.tipoEvento === 'salida' || r.tipo === 'salida');
 
-        if (entrada && salida) {
-          const [hEntrada, mEntrada] = entrada.hora.split(':').map(Number);
-          const [hSalida, mSalida] = salida.hora.split(':').map(Number);
-          
-          const minutosEntrada = hEntrada * 60 + mEntrada;
-          const minutosSalida = hSalida * 60 + mSalida;
-          
-          horasDia = Math.max(0, Math.min((minutosSalida - minutosEntrada) / 60, 
-            HORARIOS_BASE[empleado.tipo].horasDiarias));
-        } else if (entrada) {
-          horasDia = HORARIOS_BASE[empleado.tipo].horasDiarias;
+          if (entradas.length > 0 && salidas.length > 0) {
+            const primeraEntrada = entradas.sort((a, b) => a.hora.localeCompare(b.hora))[0];
+            const ultimaSalida = salidas.sort((a, b) => b.hora.localeCompare(a.hora))[0];
+
+            const [hEntrada, mEntrada] = primeraEntrada.hora.split(':').map(Number);
+            const [hSalida, mSalida] = ultimaSalida.hora.split(':').map(Number);
+            
+            const minutosEntrada = hEntrada * 60 + mEntrada;
+            const minutosSalida = hSalida * 60 + mSalida;
+            
+            if (minutosSalida > minutosEntrada) {
+              horasDia = Math.min((minutosSalida - minutosEntrada) / 60, horasDiarias);
+            }
+          } else if (entradas.length > 0) {
+            horasDia = horasDiarias;
+          }
         }
 
         acumuladoHoras += horasDia;
-        acumuladoPago += horasDia * empleado.salarioHora;
+        acumuladoPago += horasDia * salarioPorHora;
 
         progreso.push({
           fecha: dia,
@@ -827,6 +1211,7 @@
       return progreso;
     }
 
+    // **MOSTRAR RESULTADOS (sin cambios)**
     function mostrarResultadosNomina(resultados) {
       const container = document.getElementById('listaEmpleados');
       container.innerHTML = '';
@@ -863,7 +1248,7 @@
                   <small class="text-muted">Acumulado hasta hoy</small>
                 </div>
                 <div class="progress-custom mt-2">
-                  <div class="progress-bar" style="width: ${(resultado.horasTrabajadas / resultado.horasEsperadas) * 100}%"></div>
+                  <div class="progress-bar" style="width: ${Math.min(100, (resultado.horasTrabajadas / resultado.horasEsperadas) * 100)}%"></div>
                 </div>
                 <small class="text-muted d-block mt-1">
                   ${resultado.horasTrabajadas.toFixed(1)} / ${resultado.horasEsperadas} horas esperadas
@@ -889,7 +1274,7 @@
 
               <div class="text-center mt-3">
                 <div class="final-amount">$${resultado.totalPago.toFixed(2)}</div>
-                <small class="text-muted">Total final proyectado</small>
+                <small class="text-muted">Total a pagar</small>
               </div>
             </div>
           </div>
@@ -903,8 +1288,11 @@
       document.getElementById('resumenNomina').classList.remove('d-none');
 
       window.ultimosResultados = resultados;
+      
+      console.log(`✅ Nómina calculada: ${totalEmpleados} empleados, ${totalHoras.toFixed(1)} horas, $${totalPago.toFixed(2)} total`);
     }
 
+    // **DETALLE EMPLEADO (corregido)**
     window.verDetalleEmpleado = function(empleadoId) {
       const resultado = window.ultimosResultados?.find(r => r.empleado.id === empleadoId);
       if (!resultado) return;
@@ -921,7 +1309,7 @@
           </div>
           <div class="col-md-6">
             <div class="alert alert-info">
-              <strong>Total final: $${resultado.totalPago.toFixed(2)}</strong><br>
+              <strong>Total a pagar: $${resultado.totalPago.toFixed(2)}</strong><br>
               <small>
                 ${resultado.horasAPagar.toFixed(1)} horas × $${resultado.salarioPorHora.toFixed(2)}/hr
                 ${resultado.diasPenalizacion > 0 ? `<br>(${resultado.retardos} retardos → ${resultado.diasPenalizacion} días penalizados)` : ''}
@@ -930,7 +1318,7 @@
           </div>
         </div>
         
-        <h6 class="mb-3">Detalle de horas trabajadas:</h6>
+        <h6 class="mb-3">Detalle de asistencia:</h6>
         <div class="table-responsive">
           <table class="table table-sm">
             <thead>
@@ -940,6 +1328,7 @@
                 <th>Salida</th>
                 <th>Horas</th>
                 <th>Estado</th>
+                <th>Retardo</th>
               </tr>
             </thead>
             <tbody>
@@ -953,6 +1342,7 @@
             <td>${dia.salida || '-'}</td>
             <td>${dia.horas.toFixed(1)}</td>
             <td><span class="badge ${dia.estado === 'Completo' ? 'bg-success' : 'bg-warning text-dark'}">${dia.estado}</span></td>
+            <td>${dia.retardo ? '<i class="bi bi-exclamation-triangle text-warning"></i>' : '-'}</td>
           </tr>
         `;
       });
@@ -962,29 +1352,79 @@
           </table>
         </div>
         
-        <h6 class="mt-4 mb-3">Progreso acumulado:</h6>
-        <div class="progress-graph">
-      `;
-
-      resultado.progresoDiario.forEach(dia => {
-        const porcentaje = (dia.acumuladoPago / resultado.totalPago) * 100;
-        detalleHtml += `
-          <div class="progress-day ${dia.trabajoHoy ? 'worked' : ''}" style="width: ${100 / resultado.progresoDiario.length}%">
-            <div class="progress-bar-day" style="height: ${Math.min(100, porcentaje)}%"></div>
-            <div class="day-label">${new Date(dia.fecha).getDate()}</div>
-          </div>
-        `;
-      });
-
-      detalleHtml += `
-        </div>
-        <div class="text-center mt-2">
-          <small class="text-muted">Progreso diario del período</small>
+        <div class="mt-3">
+          <strong>Resumen:</strong>
+          <ul>
+            <li>Días laborales en el período: ${resultado.diasLaborales}</li>
+            <li>Días trabajados: ${resultado.diasEfectivos}</li>
+            <li>Ausencias: ${resultado.diasAusencia}</li>
+            <li>Retardos: ${resultado.retardos} (${resultado.diasPenalizacion} días penalizados)</li>
+            <li>Horas esperadas: ${resultado.horasEsperadas}</li>
+            <li>Horas trabajadas: ${resultado.horasTrabajadas.toFixed(1)}</li>
+            <li>Horas a pagar: ${resultado.horasAPagar.toFixed(1)}</li>
+          </ul>
         </div>
       `;
 
       content.innerHTML = detalleHtml;
       new bootstrap.Modal(document.getElementById('modalDetalleEmpleado')).show();
+    };
+
+    // **FUNCIONES DE UTILIDAD Y DEBUG**
+    function actualizarInfoCache() {
+      const claves = Object.keys(localStorage).filter(k => k.startsWith('asistencia_'));
+      const totalCaches = claves.length;
+      
+      let totalRegistros = 0;
+      claves.forEach(key => {
+        try {
+          const cache = JSON.parse(localStorage.getItem(key));
+          totalRegistros += cache.data?.length || 0;
+        } catch (e) {}
+      });
+      
+      const cacheInfo = document.getElementById('cacheInfo');
+      if (cacheInfo) {
+        cacheInfo.textContent = `${totalCaches} caches, ${totalRegistros} registros, ${consultasRealizadas} consultas realizadas`;
+      }
+    }
+
+    window.limpiarCacheCompleto = function() {
+      if (confirm('¿Seguro que quieres limpiar todo el cache? Esto forzará nuevas consultas a Firebase.')) {
+        const claves = Object.keys(localStorage);
+        let eliminados = 0;
+        
+        claves.forEach(key => {
+          if (key.startsWith('asistencia_')) {
+            localStorage.removeItem(key);
+            eliminados++;
+          }
+        });
+        
+        mostrarNotificacion(`Cache limpiado: ${eliminados} elementos eliminados`, 'success');
+        actualizarInfoCache();
+      }
+    };
+
+    window.toggleDebugInfo = function() {
+      const debugDiv = document.getElementById('debugInfo');
+      const debugContent = document.getElementById('debugContent');
+      
+      if (debugDiv.classList.contains('d-none')) {
+        debugContent.innerHTML = `
+          <div class="small">
+            <strong>Consultas Firebase:</strong> ${consultasRealizadas} realizadas<br>
+            <strong>Última consulta:</strong> ${ultimaConsulta > 0 ? new Date(ultimaConsulta).toLocaleTimeString() : 'Ninguna'}<br>
+            <strong>Empleados locales:</strong> ${empleadosLocales.length}<br>
+            <strong>Registros en memoria:</strong> ${registrosAsistencia.length}<br>
+            <strong>Cache duration:</strong> ${CACHE_DURACION / 1000 / 60 / 60} horas<br>
+            <strong>Estado:</strong> ${calculandoNomina ? 'Calculando...' : 'Listo'}
+          </div>
+        `;
+        debugDiv.classList.remove('d-none');
+      } else {
+        debugDiv.classList.add('d-none');
+      }
     };
 
     window.generarReporteNomina = function() {
@@ -1008,6 +1448,9 @@
         }
       }, 5000);
     }
+
+    // **INICIALIZAR INFO CACHE AL CARGAR**
+    setTimeout(actualizarInfoCache, 1000);
   </script>
 </body>
 </html>
