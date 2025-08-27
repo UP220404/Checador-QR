@@ -324,6 +324,7 @@
   </button>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     // Variables globales
     let registrosAsistenciaPDF = [];
@@ -481,19 +482,33 @@
     }
 
     async function leerArchivoPDF(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            // Para PDFs simples de texto, intentamos extraer el texto directamente
-            const content = e.target.result;
-            resolve(content);
-          } catch (error) {
-            reject(error);
+      return new Promise(async (resolve, reject) => {
+        try {
+          // Configurar PDF.js
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+          
+          let textContent = '';
+          
+          // Extraer texto de todas las páginas
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            
+            // Combinar todos los elementos de texto
+            const pageText = content.items.map(item => item.str).join(' ');
+            textContent += pageText + '\n';
           }
-        };
-        reader.onerror = () => reject(new Error('Error leyendo archivo'));
-        reader.readAsText(file, 'UTF-8');
+          
+          console.log('PDF text extracted:', textContent.substring(0, 500) + '...');
+          resolve(textContent);
+          
+        } catch (error) {
+          console.error('Error reading PDF:', error);
+          reject(new Error(`Error leyendo PDF: ${error.message}`));
+        }
       });
     }
 
