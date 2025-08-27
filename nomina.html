@@ -1,11 +1,1135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Sistema de Nómina PDF | Cielito Home</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="nomina.css">
 </head>
 <body>
-  HOLA
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark navbar-nomina">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">
+        <i class="bi bi-file-pdf me-2"></i>Sistema de Nómina PDF - Cielito Home
+      </span>
+      <button class="btn btn-outline-light" onclick="volverAdmin()">
+        <i class="bi bi-arrow-left me-2"></i>Volver al Panel
+      </button>
+    </div>
+  </nav>
+
+  <div class="nomina-container">
+    <!-- Status del sistema -->
+    <div id="sistemaStatus" class="alert alert-success">
+      <div class="row align-items-center">
+        <div class="col-lg-8 col-md-7 mb-2 mb-md-0">
+          <h6 class="mb-1"><i class="bi bi-shield-check me-2"></i>Sistema Optimizado PDF</h6>
+          <small>Sin consumo de Firebase • Análisis local de documentos</small>
+        </div>
+        <div class="col-lg-4 col-md-5 text-md-end text-center">
+          <div class="d-flex align-items-center justify-content-center justify-content-md-end">
+            <div class="me-3">
+              <div class="fw-bold text-success" id="registrosTotal">0</div>
+              <small class="text-muted d-none d-sm-block">Registros cargados</small>
+              <small class="text-muted d-block d-sm-none">Registros</small>
+            </div>
+            <i class="bi bi-file-text text-success" style="font-size: 1.5rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs de navegación -->
+    <div class="nomina-tabs">
+      <ul class="nav nav-pills nav-fill" id="nominaTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="carga-tab" data-bs-toggle="pill" data-bs-target="#carga" type="button">
+            <i class="bi bi-cloud-upload me-2"></i>Cargar PDF
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="calculo-tab" data-bs-toggle="pill" data-bs-target="#calculo" type="button">
+            <i class="bi bi-calculator me-2"></i>Cálculo de Nómina
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="configuracion-tab" data-bs-toggle="pill" data-bs-target="#configuracion" type="button">
+            <i class="bi bi-gear me-2"></i>Configuración
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content fade-in" id="nominaTabContent">
+      
+      <!-- CARGA DE PDF -->
+      <div class="tab-pane fade show active" id="carga" role="tabpanel">
+        <div class="config-card mb-4">
+          <h4 class="mb-4">
+            <i class="bi bi-file-pdf me-2"></i>Cargar Reporte de Asistencia
+          </h4>
+          
+          <!-- Zona de carga -->
+          <div class="upload-zone" id="uploadZone">
+            <div class="text-center p-5">
+              <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--secondary-color);"></i>
+              <h5 class="mt-3">Arrastra tu PDF aquí o haz click para seleccionar</h5>
+              <p class="text-muted">Soporta reportes de Cielito Home en formato PDF</p>
+              <input type="file" id="fileInput" accept=".pdf" class="d-none">
+              <button class="btn btn-success" onclick="document.getElementById('fileInput').click()">
+                <i class="bi bi-folder2-open me-2"></i>Seleccionar PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Información del archivo cargado -->
+          <div id="fileInfo" class="mt-4 d-none">
+            <div class="alert alert-info">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h6 class="mb-1"><i class="bi bi-file-check me-2"></i>Archivo cargado</h6>
+                  <small id="fileName">archivo.pdf</small>
+                </div>
+                <div class="col-md-4 text-md-end">
+                  <span class="badge bg-success" id="fileSize">0 KB</span>
+                  <button class="btn btn-sm btn-outline-danger ms-2" onclick="limpiarArchivo()">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Análisis del PDF -->
+          <div id="analisisSection" class="mt-4 d-none">
+            <h6><i class="bi bi-search me-2"></i>Análisis del PDF</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="stats-card">
+                  <div class="stats-number" id="rangoFechas">-</div>
+                  <div class="stats-label">Rango de fechas</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="stats-card">
+                  <div class="stats-number" id="totalEmpleadosPDF">0</div>
+                  <div class="stats-label">Empleados únicos</div>
+                </div>
+              </div>
+            </div>
+            
+            <button class="btn btn-primary mt-3" onclick="procesarPDF()">
+              <i class="bi bi-gear-fill me-2"></i>Procesar para Nómina
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CÁLCULO DE NÓMINA -->
+      <div class="tab-pane fade" id="calculo" role="tabpanel">
+        <!-- Selector de Período -->
+        <div class="period-selector">
+          <div class="row align-items-end">
+            <div class="col-md-3 col-sm-6 mb-3">
+              <label class="form-label">Período de Nómina:</label>
+              <select id="tipoPeriodo" class="form-select">
+                <option value="quincenal">Quincenal</option>
+                <option value="semanal">Semanal</option>
+              </select>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+              <label class="form-label">Fecha Inicio:</label>
+              <input type="date" id="fechaInicio" class="form-control">
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+              <label class="form-label">Fecha Fin:</label>
+              <input type="date" id="fechaFin" class="form-control">
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+              <button class="btn btn-calculate w-100" onclick="calcularNominaPDF()" id="btnCalcular">
+                <i class="bi bi-play-fill me-2"></i>Calcular Nómina
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning si no hay datos -->
+        <div id="warningNoDatos" class="warning-container d-none">
+          <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+          <h5 class="mt-3">No hay datos cargados</h5>
+          <p>Primero carga un PDF en la pestaña "Cargar PDF" antes de calcular la nómina.</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingNomina" class="loading-container d-none">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Procesando nómina desde PDF...</p>
+          <small class="text-muted" id="loadingDetail">Analizando registros</small>
+        </div>
+
+        <!-- Resumen de Nómina -->
+        <div id="resumenNomina" class="payroll-summary d-none">
+          <div class="row text-center">
+            <div class="col-md-3">
+              <h4 id="totalEmpleados">0</h4>
+              <p class="mb-0">Empleados</p>
+            </div>
+            <div class="col-md-3">
+              <h4 id="totalHoras">0</h4>
+              <p class="mb-0">Horas Totales</p>
+            </div>
+            <div class="col-md-3">
+              <h4 id="totalPago">$0.00</h4>
+              <p class="mb-0">Total a Pagar</p>
+            </div>
+            <div class="col-md-3">
+              <button class="btn btn-light" onclick="generarReporteNomina()">
+                <i class="bi bi-file-pdf me-2"></i>Generar Reporte
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de Empleados -->
+        <div id="listaEmpleados" class="row">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+
+      <!-- CONFIGURACIÓN -->
+      <div class="tab-pane fade" id="configuracion" role="tabpanel">
+        <div class="config-card mb-4">
+          <h4 class="mb-4 text-gradient">
+            <i class="bi bi-person-gear me-2"></i>Configuración de Empleados
+          </h4>
+          
+          <!-- Info sobre configuración -->
+          <div class="alert alert-success">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Sistema PDF:</strong> Los empleados se detectan automáticamente del PDF. Solo necesitas configurar los salarios por empleado.
+          </div>
+
+          <!-- Filtro -->
+          <div class="mb-3">
+            <input type="text" id="filtroUsuarios" class="form-control" placeholder="Buscar empleado...">
+          </div>
+
+          <!-- Lista de configuraciones -->
+          <div id="configUsuarios" class="row">
+            <!-- Se llenará dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Empleado -->
+  <div class="modal fade" id="modalDetalleEmpleado" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-person me-2"></i>Detalle de Nómina
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detalleEmpleadoContent">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configuración Usuario -->
+  <div class="modal fade" id="modalConfigUsuario" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-gear me-2"></i>Configurar Empleado
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formConfigUsuario">
+            <input type="hidden" id="configUserId">
+            
+            <div class="mb-3">
+              <label class="form-label">Nombre</label>
+              <input type="text" id="configNombre" class="form-control" readonly>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Tipo de Empleado</label>
+              <select id="configTipo" class="form-select" disabled>
+                <option value="becario">Becario</option>
+                <option value="tiempo_completo">Tiempo Completo</option>
+                <option value="nayeli">Especial Nayeli</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Salario por Hora</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="configSalarioHora" class="form-control" step="0.01">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Salario Mensual (opcional)</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="configSalarioMensual" class="form-control" step="0.01">
+              </div>
+              <small class="form-text text-muted">Si se especifica, se calculará automáticamente el salario por hora</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Tipo de Pago</label>
+              <select id="configTipoPago" class="form-select">
+                <option value="quincenal">Quincenal</option>
+                <option value="semanal">Semanal</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="configActivo" checked>
+                <label class="form-check-label" for="configActivo">
+                  Activo en nómina
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="guardarConfigUsuario()">
+            <i class="bi bi-save me-2"></i>Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toggle modo oscuro -->
+  <button class="theme-toggle-nomina" id="themeToggle">
+    <i class="bi bi-moon-fill"></i>
+  </button>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Variables globales
+    let registrosAsistenciaPDF = [];
+    let empleadosConfigPDF = JSON.parse(localStorage.getItem('nomina_empleados_pdf')) || {};
+    let archivoActual = null;
+
+    const HORARIOS_BASE = {
+      becario: { horasDiarias: 5, inicio: "08:00", fin: "13:00" },
+      tiempo_completo: { horasDiarias: 8, inicio: "08:00", fin: "16:00" },
+      nayeli: { horasDiarias: 6, inicio: "08:00", fin: "14:00" }
+    };
+
+    // Función para volver al admin
+    window.volverAdmin = function() {
+      window.location.href = 'admin.html';
+    };
+
+    // MODO OSCURO
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (localStorage.getItem('nomina-theme') === 'dark' || (!localStorage.getItem('nomina-theme') && prefersDarkScheme.matches)) {
+      document.body.classList.add('dark-mode');
+      document.getElementById('themeToggle').innerHTML = '<i class="bi bi-sun-fill"></i>';
+    }
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      if (document.body.classList.contains('dark-mode')) {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('nomina-theme', 'light');
+        document.getElementById('themeToggle').innerHTML = '<i class="bi bi-moon-fill"></i>';
+      } else {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('nomina-theme', 'dark');
+        document.getElementById('themeToggle').innerHTML = '<i class="bi bi-sun-fill"></i>';
+      }
+    });
+
+    // INICIALIZACIÓN
+    document.addEventListener('DOMContentLoaded', function() {
+      configurarEventosArchivo();
+      configurarFechasPorDefecto();
+      actualizarEstadoSistema();
+    });
+
+    function configurarEventosArchivo() {
+      const fileInput = document.getElementById('fileInput');
+      const uploadZone = document.getElementById('uploadZone');
+
+      // Click en zona de carga
+      uploadZone.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      // Drag & Drop
+      uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+      });
+
+      uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('drag-over');
+      });
+
+      uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type === 'application/pdf') {
+          manejarArchivo(files[0]);
+        } else {
+          mostrarNotificacion('Solo se permiten archivos PDF', 'warning');
+        }
+      });
+
+      // Selección de archivo
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          manejarArchivo(e.target.files[0]);
+        }
+      });
+    }
+
+    function configurarFechasPorDefecto() {
+      const hoy = new Date();
+      const dia = hoy.getDate();
+      
+      let fechaInicio, fechaFin;
+      
+      if (dia <= 15) {
+        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+      } else {
+        fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 16);
+        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      }
+      
+      document.getElementById('fechaInicio').value = fechaInicio.toISOString().split('T')[0];
+      document.getElementById('fechaFin').value = fechaFin.toISOString().split('T')[0];
+    }
+
+    // MANEJO DE ARCHIVOS PDF
+    async function manejarArchivo(file) {
+      archivoActual = file;
+      
+      // Mostrar info del archivo
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = formatearTamano(file.size);
+      document.getElementById('fileInfo').classList.remove('d-none');
+      
+      try {
+        mostrarNotificacion('Analizando PDF...', 'info');
+        await analizarPDF(file);
+      } catch (error) {
+        console.error('Error analizando PDF:', error);
+        mostrarNotificacion('Error al analizar el PDF: ' + error.message, 'danger');
+      }
+    }
+
+    async function analizarPDF(file) {
+      try {
+        // Leer el archivo como texto
+        const content = await leerArchivoPDF(file);
+        
+        // Parsear contenido del PDF
+        const registros = parsearContenidoPDF(content);
+        
+        if (registros.length === 0) {
+          throw new Error('No se encontraron registros válidos en el PDF');
+        }
+
+        registrosAsistenciaPDF = registros;
+        
+        // Analizar fechas y empleados
+        const fechas = registros.map(r => r.fecha).filter(f => f);
+        const empleadosUnicos = [...new Set(registros.map(r => r.nombre))];
+        
+        const fechaMin = fechas.length > 0 ? Math.min(...fechas.map(f => new Date(f).getTime())) : null;
+        const fechaMax = fechas.length > 0 ? Math.max(...fechas.map(f => new Date(f).getTime())) : null;
+        
+        // Mostrar análisis
+        document.getElementById('rangoFechas').textContent = 
+          fechaMin && fechaMax ? 
+          `${new Date(fechaMin).toLocaleDateString()} - ${new Date(fechaMax).toLocaleDateString()}` : 
+          'No detectado';
+        
+        document.getElementById('totalEmpleadosPDF').textContent = empleadosUnicos.length;
+        document.getElementById('registrosTotal').textContent = registros.length;
+        
+        document.getElementById('analisisSection').classList.remove('d-none');
+        
+        mostrarNotificacion(`PDF analizado: ${registros.length} registros, ${empleadosUnicos.length} empleados`, 'success');
+        
+      } catch (error) {
+        throw new Error(`Error procesando PDF: ${error.message}`);
+      }
+    }
+
+    async function leerArchivoPDF(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            // Para PDFs simples de texto, intentamos extraer el texto directamente
+            const content = e.target.result;
+            resolve(content);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsText(file, 'UTF-8');
+      });
+    }
+
+    function parsearContenidoPDF(content) {
+      const registros = [];
+      const lineas = content.split('\n');
+      
+      let fechaActual = null;
+      
+      for (let i = 0; i < lineas.length; i++) {
+        const linea = lineas[i].trim();
+        
+        // Detectar fecha
+        const matchFecha = linea.match(/Fecha:\s*(\d{4}-\d{2}-\d{2})/);
+        if (matchFecha) {
+          fechaActual = matchFecha[1];
+          continue;
+        }
+        
+        // Detectar registro de empleado
+        const matchRegistro = linea.match(/^(.+?)\s+(tiempo_completo|becario)\s+(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2}\s*[ap]\.m\.)\s+(Entrada|Salida)\s+(Puntual|Retardo|Salida)$/);
+        
+        if (matchRegistro && fechaActual) {
+          const [, nombre, tipo, fecha, hora, evento, estado] = matchRegistro;
+          
+          registros.push({
+            nombre: nombre.trim(),
+            tipo: tipo.trim(),
+            fecha: fecha.trim(),
+            hora: convertirHora24(hora.trim()),
+            evento: evento.trim(),
+            estado: estado.trim(),
+            tipoEvento: evento.toLowerCase()
+          });
+        }
+      }
+      
+      console.log(`Parseados ${registros.length} registros del PDF`);
+      return registros;
+    }
+
+    function convertirHora24(hora12) {
+      const match = hora12.match(/(\d{1,2}):(\d{2})\s*([ap])\.?m\.?/i);
+      if (!match) return hora12;
+      
+      let [, horas, minutos, ampm] = match;
+      horas = parseInt(horas);
+      
+      if (ampm.toLowerCase() === 'p' && horas !== 12) {
+        horas += 12;
+      } else if (ampm.toLowerCase() === 'a' && horas === 12) {
+        horas = 0;
+      }
+      
+      return `${horas.toString().padStart(2, '0')}:${minutos}`;
+    }
+
+    window.procesarPDF = function() {
+      if (registrosAsistenciaPDF.length === 0) {
+        mostrarNotificacion('No hay registros para procesar', 'warning');
+        return;
+      }
+      
+      // Extraer empleados únicos y crear configuración automática
+      const empleadosUnicos = [...new Set(registrosAsistenciaPDF.map(r => r.nombre))];
+      
+      empleadosUnicos.forEach(nombre => {
+        const registroTipo = registrosAsistenciaPDF.find(r => r.nombre === nombre);
+        const tipo = registroTipo ? registroTipo.tipo : 'tiempo_completo';
+        
+        if (!empleadosConfigPDF[nombre]) {
+          empleadosConfigPDF[nombre] = {
+            nombre: nombre,
+            tipo: tipo,
+            salarioHora: null,
+            salarioMensual: null,
+            tipoPago: 'quincenal',
+            activo: true
+          };
+        }
+      });
+      
+      localStorage.setItem('nomina_empleados_pdf', JSON.stringify(empleadosConfigPDF));
+      
+      renderizarEmpleadosConfiguracion();
+      actualizarEstadoSistema();
+      
+      // Cambiar a pestaña de configuración
+      document.getElementById('configuracion-tab').click();
+      
+      mostrarNotificacion('Empleados procesados. Configura los salarios en la pestaña Configuración.', 'success');
+    };
+
+    // CONFIGURACIÓN DE EMPLEADOS
+    function renderizarEmpleadosConfiguracion() {
+      const container = document.getElementById('configUsuarios');
+      container.innerHTML = '';
+      
+      const empleados = Object.values(empleadosConfigPDF);
+      
+      if (empleados.length === 0) {
+        container.innerHTML = `
+          <div class="col-12">
+            <div class="text-center p-4">
+              <i class="bi bi-people" style="font-size: 3rem; color: #6c757d;"></i>
+              <h5 class="mt-3 text-muted">No hay empleados configurados</h5>
+              <p class="text-muted">Carga y procesa un PDF primero</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      empleados.forEach(empleado => {
+        const card = document.createElement('div');
+        card.className = 'col-md-6 mb-3';
+        card.innerHTML = `
+          <div class="config-card">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="employee-name">${empleado.nombre}</h6>
+                <span class="config-badge ${empleado.activo ? 'bg-success' : 'bg-secondary'} text-white">
+                  ${empleado.activo ? 'Activo' : 'Inactivo'}
+                </span>
+                <small class="d-block text-muted mt-1">
+                  Tipo: ${empleado.tipo}
+                </small>
+              </div>
+              <div class="text-end">
+                <div class="salary-display">
+                  ${empleado.salarioMensual ? `$${empleado.salarioMensual}/mes` : (empleado.salarioHora ? `$${empleado.salarioHora}/hr` : 'Sin salario')}
+                </div>
+                <small class="text-muted">${empleado.tipoPago}</small>
+              </div>
+            </div>
+            <div class="mt-2">
+              <small class="text-muted">
+                ${HORARIOS_BASE[empleado.tipo]?.horasDiarias || 0} horas diarias
+              </small>
+            </div>
+            <button class="btn btn-sm btn-outline-primary mt-2 w-100" 
+                    onclick="editarEmpleadoPDF('${empleado.nombre}')">
+              <i class="bi bi-gear me-1"></i>Configurar
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    window.editarEmpleadoPDF = function(nombreEmpleado) {
+      const empleado = empleadosConfigPDF[nombreEmpleado];
+      if (!empleado) return;
+
+      document.getElementById('configUserId').value = nombreEmpleado;
+      document.getElementById('configNombre').value = empleado.nombre;
+      document.getElementById('configTipo').value = empleado.tipo;
+      document.getElementById('configSalarioHora').value = empleado.salarioHora || '';
+      document.getElementById('configSalarioMensual').value = empleado.salarioMensual || '';
+      document.getElementById('configTipoPago').value = empleado.tipoPago || 'quincenal';
+      document.getElementById('configActivo').checked = empleado.activo !== false;
+
+      new bootstrap.Modal(document.getElementById('modalConfigUsuario')).show();
+    };
+
+    window.guardarConfigUsuario = function() {
+      const nombreEmpleado = document.getElementById('configUserId').value;
+      const empleado = empleadosConfigPDF[nombreEmpleado];
+      
+      if (!empleado) return;
+
+      const salarioHora = document.getElementById('configSalarioHora').value;
+      const salarioMensual = document.getElementById('configSalarioMensual').value;
+      
+      empleado.salarioHora = salarioHora ? parseFloat(salarioHora) : null;
+      empleado.salarioMensual = salarioMensual ? parseFloat(salarioMensual) : null;
+      empleado.tipoPago = document.getElementById('configTipoPago').value;
+      empleado.activo = document.getElementById('configActivo').checked;
+
+      localStorage.setItem('nomina_empleados_pdf', JSON.stringify(empleadosConfigPDF));
+
+      bootstrap.Modal.getInstance(document.getElementById('modalConfigUsuario')).hide();
+      mostrarNotificacion('Configuración guardada correctamente', 'success');
+      renderizarEmpleadosConfiguracion();
+    };
+
+    // CÁLCULO DE NÓMINA
+    window.calcularNominaPDF = function() {
+      const fechaInicio = document.getElementById('fechaInicio').value;
+      const fechaFin = document.getElementById('fechaFin').value;
+      
+      if (!fechaInicio || !fechaFin) {
+        mostrarNotificacion('Selecciona las fechas del período', 'warning');
+        return;
+      }
+
+      if (registrosAsistenciaPDF.length === 0) {
+        document.getElementById('warningNoDatos').classList.remove('d-none');
+        return;
+      }
+
+      document.getElementById('warningNoDatos').classList.add('d-none');
+      document.getElementById('loadingNomina').classList.remove('d-none');
+      document.getElementById('listaEmpleados').innerHTML = '';
+      document.getElementById('resumenNomina').classList.add('d-none');
+
+      setTimeout(() => {
+        try {
+          const resultados = procesarNominaPDF(fechaInicio, fechaFin);
+          mostrarResultadosNomina(resultados);
+        } catch (error) {
+          console.error('Error calculando nómina:', error);
+          mostrarNotificacion('Error al calcular nómina: ' + error.message, 'danger');
+        } finally {
+          document.getElementById('loadingNomina').classList.add('d-none');
+        }
+      }, 500);
+    };
+
+    function procesarNominaPDF(fechaInicio, fechaFin) {
+      const empleadosActivos = Object.values(empleadosConfigPDF).filter(e => 
+        e.activo && (e.salarioHora > 0 || e.salarioMensual > 0)
+      );
+      
+      console.log(`Procesando nómina PDF para ${empleadosActivos.length} empleados activos`);
+
+      const resultados = [];
+      empleadosActivos.forEach(empleado => {
+        const resultado = calcularNominaIndividualPDF(empleado, fechaInicio, fechaFin);
+        resultados.push(resultado);
+      });
+
+      return resultados;
+    }
+
+    function calcularNominaIndividualPDF(empleado, fechaInicio, fechaFin) {
+      // Filtrar registros del empleado en el período
+      const registrosUsuario = registrosAsistenciaPDF.filter(r => 
+        r.nombre === empleado.nombre &&
+        r.fecha >= fechaInicio &&
+        r.fecha <= fechaFin
+      );
+      
+      console.log(`${empleado.nombre}: ${registrosUsuario.length} registros en el período`);
+
+      // Calcular días laborales
+      const diasLaborales = calcularDiasLaborales(fechaInicio, fechaFin);
+      
+      // Calcular horas y retardos
+      const { horasInfo, retardos } = calcularHorasYRetardos(registrosUsuario, empleado.tipo);
+      
+      // Penalizaciones
+      const diasPenalizacion = Math.floor(retardos / 3);
+      const diasEfectivos = Math.max(0, diasLaborales - diasPenalizacion);
+      
+      // Horas
+      const horasDiarias = HORARIOS_BASE[empleado.tipo]?.horasDiarias || 8;
+      const horasEsperadas = diasLaborales * horasDiarias;
+      const horasAPagar = Math.min(horasInfo.horasReales, diasEfectivos * horasDiarias);
+      
+      // Salario
+      const tipoPeriodo = document.getElementById('tipoPeriodo').value;
+      const salarioPorHora = calcularSalarioPorHora(empleado, tipoPeriodo, horasDiarias, diasLaborales);
+      const totalPago = horasAPagar * salarioPorHora;
+
+      return {
+        empleado: empleado,
+        diasLaborales: diasLaborales,
+        diasEfectivos: diasEfectivos,
+        diasAusencia: diasLaborales - Math.min(diasLaborales, horasInfo.diasTrabajados),
+        diasPenalizacion: diasPenalizacion,
+        horasEsperadas: horasEsperadas,
+        horasTrabajadas: horasInfo.horasReales,
+        horasAPagar: horasAPagar,
+        retardos: retardos,
+        totalPago: totalPago,
+        detalleHoras: horasInfo.detalle,
+        salarioPorHora: salarioPorHora
+      };
+    }
+
+    // FUNCIONES AUXILIARES
+    function calcularDiasLaborales(fechaInicio, fechaFin) {
+      const inicio = new Date(fechaInicio + 'T00:00:00');
+      const fin = new Date(fechaFin + 'T23:59:59');
+      let dias = 0;
+      
+      const current = new Date(inicio);
+      while (current <= fin) {
+        const diaSemana = current.getDay();
+        if (diaSemana !== 0 && diaSemana !== 6) {
+          dias++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      
+      return dias;
+    }
+
+    function calcularHorasYRetardos(registros, horarioBase) {
+      const registrosPorDia = {};
+      let horasReales = 0;
+      let retardos = 0;
+      const detalle = [];
+      const horasDiarias = HORARIOS_BASE[horarioBase]?.horasDiarias || 8;
+
+      // Agrupar por día
+      registros.forEach(registro => {
+        const fecha = registro.fecha;
+        if (!registrosPorDia[fecha]) {
+          registrosPorDia[fecha] = { entradas: [], salidas: [], retardo: false };
+        }
+        
+        if (registro.tipoEvento === 'entrada') {
+          registrosPorDia[fecha].entradas.push(registro.hora);
+          if (registro.estado === 'Retardo') {
+            registrosPorDia[fecha].retardo = true;
+          }
+        } else if (registro.tipoEvento === 'salida') {
+          registrosPorDia[fecha].salidas.push(registro.hora);
+        }
+      });
+
+      Object.entries(registrosPorDia).forEach(([fecha, reg]) => {
+        let horasDia = 0;
+        let estado = 'Sin registro';
+
+        if (reg.retardo) {
+          retardos++;
+        }
+
+        const primeraEntrada = reg.entradas.length > 0 ? reg.entradas.sort()[0] : null;
+        const ultimaSalida = reg.salidas.length > 0 ? reg.salidas.sort().pop() : null;
+
+        if (primeraEntrada && ultimaSalida) {
+          const [hEntrada, mEntrada] = primeraEntrada.split(':').map(Number);
+          const [hSalida, mSalida] = ultimaSalida.split(':').map(Number);
+          
+          const minutosEntrada = hEntrada * 60 + mEntrada;
+          const minutosSalida = hSalida * 60 + mSalida;
+          
+          if (minutosSalida > minutosEntrada) {
+            const minutosTrabajados = minutosSalida - minutosEntrada;
+            horasDia = Math.min(minutosTrabajados / 60, horasDiarias);
+            horasReales += horasDia;
+            estado = 'Completo';
+          }
+        } else if (primeraEntrada) {
+          horasDia = horasDiarias;
+          horasReales += horasDia;
+          estado = 'Sin salida';
+        }
+
+        detalle.push({
+          fecha: fecha,
+          entrada: primeraEntrada,
+          salida: ultimaSalida,
+          horas: horasDia,
+          estado: estado,
+          retardo: reg.retardo
+        });
+      });
+
+      const diasTrabajados = detalle.filter(d => d.horas > 0).length;
+
+      return { 
+        horasInfo: { horasReales, detalle, diasTrabajados },
+        retardos 
+      };
+    }
+
+    function calcularSalarioPorHora(empleado, tipoPeriodo, horasDiarias, diasLaborales) {
+      if (empleado.salarioHora && empleado.salarioHora > 0) {
+        return empleado.salarioHora;
+      }
+      
+      if (!empleado.salarioMensual || empleado.salarioMensual <= 0) {
+        return 0;
+      }
+
+      let salarioPorHora = 0;
+      
+      if (tipoPeriodo === 'quincenal') {
+        const pagoQuincenal = empleado.salarioMensual / 2;
+        const horasQuincenales = diasLaborales * horasDiarias;
+        salarioPorHora = horasQuincenales > 0 ? pagoQuincenal / horasQuincenales : 0;
+      } else if (tipoPeriodo === 'semanal') {
+        const pagoSemanal = empleado.salarioMensual / 4.33;
+        const horasPorSemana = 5 * horasDiarias;
+        salarioPorHora = pagoSemanal / horasPorSemana;
+      } else {
+        const horasPorMes = horasDiarias * 22;
+        salarioPorHora = empleado.salarioMensual / horasPorMes;
+      }
+      
+      return salarioPorHora;
+    }
+
+    function mostrarResultadosNomina(resultados) {
+      const container = document.getElementById('listaEmpleados');
+      container.innerHTML = '';
+
+      let totalEmpleados = resultados.length;
+      let totalHoras = 0;
+      let totalPago = 0;
+
+      resultados.forEach(resultado => {
+        totalHoras += resultado.horasTrabajadas;
+        totalPago += resultado.totalPago;
+
+        const card = document.createElement('div');
+        card.className = 'col-md-6 col-lg-4 mb-4 fade-in';
+        card.innerHTML = `
+          <div class="employee-card" onclick="verDetalleEmpleado('${resultado.empleado.nombre}')">
+            <div class="employee-card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h6 class="employee-name">${resultado.empleado.nombre}</h6>
+                  <small class="employee-type">${resultado.empleado.tipo} - $${resultado.salarioPorHora.toFixed(2)}/hr</small>
+                </div>
+                <span class="delay-badge ${resultado.retardos > 0 ? 'bg-warning text-dark' : 'bg-success text-white'}">
+                  ${resultado.retardos} retardo${resultado.retardos !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <div class="progress-section">
+                <div class="text-center">
+                  <div class="accumulated-amount">$${resultado.totalPago.toFixed(2)}</div>
+                  <small class="text-muted">Total a pagar</small>
+                </div>
+                <div class="progress-custom mt-2">
+                  <div class="progress-bar" style="width: ${Math.min(100, (resultado.horasTrabajadas / resultado.horasEsperadas) * 100)}%"></div>
+                </div>
+                <small class="text-muted d-block mt-1">
+                  ${resultado.horasTrabajadas.toFixed(1)} / ${resultado.horasEsperadas} horas esperadas
+                </small>
+              </div>
+
+              <div class="stats-grid">
+                <div class="row text-center small">
+                  <div class="col-4">
+                    <div class="stat-number">${resultado.diasEfectivos}</div>
+                    <small class="text-muted">Días trabajados</small>
+                  </div>
+                  <div class="col-4">
+                    <div class="stat-number">${resultado.diasAusencia}</div>
+                    <small class="text-muted">Ausencias</small>
+                  </div>
+                  <div class="col-4">
+                    <div class="stat-number">${resultado.diasPenalizacion}</div>
+                    <small class="text-muted">Penalizaciones</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      document.getElementById('totalEmpleados').textContent = totalEmpleados;
+      document.getElementById('totalHoras').textContent = totalHoras.toFixed(1);
+      document.getElementById('totalPago').textContent = `$${totalPago.toFixed(2)}`;
+      document.getElementById('resumenNomina').classList.remove('d-none');
+
+      window.ultimosResultados = resultados;
+    }
+
+    // DETALLE DE EMPLEADO
+    window.verDetalleEmpleado = function(nombreEmpleado) {
+      const resultado = window.ultimosResultados?.find(r => r.empleado.nombre === nombreEmpleado);
+      if (!resultado) return;
+      
+      const content = document.getElementById('detalleEmpleadoContent');
+      
+      let detalleHtml = `
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h6>${resultado.empleado.nombre}</h6>
+            <p class="small">Tipo: ${resultado.empleado.tipo}</p>
+            <p class="small">Salario/hora: $${resultado.salarioPorHora.toFixed(2)}</p>
+          </div>
+          <div class="col-md-6">
+            <div class="alert alert-info">
+              <strong>Total a pagar: $${resultado.totalPago.toFixed(2)}</strong><br>
+              <small>
+                ${resultado.horasAPagar.toFixed(1)} horas × $${resultado.salarioPorHora.toFixed(2)}/hr
+                ${resultado.diasPenalizacion > 0 ? `<br>(${resultado.retardos} retardos → ${resultado.diasPenalizacion} días penalizados)` : ''}
+              </small>
+            </div>
+          </div>
+        </div>
+        
+        <h6 class="mb-3">Detalle de asistencia:</h6>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Horas</th>
+                <th>Estado</th>
+                <th>Retardo</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      resultado.detalleHoras.forEach(dia => {
+        detalleHtml += `
+          <tr>
+            <td>${dia.fecha}</td>
+            <td>${dia.entrada || '-'}</td>
+            <td>${dia.salida || '-'}</td>
+            <td>${dia.horas.toFixed(1)}</td>
+            <td><span class="badge ${dia.estado === 'Completo' ? 'bg-success' : 'bg-warning text-dark'}">${dia.estado}</span></td>
+            <td>${dia.retardo ? '<i class="bi bi-exclamation-triangle text-warning"></i>' : '-'}</td>
+          </tr>
+        `;
+      });
+
+      detalleHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      content.innerHTML = detalleHtml;
+      new bootstrap.Modal(document.getElementById('modalDetalleEmpleado')).show();
+    };
+
+    // UTILIDADES
+    window.limpiarArchivo = function() {
+      archivoActual = null;
+      registrosAsistenciaPDF = [];
+      document.getElementById('fileInfo').classList.add('d-none');
+      document.getElementById('analisisSection').classList.add('d-none');
+      document.getElementById('fileInput').value = '';
+      actualizarEstadoSistema();
+      mostrarNotificacion('Archivo limpiado', 'info');
+    };
+
+    function actualizarEstadoSistema() {
+      document.getElementById('registrosTotal').textContent = registrosAsistenciaPDF.length;
+      
+      const statusDiv = document.getElementById('sistemaStatus');
+      if (registrosAsistenciaPDF.length > 0) {
+        statusDiv.className = 'alert alert-success';
+      } else {
+        statusDiv.className = 'alert alert-info';
+      }
+    }
+
+    function formatearTamano(bytes) {
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      if (bytes === 0) return '0 Bytes';
+      const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+      return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    window.generarReporteNomina = function() {
+      mostrarNotificacion('Función de reporte en desarrollo', 'info');
+    };
+
+    function mostrarNotificacion(mensaje, tipo) {
+      const notificacion = document.createElement('div');
+      notificacion.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+      notificacion.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+      notificacion.innerHTML = `
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      document.body.appendChild(notificacion);
+      
+      setTimeout(() => {
+        if (notificacion.parentNode) {
+          notificacion.remove();
+        }
+      }, 5000);
+    }
+  </script>
+
+  <style>
+    .upload-zone {
+      border: 3px dashed #198754;
+      border-radius: 15px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .upload-zone:hover {
+      border-color: #20c997;
+      background-color: rgba(25, 135, 84, 0.05);
+    }
+
+    .upload-zone.drag-over {
+      border-color: #20c997;
+      background-color: rgba(25, 135, 84, 0.1);
+      transform: scale(1.02);
+    }
+
+    .stats-card {
+      background: rgba(255,255,255,0.7);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--secondary-color);
+    }
+
+    body.dark-mode .stats-card {
+      background: rgba(0,0,0,0.2);
+      border-color: var(--accent-color);
+    }
+
+    .stats-card .stats-number {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--secondary-color);
+    }
+
+    body.dark-mode .stats-card .stats-number {
+      color: var(--accent-color);
+    }
+
+    .stats-card .stats-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    body.dark-mode .stats-card .stats-label {
+      color: #b0b0b0;
+    }
+  </style>
 </body>
 </html>
