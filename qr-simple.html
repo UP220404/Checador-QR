@@ -8,8 +8,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- ✅ LIBRERÍA QRCode CORREGIDA -->
-  <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <style>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>  <style>
     :root {
       --verde: #155d27;
       --verde-claro: #e6f0e9;
@@ -342,7 +341,7 @@
         console.log('🔄 Iniciando generación de QR...');
         
         // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
-        if (typeof QRCode === 'undefined') {
+        if (typeof QRious === 'undefined') {
           throw new Error('QRCode library not available');
         }
         
@@ -373,23 +372,13 @@
 
         console.log('🔗 URL generada:', urlCompleta);
 
-        // ✅ GENERAR CÓDIGO QR CON VERIFICACIÓN ADICIONAL
-        await new Promise((resolve, reject) => {
-          QRCode.toCanvas(elements.qrCanvas, urlCompleta, {
-            width: 300,
-            height: 300,
-            color: {
-              dark: '#155d27',
-              light: '#ffffff'
-            },
-            errorCorrectionLevel: 'M',
-            margin: 2
-          }, (error) => {
-            if (error) reject(error);
-            else resolve();
-          });
+        const qr = new QRious({
+        element: elements.qrCanvas,
+        value: urlCompleta,
+        size: 300,
+        foreground: '#155d27',
+        background: '#ffffff'
         });
-
         // Actualizar UI
         elements.currentToken.textContent = tokenActual;
         elements.qrLoading.style.display = 'none';
@@ -502,7 +491,7 @@
         console.log('🔍 Verificando token existente...');
         
         // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
-        if (typeof QRCode === 'undefined') {
+        if (typeof QRious === 'undefined') {
           console.error('❌ QRCode library not available');
           return;
         }
@@ -531,20 +520,15 @@
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
             const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
             
-            // ✅ USAR PROMESA PARA GENERAR QR
-            await new Promise((resolve, reject) => {
-              QRCode.toCanvas(elements.qrCanvas, urlCompleta, {
-                width: 300,
-                height: 300,
-                color: { dark: '#155d27', light: '#ffffff' },
-                errorCorrectionLevel: 'M',
-                margin: 2
-              }, (error) => {
-                if (error) reject(error);
-                else resolve();
-              });
+           
+            const qr = new QRious({
+            element: elements.qrCanvas,
+            value: urlCompleta,
+            size: 300,
+            foreground: '#155d27',
+            background: '#ffffff'
             });
-            
+
             elements.qrLoading.style.display = 'none';
             elements.qrCanvas.style.display = 'block';
             
@@ -577,7 +561,7 @@
       console.log('🚀 Iniciando aplicación QR...');
       
       // Verificar que todas las librerías estén cargadas
-      if (typeof QRCode === 'undefined') {
+      if (typeof QRious === 'undefined') {
         console.error('❌ QRCode library not loaded, waiting...');
         
         // Esperar un poco y verificar de nuevo
