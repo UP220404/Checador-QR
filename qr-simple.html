@@ -71,7 +71,6 @@
     color: white;
   }
 
-  /* ✅ LOGO SECTION SIN ÍCONO GRANDE */
   .logo-section {
     margin-bottom: 1rem;
   }
@@ -184,7 +183,6 @@
     transform: none;
   }
 
-  /* ✅ PANEL DE INFORMACIÓN */
   .info-title {
     font-size: 1.8rem;
     font-weight: 700;
@@ -210,6 +208,12 @@
     margin: 1rem 0;
     word-break: break-all;
     text-align: center;
+    filter: blur(0px);
+    transition: filter 0.3s ease;
+  }
+
+  .token-display.blur {
+    filter: blur(3px);
   }
 
   .countdown {
@@ -254,6 +258,26 @@
     line-height: 1.4;
     text-align: center;
     margin-top: 1rem;
+  }
+
+  /* ✅ ALERTA DE SEGURIDAD */
+  .security-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(220, 53, 69, 0.95);
+    color: white;
+    padding: 1rem;
+    border-radius: 10px;
+    max-width: 300px;
+    z-index: 1000;
+    transform: translateX(350px);
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);
+  }
+
+  .security-alert.show {
+    transform: translateX(0);
   }
 
   .status-success { background: #198754; }
@@ -307,16 +331,20 @@
 
 </head>
 <body>
+  <!-- ✅ ALERTA DE SEGURIDAD -->
+  <div id="security-alert" class="security-alert">
+    <strong><i class="bi bi-shield-exclamation me-1"></i>Alerta de Seguridad</strong>
+    <p class="mb-0 mt-1" id="security-message">Actividad sospechosa detectada</p>
+  </div>
+
   <div class="main-container">
     <!-- ✅ SECCIÓN QR (IZQUIERDA) -->
     <div class="qr-section">
-      <!-- Logo y título sin ícono grande -->
       <div class="logo-section">
         <h1 class="title">Cielito Home</h1>
         <p class="subtitle">Código QR de Acceso Inteligente</p>
       </div>
 
-      <!-- Área del QR -->
       <div class="qr-display">
         <div class="status-badge status-success" id="status-badge">
           <i class="bi bi-shield-check"></i>
@@ -331,13 +359,11 @@
         <canvas id="qr-canvas" class="qr-canvas" style="display: none;"></canvas>
       </div>
 
-      <!-- Indicador de modo -->
       <div id="mode-indicator" class="mode-indicator">
         <i class="bi bi-info-circle me-2"></i>
         <span id="mode-text">Detectando horario...</span>
       </div>
 
-      <!-- Botón regenerar -->
       <button class="refresh-button" id="refresh-btn">
         <i class="bi bi-arrow-clockwise me-2"></i>
         Generar Nuevo QR
@@ -351,7 +377,6 @@
         Panel de Control
       </h2>
 
-      <!-- Información del token -->
       <div class="token-info">
         <h6 class="text-center mb-3" style="color: rgba(255,255,255,0.9);">
           <strong>Token Actual:</strong>
@@ -364,7 +389,6 @@
         <div class="countdown" id="countdown">--:--</div>
       </div>
 
-      <!-- Estadísticas -->
       <div class="stats-grid">
         <div class="stat-card">
           <p class="stat-number" id="tokens-count">0</p>
@@ -380,7 +404,6 @@
         </div>
       </div>
 
-      <!-- Footer informativo -->
       <div class="footer-info">
         <i class="bi bi-lightbulb me-1"></i>
         <strong>Sistema Inteligente:</strong><br>
@@ -392,6 +415,23 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ✅ CONFIGURACIÓN DE SEGURIDAD AVANZADA
+    const SECURITY_CONFIG = {
+      MAX_ATTEMPTS_PER_SESSION: 5,
+      RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutos
+      DEVICE_FINGERPRINT_REQUIRED: true,
+      TOKEN_ENCRYPTION_ENABLED: true,
+      DEVTOOLS_DETECTION: true,
+      OBFUSCATE_COORDINATES: true,
+      ANTI_AUTOMATION: true
+    };
+
+    // ✅ COORDENADAS OFUSCADAS (Base64)
+    const _0x4a2b = [
+      'MjEuOTI1NDU2NTc5MjU1MTc=', // Latitud ofuscada
+      'LTEwMi4zMTMyNzQzMTM5MjUxOQ==' // Longitud ofuscada
+    ];
 
     // Configuración Firebase
     const firebaseConfig = {
@@ -406,13 +446,17 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Variables globales
+    // ✅ VARIABLES GLOBALES CON SEGURIDAD
     let tokenActual = null;
     let tiempoExpiracion = null;
     let intervaloCuenta = null;
     let modoActual = 'detectando';
     let ultimaGeneracion = 0;
     let yaInicializado = false;
+    let intentosGeneracion = 0;
+    let deviceFingerprint = null;
+    let securityViolations = 0;
+    let lastUserActivity = Date.now();
 
     // Elementos DOM
     const elements = {
@@ -428,8 +472,192 @@
       blockedCount: document.getElementById('blocked-count'),
       modeIndicator: document.getElementById('mode-indicator'),
       modeText: document.getElementById('mode-text'),
-      footerText: document.getElementById('footer-text')
+      footerText: document.getElementById('footer-text'),
+      securityAlert: document.getElementById('security-alert'),
+      securityMessage: document.getElementById('security-message')
     };
+
+    // ✅ GENERACIÓN DE FINGERPRINT DEL DISPOSITIVO
+    function generarDeviceFingerprint() {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('Device fingerprint test', 2, 2);
+        
+        const fingerprint = btoa(JSON.stringify({
+          ua: navigator.userAgent.slice(0, 50),
+          screen: `${screen.width}x${screen.height}`,
+          timezone: new Date().getTimezoneOffset(),
+          language: navigator.language,
+          platform: navigator.platform.slice(0, 10),
+          canvas: canvas.toDataURL().slice(-50),
+          memory: navigator.deviceMemory || 'unknown',
+          cores: navigator.hardwareConcurrency || 'unknown',
+          timestamp: Math.floor(Date.now() / 3600000) // Hora actual
+        }));
+        
+        return fingerprint;
+      } catch (error) {
+        console.warn('Error generando fingerprint:', error);
+        return btoa(`fallback_${Date.now()}_${Math.random()}`);
+      }
+    }
+
+    // ✅ DETECCIÓN DE HERRAMIENTAS DE DESARROLLADOR
+    function detectarDevTools() {
+      if (!SECURITY_CONFIG.DEVTOOLS_DETECTION) return false;
+      
+      let devtools = {
+        open: false,
+        orientation: null
+      };
+      
+      const threshold = 160;
+      
+      setInterval(() => {
+        if (window.outerHeight - window.innerHeight > threshold || 
+            window.outerWidth - window.innerWidth > threshold) {
+          if (!devtools.open) {
+            devtools.open = true;
+            mostrarAlertaSeguridad('🔧 Herramientas de desarrollador detectadas');
+            registrarViolacionSeguridad('devtools_opened');
+          }
+        } else {
+          devtools.open = false;
+        }
+      }, 500);
+      
+      return devtools;
+    }
+
+    // ✅ DETECCIÓN ANTI-AUTOMATIZACIÓN
+    function configurarAntiAutomation() {
+      if (!SECURITY_CONFIG.ANTI_AUTOMATION) return;
+      
+      // Detectar movimientos de mouse humanos
+      let mouseMovements = [];
+      let lastMouseMove = 0;
+      
+      document.addEventListener('mousemove', (e) => {
+        const now = Date.now();
+        if (now - lastMouseMove > 100) { // Throttle
+          mouseMovements.push({
+            x: e.clientX,
+            y: e.clientY,
+            time: now
+          });
+          lastMouseMove = now;
+          
+          // Mantener solo los últimos 10 movimientos
+          if (mouseMovements.length > 10) {
+            mouseMovements.shift();
+          }
+        }
+      });
+      
+      // Detectar clicks demasiado rápidos
+      let lastClick = 0;
+      document.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastClick < 100) { // Click demasiado rápido
+          mostrarAlertaSeguridad('🤖 Actividad automatizada detectada');
+          registrarViolacionSeguridad('rapid_clicking');
+        }
+        lastClick = now;
+      });
+      
+      // Detectar falta de actividad de mouse (bots)
+      setInterval(() => {
+        if (mouseMovements.length < 2 && Date.now() - lastUserActivity > 30000) {
+          console.warn('⚠️ Posible comportamiento automatizado');
+        }
+      }, 30000);
+    }
+
+    // ✅ ENCRIPTACIÓN SIMPLE DE TOKENS (Para mostrar)
+    function encriptarTokenDisplay(token) {
+      if (!SECURITY_CONFIG.TOKEN_ENCRYPTION_ENABLED) return token;
+      
+      try {
+        // Encriptación simple XOR para mostrar en pantalla
+        const key = 'CIELITO_HOME_2025';
+        let encrypted = '';
+        
+        for (let i = 0; i < token.length; i++) {
+          encrypted += String.fromCharCode(
+            token.charCodeAt(i) ^ key.charCodeAt(i % key.length)
+          );
+        }
+        
+        return `🔐 ${btoa(encrypted).slice(0, 32)}...`;
+      } catch (error) {
+        return `🔐 ${token.slice(0, 20)}...`;
+      }
+    }
+
+    // ✅ REGISTRO DE VIOLACIONES DE SEGURIDAD
+    async function registrarViolacionSeguridad(tipo, detalles = {}) {
+      securityViolations++;
+      
+      try {
+        const violacionData = {
+          tipo: tipo,
+          timestamp: new Date(),
+          fingerprint: deviceFingerprint,
+          userAgent: navigator.userAgent.slice(0, 100),
+          url: window.location.href,
+          detalles: detalles,
+          violacionesTotal: securityViolations
+        };
+        
+        await setDoc(doc(db, "security_violations", `${Date.now()}_${tipo}`), violacionData);
+        
+        // Si hay demasiadas violaciones, bloquear temporalmente
+        if (securityViolations >= 5) {
+          mostrarAlertaSeguridad('🚨 Demasiadas violaciones de seguridad. Acceso restringido.');
+          elements.refreshBtn.disabled = true;
+          elements.refreshBtn.innerHTML = '<i class="bi bi-shield-x me-2"></i>Acceso Restringido';
+        }
+        
+      } catch (error) {
+        console.error('Error registrando violación:', error);
+      }
+    }
+
+    // ✅ MOSTRAR ALERTAS DE SEGURIDAD
+    function mostrarAlertaSeguridad(mensaje) {
+      elements.securityMessage.textContent = mensaje;
+      elements.securityAlert.classList.add('show');
+      
+      setTimeout(() => {
+        elements.securityAlert.classList.remove('show');
+      }, 5000);
+    }
+
+    // ✅ RATE LIMITING AVANZADO
+    function verificarRateLimit() {
+      const ahora = Date.now();
+      const ventanaKey = Math.floor(ahora / SECURITY_CONFIG.RATE_LIMIT_WINDOW);
+      const storageKey = `rate_limit_${ventanaKey}`;
+      
+      try {
+        let intentos = parseInt(localStorage.getItem(storageKey) || '0');
+        
+        if (intentos >= SECURITY_CONFIG.MAX_ATTEMPTS_PER_SESSION) {
+          mostrarAlertaSeguridad(`⏰ Límite de intentos alcanzado. Espera ${Math.ceil(SECURITY_CONFIG.RATE_LIMIT_WINDOW / 60000)} minutos.`);
+          return false;
+        }
+        
+        localStorage.setItem(storageKey, (intentos + 1).toString());
+        return true;
+        
+      } catch (error) {
+        console.warn('Error en rate limiting:', error);
+        return true; // Permitir en caso de error
+      }
+    }
 
     // ✅ FUNCIÓN PARA DETECTAR MODO SEGÚN HORARIO
     function detectarModo() {
@@ -469,7 +697,7 @@
       }
     }
 
-    // ✅ ACTUALIZAR INDICADOR DE MODO
+    // ✅ ACTUALIZAR INDICADOR DE MODO CON SEGURIDAD
     function actualizarIndicadorModo() {
       const modo = detectarModo();
       modoActual = modo.tipo;
@@ -477,16 +705,15 @@
       elements.modeIndicator.className = `mode-indicator ${modo.clase}`;
       elements.modeText.innerHTML = `<i class="${modo.icono} me-2"></i>${modo.descripcion}`;
       
-      // ✅ CONTROLAR BOTÓN Y TEXTO SEGÚN MODO
       if (modo.tipo === 'inactivo') {
         elements.footerText.innerHTML = 'Sistema inactivo<br>Horario: 7:00 AM - 6:00 PM';
         elements.refreshBtn.disabled = true;
         elements.refreshBtn.innerHTML = '<i class="bi bi-moon me-2"></i>Sistema inactivo';
       } else if (modo.tipo === 'dinamico') {
         elements.footerText.innerHTML = 'Horario de entrada<br>QR se regenera cada 10 minutos para máxima seguridad';
-        elements.refreshBtn.disabled = false;
+        elements.refreshBtn.disabled = securityViolations >= 5;
         elements.refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Generar Nuevo QR';
-      } else { // estático
+      } else {
         elements.footerText.innerHTML = 'Horario estable<br>QR fijo para registros de salida';
         elements.refreshBtn.disabled = true;
         elements.refreshBtn.innerHTML = '<i class="bi bi-shield-lock me-2"></i>QR Fijo Activo';
@@ -495,13 +722,15 @@
       return modo;
     }
 
-    // Generar token único
+    // ✅ GENERACIÓN DE TOKEN SEGURO CON FINGERPRINT
     function generarTokenSeguro() {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 15);
       const extra = Math.random().toString(36).substring(2, 8);
-      const modo = modoActual.charAt(0).toUpperCase(); // D, E, I
-      return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
+      const modo = modoActual.charAt(0).toUpperCase();
+      const fingerprintHash = btoa(deviceFingerprint).slice(-8);
+      
+      return `CH_${modo}_${timestamp}_${random}_${extra}_${fingerprintHash}`.toUpperCase();
     }
 
     // ✅ FUNCIÓN MANEJO DE ERRORES DE FIREBASE
@@ -516,36 +745,45 @@
           
           console.warn('⚠️ Error de conexión Firebase detectado, reintentando...');
           
-          // Mostrar mensaje temporal al usuario
           if (elements.statusText) {
             const estadoAnterior = elements.statusText.innerHTML;
             elements.statusText.innerHTML = '<i class="bi bi-wifi me-1"></i>Reconectando...';
             
-            // Restaurar después de 3 segundos
             setTimeout(() => {
               elements.statusText.innerHTML = estadoAnterior;
             }, 3000);
           }
           
-          // Reintentar operación después de 2 segundos
           setTimeout(() => {
             verificarToken();
           }, 2000);
           
-          // Prevenir que el error se propague
           event.preventDefault();
         }
       });
     }
 
-    // ✅ FUNCIÓN GENERARQR - COMPLETAMENTE CONTROLADA
+    // ✅ FUNCIÓN GENERARQR CON SEGURIDAD AVANZADA
     async function generarQR(forzarPorUsuario = false) {
       try {
+        // ✅ VERIFICACIONES DE SEGURIDAD
+        if (forzarPorUsuario) {
+          if (!verificarRateLimit()) {
+            return;
+          }
+          
+          intentosGeneracion++;
+          if (intentosGeneracion > 10) {
+            mostrarAlertaSeguridad('🚨 Demasiados intentos de generación');
+            registrarViolacionSeguridad('excessive_generation', { intentos: intentosGeneracion });
+            return;
+          }
+        }
+        
         console.log('🔄 Iniciando generación de QR...', { forzarPorUsuario });
         
         const modo = actualizarIndicadorModo();
         
-        // ✅ VERIFICAR HORARIO LABORAL
         if (modo.tipo === 'inactivo') {
           elements.qrLoading.innerHTML = `
             <i class="bi bi-moon text-warning" style="font-size: 3rem;"></i>
@@ -558,14 +796,12 @@
           return;
         }
         
-        // ✅ EVITAR REGENERACIONES INNECESARIAS
         const ahora = Date.now();
         if (!forzarPorUsuario && (ahora - ultimaGeneracion) < 15000) {
           console.log('🚫 Regeneración muy reciente, omitiendo...');
           return;
         }
         
-        // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
         if (typeof QRious === 'undefined') {
           throw new Error('QRCode library not available');
         }
@@ -574,15 +810,14 @@
         elements.qrCanvas.style.display = 'none';
         actualizarEstado('generando');
 
-        // ✅ GENERAR TOKEN CON LÓGICA HORARIA
+        // ✅ GENERAR TOKEN CON SEGURIDAD
         tokenActual = generarTokenSeguro();
         tiempoExpiracion = Date.now() + modo.duracion;
         ultimaGeneracion = ahora;
 
         console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
-        console.log(`⏰ Válido por: ${modo.duracion / 60000} minutos`);
 
-        // Guardar en Firebase con información del modo
+        // ✅ GUARDAR EN FIREBASE CON FINGERPRINT
         await setDoc(doc(db, "qr_tokens", "current"), {
           token: tokenActual,
           expiracion: new Date(tiempoExpiracion),
@@ -591,16 +826,15 @@
           activo: true,
           modo: modo.tipo,
           duracionMinutos: modo.duracion / 60000,
-          proximoCambio: new Date(tiempoExpiracion)
+          deviceFingerprint: deviceFingerprint,
+          securityLevel: 'enhanced',
+          generadoPor: forzarPorUsuario ? 'usuario' : 'sistema'
         });
 
-        console.log('💾 Token guardado en Firebase');
-
-        // Crear URL del checador con token
+        // Crear URL con medidas anti-tampering
         const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
-        const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
-
-        console.log('🔗 URL generada:', urlCompleta);
+        const checksum = btoa(`${tokenActual}_${tiempoExpiracion}`).slice(-8);
+        const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&cs=${checksum}&t=${Date.now()}`;
 
         // Generar QR
         const qr = new QRious({
@@ -611,26 +845,32 @@
           background: '#ffffff'
         });
 
-        // Actualizar UI
-        elements.currentToken.textContent = tokenActual;
+        // ✅ MOSTRAR TOKEN ENCRIPTADO
+        const tokenMostrar = encriptarTokenDisplay(tokenActual);
+        elements.currentToken.textContent = tokenMostrar;
+        
+        // ✅ EFECTO DE BLUR AL TOKEN
+        elements.currentToken.classList.add('blur');
+        setTimeout(() => {
+          elements.currentToken.classList.remove('blur');
+        }, 1000);
+        
         elements.qrLoading.style.display = 'none';
         elements.qrCanvas.style.display = 'block';
         
         actualizarEstado('activo');
         iniciarCuentaRegresiva();
         
-        // ✅ SOLO INCREMENTAR CONTADOR SI ES GENERACIÓN MANUAL
         if (forzarPorUsuario) {
           await actualizarEstadisticas();
           console.log('📊 Contador incrementado por acción manual');
-        } else {
-          console.log('🔄 Regeneración automática - contador NO incrementado');
         }
 
         console.log(`✅ QR generado exitosamente en modo ${modo.tipo}`);
 
       } catch (error) {
         console.error('❌ Error generando QR:', error);
+        registrarViolacionSeguridad('generation_error', { error: error.message });
         
         elements.qrLoading.innerHTML = `
           <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
@@ -660,7 +900,6 @@
           actualizarEstado('expirado');
           elements.countdown.textContent = 'Expirado';
           
-          // ✅ SOLO AUTO-REGENERAR EN MODO DINÁMICO
           if (modo.tipo === 'dinamico') {
             console.log('🔄 Token expirado en modo dinámico, regenerando...');
             setTimeout(() => generarQR(false), 3000);
@@ -668,20 +907,17 @@
           return;
         }
         
-        // ✅ MOSTRAR DIFERENTE SEGÚN MODO
         if (modo.tipo === 'dinamico') {
-          // Modo dinámico: mostrar minutos y segundos
           const minutos = Math.floor(tiempoRestante / 60000);
           const segundos = Math.floor((tiempoRestante % 60000) / 1000);
           elements.countdown.textContent = `${minutos}:${segundos.toString().padStart(2, '0')}`;
         } else if (modo.tipo === 'estatico') {
-          // Modo estático: solo mostrar "Activo" sin cuenta regresiva
           elements.countdown.textContent = 'QR Fijo Activo';
         }
       }, 1000);
     }
 
-    // Actualizar estado
+    // ✅ ACTUALIZAR ESTADO
     function actualizarEstado(estado) {
       elements.statusBadge.className = 'status-badge';
       
@@ -709,6 +945,7 @@
       }
     }
 
+    // ✅ ESTADÍSTICAS CON SEGURIDAD
     async function actualizarEstadisticas() {
       try {
         const hoy = new Date().toISOString().split('T')[0];
@@ -717,7 +954,8 @@
         try {
           await updateDoc(statsRef, {
             generados: increment(1),
-            ultimaActualizacion: new Date()
+            ultimaActualizacion: new Date(),
+            deviceFingerprint: deviceFingerprint
           });
         } catch (updateError) {
           await setDoc(statsRef, {
@@ -725,7 +963,8 @@
             exitosos: 0,
             bloqueados: 0,
             fecha: hoy,
-            ultimaActualizacion: new Date()
+            ultimaActualizacion: new Date(),
+            deviceFingerprint: deviceFingerprint
           });
         }
 
@@ -742,14 +981,13 @@
       }
     }
 
-    // ✅ FUNCIÓN VERIFICARTOKEN CON REINTENTOS
+    // ✅ VERIFICAR TOKEN CON SEGURIDAD
     async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
         
         const modo = actualizarIndicadorModo();
         
-        // ✅ VERIFICAR HORARIO LABORAL PRIMERO
         if (modo.tipo === 'inactivo') {
           console.log('🌙 Fuera de horario laboral');
           elements.qrLoading.innerHTML = `
@@ -763,7 +1001,6 @@
           return;
         }
         
-        // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
         if (typeof QRious === 'undefined') {
           console.error('❌ QRCode library not available');
           return;
@@ -778,32 +1015,27 @@
           const modoToken = data.modo || 'dinamico';
           
           console.log('📄 Token encontrado:', data.token);
-          console.log('⏰ Expira:', expiracion);
-          console.log('🔵 Usado:', data.usado);
           console.log('🎯 Modo token:', modoToken, '/ Modo actual:', modo.tipo);
           
-          // ✅ LÓGICA DE REGENERACIÓN INTELIGENTE
           const debeRegenerar = 
             data.usado || 
             ahora > expiracion ||
             (modoToken !== modo.tipo);
           
           if (debeRegenerar) {
-            console.log('🔄 Token necesita regeneración:', {
-              usado: data.usado,
-              expirado: ahora > expiracion,
-              cambioModo: modoToken !== modo.tipo
-            });
+            console.log('🔄 Token necesita regeneración');
             await generarQR(false);
           } else {
             console.log('✅ Token válido, reutilizando...');
             tokenActual = data.token;
             tiempoExpiracion = expiracion.getTime();
-            elements.currentToken.textContent = tokenActual;
             
-            // Recrear QR con token existente
+            const tokenMostrar = encriptarTokenDisplay(tokenActual);
+            elements.currentToken.textContent = tokenMostrar;
+            
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
-            const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
+            const checksum = btoa(`${tokenActual}_${tiempoExpiracion}`).slice(-8);
+            const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&cs=${checksum}&t=${Date.now()}`;
             
             const qr = new QRious({
               element: elements.qrCanvas,
@@ -828,7 +1060,7 @@
           await generarQR(true);
         }
 
-        // ✅ CARGAR ESTADÍSTICAS SIN INCREMENTAR
+        // Cargar estadísticas
         const hoy = new Date().toISOString().split('T')[0];
         const statsRef = doc(db, "qr_stats", hoy);
         const statsDoc = await getDoc(statsRef);
@@ -842,7 +1074,6 @@
       } catch (error) {
         console.error('❌ Error verificando token:', error);
         
-        // ✅ REINTENTAR EN CASO DE ERROR DE CONEXIÓN
         if (reintentos > 0 && 
             (error.code === 'unavailable' || 
              error.message?.includes('Failed to fetch') ||
@@ -851,7 +1082,6 @@
           
           console.log(`🔄 Reintentando verificación (${reintentos} intentos restantes)...`);
           
-          // Esperar un poco antes de reintentar
           setTimeout(() => {
             verificarToken(reintentos - 1);
           }, 2000);
@@ -864,15 +1094,16 @@
       }
     }
 
-    // ✅ EVENT LISTENER - SOLO PERMITIR CLICKS EN MODO DINÁMICO
+    // ✅ EVENT LISTENER CON SEGURIDAD
     elements.refreshBtn.addEventListener('click', () => {
+      lastUserActivity = Date.now();
       const modo = detectarModo();
-      if (modo.tipo === 'dinamico') {
-        generarQR(true); // Forzar generación manual
+      if (modo.tipo === 'dinamico' && securityViolations < 5) {
+        generarQR(true);
       }
     });
 
-    // ✅ INICIALIZACIÓN CONTROLADA
+    // ✅ INICIALIZACIÓN CON SEGURIDAD COMPLETA
     async function inicializar() {
       if (yaInicializado) {
         console.log('⚠️ Sistema ya inicializado, evitando duplicación');
@@ -880,10 +1111,23 @@
       }
       
       yaInicializado = true;
-      console.log('🚀 Iniciando sistema QR inteligente...');
+      console.log('🚀 Iniciando sistema QR inteligente con seguridad avanzada...');
       
-      // ✅ ACTIVAR MANEJO DE ERRORES
+      // ✅ GENERAR FINGERPRINT
+      deviceFingerprint = generarDeviceFingerprint();
+      console.log('🔍 Device fingerprint generado');
+      
+      // ✅ ACTIVAR SEGURIDADES
       manejarErroresFirebase();
+      detectarDevTools();
+      configurarAntiAutomation();
+      
+      // ✅ MONITOREO DE ACTIVIDAD
+      ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+        document.addEventListener(event, () => {
+          lastUserActivity = Date.now();
+        }, true);
+      });
       
       if (typeof QRious === 'undefined') {
         console.error('❌ QRious library not loaded, waiting...');
@@ -894,6 +1138,7 @@
             configurarIntervalos();
           } else {
             console.error('❌ QRious library failed to load');
+            registrarViolacionSeguridad('library_load_failed');
             elements.qrLoading.innerHTML = `
               <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
               <p class="text-danger mt-3 mb-0">Error cargando librería QR</p>
@@ -910,7 +1155,7 @@
       }
     }
 
-    // ✅ CONFIGURAR INTERVALOS EFICIENTES Y CONTROLADOS
+    // ✅ CONFIGURAR INTERVALOS CON SEGURIDAD
     function configurarIntervalos() {
       // Verificar estado cada 30 segundos
       setInterval(() => {
@@ -920,25 +1165,24 @@
         }
       }, 30000);
       
-      // ✅ REGENERACIÓN AUTOMÁTICA CONTROLADA CADA 10 MINUTOS EN MODO DINÁMICO
+      // Regeneración automática controlada
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
         const minutos = ahora.getMinutos();
         const segundos = ahora.getSeconds();
         
-        // Solo regenerar en horario dinámico, cada 10 minutos exactos
         if (hora >= 7 && hora < 10 && minutos % 10 === 0 && segundos < 5) {
-          console.log('🔄 Regeneración automática programada (modo dinámico)');
+          console.log('🔄 Regeneración automática programada');
           generarQR(false);
         }
       }, 5000);
 
-      // ✅ VERIFICACIÓN DE CAMBIO DE MODO
+      // Verificación de cambio de modo
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
-        const minutos = ahora.getMinutos();
+        const minutos = ahora.getMinutes();
         
         if (minutos === 0) {
           if (hora === 7) {
@@ -953,7 +1197,38 @@
           }
         }
       }, 60000);
+      
+      // ✅ LIMPIEZA DE RATE LIMITING ANTIGUO
+      setInterval(() => {
+        try {
+          const ahora = Date.now();
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('rate_limit_')) {
+              const timestamp = parseInt(key.split('_')[2]) * SECURITY_CONFIG.RATE_LIMIT_WINDOW;
+              if (ahora - timestamp > SECURITY_CONFIG.RATE_LIMIT_WINDOW) {
+                localStorage.removeItem(key);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Error limpiando rate limiting:', error);
+        }
+      }, 300000); // Cada 5 minutos
     }
+
+    // ✅ PROTECCIÓN CONTRA CONSOLA
+    Object.defineProperty(window, 'console', {
+      value: new Proxy(console, {
+        get(target, prop) {
+          if (SECURITY_CONFIG.DEVTOOLS_DETECTION && 
+              ['log', 'warn', 'error', 'info', 'debug'].includes(prop)) {
+            registrarViolacionSeguridad('console_access', { method: prop });
+          }
+          return target[prop];
+        }
+      })
+    });
 
     // Inicialización
     await inicializar();
