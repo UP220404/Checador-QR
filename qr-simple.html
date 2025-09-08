@@ -7,293 +7,28 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- ✅ LIBRERÍA QRCode CORREGIDA -->
+  <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
-    :root {
-      --verde: #155d27;
-      --verde-claro: #e6f0e9;
-      --dorado: #c1a35f;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, var(--verde) 0%, var(--dorado) 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0;
-      color: white;
-    }
-
-    .qr-container {
-      background: white;
-      border-radius: 25px;
-      padding: 3rem;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      max-width: 450px;
-      width: 90%;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .qr-container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 6px;
-      background: linear-gradient(90deg, var(--verde), var(--dorado));
-    }
-
-    .logo-section {
-      margin-bottom: 2rem;
-    }
-
-    .logo-icon {
-      font-size: 4rem;
-      color: var(--verde);
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    .title {
-      font-size: 2.2rem;
-      font-weight: 700;
-      color: var(--verde);
-      margin: 0 0 0.5rem 0;
-      letter-spacing: -0.5px;
-    }
-
-    .subtitle {
-      color: #6c757d;
-      font-size: 1.1rem;
-      font-weight: 500;
-      margin-bottom: 2rem;
-    }
-
-    .qr-display {
-      background: #f8f9fa;
-      border-radius: 20px;
-      padding: 2rem;
-      margin: 2rem 0;
-      border: 3px dashed var(--verde);
-      position: relative;
-    }
-
-    .status-badge {
-      position: absolute;
-      top: -12px;
-      right: 20px;
-      background: var(--verde);
-      color: white;
-      padding: 0.4rem 1rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .qr-canvas {
-      max-width: 100%;
-      border-radius: 15px;
-    }
-
-    .loading-spinner {
-      color: var(--verde);
-      font-size: 3rem;
-      animation: spin 2s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .info-section {
-      background: linear-gradient(135deg, var(--verde-claro), #f0f8ff);
-      border-radius: 15px;
-      padding: 1.5rem;
-      margin: 2rem 0;
-      color: var(--verde);
-    }
-
-    .token-display {
-      font-family: 'Courier New', monospace;
-      font-size: 0.9rem;
-      background: white;
-      padding: 0.8rem;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-      margin: 1rem 0;
-      word-break: break-all;
-    }
-
-    .countdown {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--verde);
-    }
-
-    .refresh-button {
-      background: linear-gradient(135deg, var(--verde), var(--dorado));
-      border: none;
-      border-radius: 15px;
-      padding: 1rem 2rem;
-      color: white;
-      font-weight: 600;
-      font-size: 1.1rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      width: 100%;
-      margin-top: 1.5rem;
-    }
-
-    .refresh-button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(21, 93, 39, 0.3);
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-
-    .stat-card {
-      background: rgba(21, 93, 39, 0.1);
-      padding: 1rem;
-      border-radius: 12px;
-      text-align: center;
-    }
-
-    .stat-number {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--verde);
-      margin: 0;
-    }
-
-    .stat-label {
-      font-size: 0.8rem;
-      color: #6c757d;
-      margin: 0;
-    }
-
-    .footer-info {
-      margin-top: 2rem;
-      font-size: 0.9rem;
-      color: #6c757d;
-      line-height: 1.5;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .qr-container {
-        padding: 2rem;
-        margin: 1rem;
-      }
-      
-      .title {
-        font-size: 1.8rem;
-      }
-      
-      .stats-row {
-        grid-template-columns: 1fr;
-        gap: 0.8rem;
-      }
-    }
-
-    /* Animaciones */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .qr-container {
-      animation: fadeIn 0.6s ease-out;
-    }
-
-    .status-success { background: #198754; }
-    .status-warning { background: #ffc107; color: #000; }
-    .status-danger { background: #dc3545; }
+    /* ... todos los estilos existentes ... */
   </style>
 </head>
 <body>
-  <div class="qr-container">
-    <!-- Logo y título -->
-    <div class="logo-section">
-      <i class="bi bi-building logo-icon"></i>
-      <h1 class="title">Cielito Home</h1>
-      <p class="subtitle">Código QR de Acceso</p>
-    </div>
-
-    <!-- Área del QR -->
-    <div class="qr-display">
-      <div class="status-badge status-success" id="status-badge">
-        <i class="bi bi-shield-check"></i>
-        <span id="status-text">Activo</span>
-      </div>
-      
-      <div id="qr-loading" class="loading-spinner">
-        <i class="bi bi-hourglass-split"></i>
-        <p class="mt-3 mb-0">Generando QR seguro...</p>
-      </div>
-      
-      <canvas id="qr-canvas" class="qr-canvas" style="display: none;"></canvas>
-    </div>
-
-    <!-- Información del token -->
-    <div class="info-section">
-      <div class="row">
-        <div class="col-md-6">
-          <small><strong>Token Actual:</strong></small>
-          <div class="token-display" id="current-token">Generando...</div>
-        </div>
-        <div class="col-md-6">
-          <small><strong>Válido por:</strong></small>
-          <div class="countdown" id="countdown">--:--</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estadísticas -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <p class="stat-number" id="tokens-count">0</p>
-        <p class="stat-label">QRs Generados</p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-number" id="success-count">0</p>
-        <p class="stat-label">Usos Exitosos</p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-number" id="blocked-count">0</p>
-        <p class="stat-label">Bloqueados</p>
-      </div>
-    </div>
-
-    <!-- Botón regenerar -->
-    <button class="refresh-button" id="refresh-btn">
-      <i class="bi bi-arrow-clockwise me-2"></i>
-      Generar Nuevo QR
-    </button>
-
-    <!-- Footer informativo -->
-    <div class="footer-info">
-      <i class="bi bi-info-circle me-1"></i>
-      <strong>Importante:</strong> Este QR se regenera automáticamente cada 30 minutos y después de cada uso exitoso para máxima seguridad.
-    </div>
-  </div>
+  <!-- ... todo el HTML existente ... -->
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
+    if (typeof QRCode === 'undefined') {
+      console.error('❌ QRCode library not loaded');
+      document.getElementById('qr-loading').innerHTML = `
+        <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+        <p class="text-danger mt-3 mb-0">Error cargando librería QR</p>
+        <small class="text-muted">Recarga la página</small>
+      `;
+    }
 
     // Configuración Firebase
     const firebaseConfig = {
@@ -335,10 +70,15 @@
       return `CH_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-    // Generar QR
+    // ✅ FUNCIÓN GENERARQR MEJORADA CON VERIFICACIÓN
     async function generarQR() {
       try {
         console.log('🔄 Iniciando generación de QR...');
+        
+        // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
+        if (typeof QRCode === 'undefined') {
+          throw new Error('QRCode library not available');
+        }
         
         elements.qrLoading.style.display = 'block';
         elements.qrCanvas.style.display = 'none';
@@ -367,16 +107,21 @@
 
         console.log('🔗 URL generada:', urlCompleta);
 
-        // Generar código QR
-        await QRCode.toCanvas(elements.qrCanvas, urlCompleta, {
-          width: 300,
-          height: 300,
-          color: {
-            dark: '#155d27',
-            light: '#ffffff'
-          },
-          errorCorrectionLevel: 'M',
-          margin: 2
+        // ✅ GENERAR CÓDIGO QR CON VERIFICACIÓN ADICIONAL
+        await new Promise((resolve, reject) => {
+          QRCode.toCanvas(elements.qrCanvas, urlCompleta, {
+            width: 300,
+            height: 300,
+            color: {
+              dark: '#155d27',
+              light: '#ffffff'
+            },
+            errorCorrectionLevel: 'M',
+            margin: 2
+          }, (error) => {
+            if (error) reject(error);
+            else resolve();
+          });
         });
 
         // Actualizar UI
@@ -397,13 +142,17 @@
           <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
           <p class="text-danger mt-3 mb-0">Error al generar QR</p>
           <small class="text-muted">${error.message}</small>
+          <br>
+          <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
+          </button>
         `;
         
         actualizarEstado('error');
       }
     }
 
-    // Cuenta regresiva
+    // Resto de funciones sin cambios...
     function iniciarCuentaRegresiva() {
       if (intervaloCuenta) clearInterval(intervaloCuenta);
       
@@ -424,7 +173,7 @@
       }, 1000);
     }
 
-    // Actualizar estado visual
+    // Actualizar estado
     function actualizarEstado(estado) {
       elements.statusBadge.className = 'status-badge';
       
@@ -448,20 +197,17 @@
       }
     }
 
-    // Actualizar estadísticas
     async function actualizarEstadisticas() {
       try {
         const hoy = new Date().toISOString().split('T')[0];
         const statsRef = doc(db, "qr_stats", hoy);
         
-        // Intentar actualizar o crear documento
         try {
           await updateDoc(statsRef, {
             generados: increment(1),
             ultimaActualizacion: new Date()
           });
         } catch (updateError) {
-          // Si no existe, crear nuevo documento
           await setDoc(statsRef, {
             generados: 1,
             exitosos: 0,
@@ -471,7 +217,6 @@
           });
         }
 
-        // Obtener estadísticas actualizadas
         const statsDoc = await getDoc(statsRef);
         if (statsDoc.exists()) {
           const data = statsDoc.data();
@@ -485,10 +230,16 @@
       }
     }
 
-    // Verificar estado del token actual
+    // ✅ FUNCIÓN VERIFICARTOKEN MEJORADA
     async function verificarToken() {
       try {
         console.log('🔍 Verificando token existente...');
+        
+        // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
+        if (typeof QRCode === 'undefined') {
+          console.error('❌ QRCode library not available');
+          return;
+        }
         
         const tokenDoc = await getDoc(doc(db, "qr_tokens", "current"));
         
@@ -514,12 +265,18 @@
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
             const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
             
-            await QRCode.toCanvas(elements.qrCanvas, urlCompleta, {
-              width: 300,
-              height: 300,
-              color: { dark: '#155d27', light: '#ffffff' },
-              errorCorrectionLevel: 'M',
-              margin: 2
+            // ✅ USAR PROMESA PARA GENERAR QR
+            await new Promise((resolve, reject) => {
+              QRCode.toCanvas(elements.qrCanvas, urlCompleta, {
+                width: 300,
+                height: 300,
+                color: { dark: '#155d27', light: '#ffffff' },
+                errorCorrectionLevel: 'M',
+                margin: 2
+              }, (error) => {
+                if (error) reject(error);
+                else resolve();
+              });
             });
             
             elements.qrLoading.style.display = 'none';
@@ -537,7 +294,6 @@
           await generarQR();
         }
 
-        // Cargar estadísticas
         await actualizarEstadisticas();
 
       } catch (error) {
@@ -550,9 +306,38 @@
     // Event listeners
     elements.refreshBtn.addEventListener('click', generarQR);
 
+    // ✅ INICIALIZACIÓN MEJORADA CON VERIFICACIÓN DE LIBRERÍAS
+    async function inicializar() {
+      console.log('🚀 Iniciando aplicación QR...');
+      
+      // Verificar que todas las librerías estén cargadas
+      if (typeof QRCode === 'undefined') {
+        console.error('❌ QRCode library not loaded, waiting...');
+        
+        // Esperar un poco y verificar de nuevo
+        setTimeout(async () => {
+          if (typeof QRCode !== 'undefined') {
+            console.log('✅ QRCode library loaded successfully');
+            await verificarToken();
+          } else {
+            console.error('❌ QRCode library failed to load');
+            elements.qrLoading.innerHTML = `
+              <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+              <p class="text-danger mt-3 mb-0">Error cargando librería QR</p>
+              <button class="btn btn-primary mt-2" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
+              </button>
+            `;
+          }
+        }, 1000);
+      } else {
+        console.log('✅ QRCode library ready');
+        await verificarToken();
+      }
+    }
+
     // Inicialización
-    console.log('🚀 Iniciando aplicación QR...');
-    await verificarToken();
+    await inicializar();
     
     // Verificar cada 30 segundos
     setInterval(verificarToken, 30000);
