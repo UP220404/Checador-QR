@@ -410,7 +410,7 @@
     let intervaloCuenta = null;
     let modoActual = 'detectando';
     let ultimaGeneracion = 0;
-    let yaInicializado = false; // ✅ PREVENIR MÚLTIPLES INICIALIZACIONES
+    let yaInicializado = false;
 
     // Elementos DOM
     const elements = {
@@ -502,7 +502,41 @@
       return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-    // ✅ FUNCIÓN GENERARQR - SIN REGENERACIONES AUTOMÁTICAS INNECESARIAS
+    // ✅ FUNCIÓN MANEJO DE ERRORES DE FIREBASE
+    function manejarErroresFirebase() {
+      window.addEventListener('unhandledrejection', event => {
+        const error = event.reason;
+        
+        if (error?.code?.includes('unavailable') || 
+            error?.message?.includes('QUIC') || 
+            error?.message?.includes('WebChannel') ||
+            error?.message?.includes('Failed to fetch')) {
+          
+          console.warn('⚠️ Error de conexión Firebase detectado, reintentando...');
+          
+          // Mostrar mensaje temporal al usuario
+          if (elements.statusText) {
+            const estadoAnterior = elements.statusText.innerHTML;
+            elements.statusText.innerHTML = '<i class="bi bi-wifi me-1"></i>Reconectando...';
+            
+            // Restaurar después de 3 segundos
+            setTimeout(() => {
+              elements.statusText.innerHTML = estadoAnterior;
+            }, 3000);
+          }
+          
+          // Reintentar operación después de 2 segundos
+          setTimeout(() => {
+            verificarToken();
+          }, 2000);
+          
+          // Prevenir que el error se propague
+          event.preventDefault();
+        }
+      });
+    }
+
+    // ✅ FUNCIÓN GENERARQR - COMPLETAMENTE CONTROLADA
     async function generarQR(forzarPorUsuario = false) {
       try {
         console.log('🔄 Iniciando generación de QR...', { forzarPorUsuario });
@@ -522,9 +556,9 @@
           return;
         }
         
-        // ✅ EVITAR REGENERACIONES AUTOMÁTICAS INNECESARIAS
+        // ✅ EVITAR REGENERACIONES INNECESARIAS
         const ahora = Date.now();
-        if (!forzarPorUsuario && (ahora - ultimaGeneracion) < 15000) { // Mínimo 15 segundos entre regeneraciones automáticas
+        if (!forzarPorUsuario && (ahora - ultimaGeneracion) < 15000) {
           console.log('🚫 Regeneración muy reciente, omitiendo...');
           return;
         }
@@ -627,7 +661,7 @@
           // ✅ SOLO AUTO-REGENERAR EN MODO DINÁMICO
           if (modo.tipo === 'dinamico') {
             console.log('🔄 Token expirado en modo dinámico, regenerando...');
-            setTimeout(() => generarQR(false), 3000); // Regeneración automática después de 3 segundos
+            setTimeout(() => generarQR(false), 3000);
           }
           return;
         }
@@ -706,8 +740,8 @@
       }
     }
 
-    // ✅ FUNCIÓN VERIFICARTOKEN - SIN REGENERACIONES INNECESARIAS
-    async function verificarToken() {
+    // ✅ FUNCIÓN VERIFICARTOKEN CON REINTENTOS
+    async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
         
@@ -746,11 +780,11 @@
           console.log('🔵 Usado:', data.usado);
           console.log('🎯 Modo token:', modoToken, '/ Modo actual:', modo.tipo);
           
-          // ✅ LÓGICA DE REGENERACIÓN MÁS INTELIGENTE
+          // ✅ LÓGICA DE REGENERACIÓN INTELIGENTE
           const debeRegenerar = 
             data.usado || 
             ahora > expiracion ||
-            (modoToken !== modo.tipo); // Solo por cambio de modo
+            (modoToken !== modo.tipo);
           
           if (debeRegenerar) {
             console.log('🔄 Token necesita regeneración:', {
@@ -758,7 +792,7 @@
               expirado: ahora > expiracion,
               cambioModo: modoToken !== modo.tipo
             });
-            await generarQR(false); // Regeneración automática
+            await generarQR(false);
           } else {
             console.log('✅ Token válido, reutilizando...');
             tokenActual = data.token;
@@ -789,7 +823,7 @@
           }
         } else {
           console.log('📝 No hay token, generando nuevo...');
-          await generarQR(true); // Primera generación, sí incrementar contador
+          await generarQR(true);
         }
 
         // ✅ CARGAR ESTADÍSTICAS SIN INCREMENTAR
@@ -805,6 +839,24 @@
 
       } catch (error) {
         console.error('❌ Error verificando token:', error);
+        
+        // ✅ REINTENTAR EN CASO DE ERROR DE CONEXIÓN
+        if (reintentos > 0 && 
+            (error.code === 'unavailable' || 
+             error.message?.includes('Failed to fetch') ||
+             error.message?.includes('network') ||
+             error.message?.includes('QUIC'))) {
+          
+          console.log(`🔄 Reintentando verificación (${reintentos} intentos restantes)...`);
+          
+          // Esperar un poco antes de reintentar
+          setTimeout(() => {
+            verificarToken(reintentos - 1);
+          }, 2000);
+          
+          return;
+        }
+        
         console.log('🔄 Intentando generar nuevo QR...');
         await generarQR(true);
       }
@@ -827,6 +879,9 @@
       
       yaInicializado = true;
       console.log('🚀 Iniciando sistema QR inteligente...');
+      
+      // ✅ ACTIVAR MANEJO DE ERRORES
+      manejarErroresFirebase();
       
       if (typeof QRious === 'undefined') {
         console.error('❌ QRious library not loaded, waiting...');
@@ -853,17 +908,13 @@
       }
     }
 
-    // ✅ CONFIGURAR INTERVALOS MÁS CONTROLADOS
+    // ✅ CONFIGURAR INTERVALOS EFICIENTES Y CONTROLADOS
     function configurarIntervalos() {
-      // ✅ VERIFICAR ESTADO CADA 30 SEGUNDOS (NO REGENERAR)
+      // Verificar estado cada 30 segundos
       setInterval(() => {
         const modo = detectarModo();
-        actualizarIndicadorModo();
-        
-        // Solo verificar si hay cambios importantes
-        if (modo.tipo !== modoActual) {
-          console.log('🔄 Cambio de modo detectado, verificando token...');
-          verificarToken();
+        if (modo.tipo !== 'inactivo') {
+          actualizarIndicadorModo();
         }
       }, 30000);
       
@@ -871,19 +922,34 @@
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
-        const minutos = ahora.getMinutes();
+        const minutos = ahora.getMinutos();
         const segundos = ahora.getSeconds();
         
-        // Solo regenerar en horario dinámico, cada 10 minutos exactos, y solo una vez por minuto
+        // Solo regenerar en horario dinámico, cada 10 minutos exactos
         if (hora >= 7 && hora < 10 && minutos % 10 === 0 && segundos < 5) {
           console.log('🔄 Regeneración automática programada (modo dinámico)');
-          generarQR(false); // Regeneración automática
+          generarQR(false);
         }
-      }, 5000); // Verificar cada 5 segundos para capturar el momento exacto
+      }, 5000);
 
-      // ✅ ACTUALIZAR MODO CADA MINUTO
+      // ✅ VERIFICACIÓN DE CAMBIO DE MODO
       setInterval(() => {
-        actualizarIndicadorModo();
+        const ahora = new Date();
+        const hora = ahora.getHours();
+        const minutos = ahora.getMinutos();
+        
+        if (minutos === 0) {
+          if (hora === 7) {
+            console.log('🌅 Cambiando a modo dinámico (7 AM)');
+            generarQR(false);
+          } else if (hora === 10) {
+            console.log('🔒 Cambiando a modo estático (10 AM)');
+            generarQR(false);
+          } else if (hora === 18) {
+            console.log('🌙 Sistema inactivo (6 PM)');
+            actualizarIndicadorModo();
+          }
+        }
       }, 60000);
     }
 
