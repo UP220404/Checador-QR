@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   
-
   <style>
   :root {
     --verde: #155d27;
@@ -72,15 +71,9 @@
     color: white;
   }
 
+  /* ✅ LOGO SECTION SIN ÍCONO GRANDE */
   .logo-section {
-    margin-bottom: auto;
-  }
-
-  .logo-icon {
-    font-size: 3rem;
-    color: var(--verde);
     margin-bottom: 1rem;
-    display: block;
   }
 
   .title {
@@ -95,14 +88,14 @@
     color: #6c757d;
     font-size: 1rem;
     font-weight: 500;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
   .qr-display {
     background: #f8f9fa;
     border-radius: 20px;
     padding: 1.5rem;
-    margin: 1.5rem 0;
+    margin: 1rem 0;
     border: 3px dashed var(--verde);
     position: relative;
     min-height: 320px;
@@ -177,7 +170,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     width: 100%;
-    margin-top: auto;
+    margin-top: 1rem;
   }
 
   .refresh-button:hover:not(:disabled) {
@@ -193,7 +186,7 @@
 
   /* ✅ PANEL DE INFORMACIÓN */
   .info-title {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 700;
     margin-bottom: 1.5rem;
     text-align: center;
@@ -203,13 +196,13 @@
     background: rgba(255,255,255,0.15);
     border-radius: 15px;
     padding: 1.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     border: 1px solid rgba(255,255,255,0.2);
   }
 
   .token-display {
     font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     background: rgba(255,255,255,0.9);
     color: #333;
     padding: 0.8rem;
@@ -220,7 +213,7 @@
   }
 
   .countdown {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: white;
     text-align: center;
@@ -231,7 +224,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
-    margin: 2rem 0;
+    margin: 1.5rem 0;
   }
 
   .stat-card {
@@ -243,24 +236,24 @@
   }
 
   .stat-number {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: white;
     margin: 0;
   }
 
   .stat-label {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: rgba(255,255,255,0.8);
     margin: 0;
   }
 
   .footer-info {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: rgba(255,255,255,0.8);
-    line-height: 1.5;
+    line-height: 1.4;
     text-align: center;
-    margin-top: auto;
+    margin-top: 1rem;
   }
 
   .status-success { background: #198754; }
@@ -312,15 +305,13 @@
   }
 </style>
 
-
 </head>
 <body>
   <div class="main-container">
     <!-- ✅ SECCIÓN QR (IZQUIERDA) -->
     <div class="qr-section">
-      <!-- Logo y título -->
+      <!-- Logo y título sin ícono grande -->
       <div class="logo-section">
-        <i class="bi bi-building logo-icon"></i>
         <h1 class="title">Cielito Home</h1>
         <p class="subtitle">Código QR de Acceso Inteligente</p>
       </div>
