@@ -343,6 +343,7 @@
     let tiempoExpiracion = null;
     let intervaloCuenta = null;
     let modoActual = 'detectando';
+    let ultimaGeneracion = 0; // Para controlar regeneraciones automáticas
 
     // Elementos DOM
     const elements = {
@@ -407,13 +408,19 @@
       elements.modeIndicator.className = `mode-indicator ${modo.clase}`;
       elements.modeText.innerHTML = `<i class="${modo.icono} me-2"></i>${modo.descripcion}`;
       
-      // Actualizar footer según el modo
+      // ✅ CONTROLAR BOTÓN Y TEXTO SEGÚN MODO
       if (modo.tipo === 'inactivo') {
         elements.footerText.textContent = 'Sistema inactivo • Horario: 7:00 AM - 6:00 PM';
+        elements.refreshBtn.disabled = true;
+        elements.refreshBtn.innerHTML = '<i class="bi bi-moon me-2"></i>Sistema inactivo';
       } else if (modo.tipo === 'dinamico') {
         elements.footerText.textContent = 'Horario de entrada • QR se regenera cada 10 minutos para máxima seguridad';
-      } else {
+        elements.refreshBtn.disabled = false;
+        elements.refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Generar Nuevo QR';
+      } else { // estático
         elements.footerText.textContent = 'Horario estable • QR fijo para registros de salida';
+        elements.refreshBtn.disabled = true;
+        elements.refreshBtn.innerHTML = '<i class="bi bi-shield-lock me-2"></i>QR Fijo Activo';
       }
       
       return modo;
@@ -428,8 +435,8 @@
       return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-    // ✅ FUNCIÓN GENERARQR CON LÓGICA HORARIA INTELIGENTE
-    async function generarQR() {
+    // ✅ FUNCIÓN GENERARQR MEJORADA - SIN REGENERACIONES INNECESARIAS
+    async function generarQR(forzar = false) {
       try {
         console.log('🔄 Iniciando generación de QR inteligente...');
         
@@ -448,6 +455,13 @@
           return;
         }
         
+        // ✅ EVITAR REGENERACIONES INNECESARIAS
+        const ahora = Date.now();
+        if (!forzar && modo.tipo === 'dinamico' && (ahora - ultimaGeneracion) < 5000) {
+          console.log('🚫 Regeneración demasiado pronto, omitiendo...');
+          return;
+        }
+        
         // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
         if (typeof QRious === 'undefined') {
           throw new Error('QRCode library not available');
@@ -460,6 +474,7 @@
         // ✅ GENERAR TOKEN CON LÓGICA HORARIA
         tokenActual = generarTokenSeguro();
         tiempoExpiracion = Date.now() + modo.duracion;
+        ultimaGeneracion = ahora; // ✅ MARCAR TIEMPO DE GENERACIÓN
 
         console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
         console.log(`⏰ Válido por: ${modo.duracion / 60000} minutos`);
@@ -500,7 +515,11 @@
         
         actualizarEstado('activo');
         iniciarCuentaRegresiva();
-        await actualizarEstadisticas();
+        
+        // ✅ SOLO INCREMENTAR CONTADOR SI ES GENERACIÓN MANUAL O PRIMERA VEZ
+        if (forzar || ultimaGeneracion === ahora) {
+          await actualizarEstadisticas();
+        }
 
         console.log(`✅ QR generado exitosamente en modo ${modo.tipo}`);
 
@@ -521,36 +540,37 @@
       }
     }
 
-    // Cuenta regresiva
+    // ✅ CUENTA REGRESIVA MEJORADA - SIN MOSTRAR HORAS EN MODO ESTÁTICO
     function iniciarCuentaRegresiva() {
       if (intervaloCuenta) clearInterval(intervaloCuenta);
       
       intervaloCuenta = setInterval(() => {
         const ahora = Date.now();
         const tiempoRestante = tiempoExpiracion - ahora;
+        const modo = detectarModo();
         
         if (tiempoRestante <= 0) {
           clearInterval(intervaloCuenta);
           actualizarEstado('expirado');
           elements.countdown.textContent = 'Expirado';
           
-          // Auto-regenerar si estamos en horario laboral
-          const modo = detectarModo();
-          if (modo.tipo !== 'inactivo') {
-            console.log('🔄 Token expirado, regenerando automáticamente...');
-            setTimeout(generarQR, 2000);
+          // Auto-regenerar SOLO en modo dinámico
+          if (modo.tipo === 'dinamico') {
+            console.log('🔄 Token expirado en modo dinámico, regenerando...');
+            setTimeout(() => generarQR(false), 2000);
           }
           return;
         }
         
-        const horas = Math.floor(tiempoRestante / 3600000);
-        const minutos = Math.floor((tiempoRestante % 3600000) / 60000);
-        const segundos = Math.floor((tiempoRestante % 60000) / 1000);
-        
-        if (horas > 0) {
-          elements.countdown.textContent = `${horas}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
-        } else {
+        // ✅ MOSTRAR DIFERENTE SEGÚN MODO
+        if (modo.tipo === 'dinamico') {
+          // Modo dinámico: mostrar minutos y segundos
+          const minutos = Math.floor(tiempoRestante / 60000);
+          const segundos = Math.floor((tiempoRestante % 60000) / 1000);
           elements.countdown.textContent = `${minutos}:${segundos.toString().padStart(2, '0')}`;
+        } else if (modo.tipo === 'estatico') {
+          // Modo estático: solo mostrar "Activo" sin cuenta regresiva
+          elements.countdown.textContent = 'QR Fijo Activo';
         }
       }, 1000);
     }
@@ -616,7 +636,7 @@
       }
     }
 
-    // ✅ FUNCIÓN VERIFICARTOKEN CON LÓGICA HORARIA
+    // ✅ FUNCIÓN VERIFICARTOKEN MEJORADA - SIN REGENERACIONES INNECESARIAS
     async function verificarToken() {
       try {
         console.log('🔍 Verificando token existente...');
@@ -656,12 +676,13 @@
           console.log('🔵 Usado:', data.usado);
           console.log('🎯 Modo token:', modoToken, '/ Modo actual:', modo.tipo);
           
-          // ✅ LÓGICA DE REGENERACIÓN INTELIGENTE
+          // ✅ LÓGICA DE REGENERACIÓN MÁS INTELIGENTE
           const debeRegenerar = 
             data.usado || 
             ahora > expiracion ||
             (modoToken !== modo.tipo) || // Cambio de modo
-            (modo.tipo === 'dinamico' && (ahora.getTime() - data.creado.toDate().getTime()) > 10 * 60 * 1000); // Más de 10 min en modo dinámico
+            (modo.tipo === 'dinamico' && modoToken === 'dinamico' && 
+             (ahora.getTime() - data.creado.toDate().getTime()) > 10 * 60 * 1000); // Más de 10 min en modo dinámico
           
           if (debeRegenerar) {
             console.log('🔄 Token necesita regeneración:', {
@@ -670,7 +691,7 @@
               cambioModo: modoToken !== modo.tipo,
               tiempoExcedido: modo.tipo === 'dinamico' && (ahora.getTime() - data.creado.toDate().getTime()) > 10 * 60 * 1000
             });
-            await generarQR();
+            await generarQR(false); // No incrementar contador en regeneración automática
           } else {
             console.log('✅ Token válido, reutilizando...');
             tokenActual = data.token;
@@ -701,7 +722,7 @@
           }
         } else {
           console.log('📝 No hay token, generando nuevo...');
-          await generarQR();
+          await generarQR(true); // Primera generación, sí incrementar contador
         }
 
         await actualizarEstadisticas();
@@ -709,12 +730,17 @@
       } catch (error) {
         console.error('❌ Error verificando token:', error);
         console.log('🔄 Intentando generar nuevo QR...');
-        await generarQR();
+        await generarQR(true);
       }
     }
 
-    // Event listeners
-    elements.refreshBtn.addEventListener('click', generarQR);
+    // ✅ EVENT LISTENER MEJORADO - SOLO PERMITIR CLICKS EN MODO DINÁMICO
+    elements.refreshBtn.addEventListener('click', () => {
+      const modo = detectarModo();
+      if (modo.tipo === 'dinamico') {
+        generarQR(true); // Forzar generación y incrementar contador
+      }
+    });
 
     // ✅ INICIALIZACIÓN CON GESTIÓN INTELIGENTE DE INTERVALOS
     async function inicializar() {
@@ -745,7 +771,7 @@
       }
     }
 
-    // ✅ CONFIGURAR INTERVALOS INTELIGENTES SEGÚN HORARIO
+    // ✅ CONFIGURAR INTERVALOS MÁS EFICIENTES
     function configurarIntervalos() {
       // Verificar estado cada 30 segundos
       setInterval(() => {
@@ -755,39 +781,38 @@
         }
       }, 30000);
       
-      // ✅ REGENERACIÓN AUTOMÁTICA CADA 10 MINUTOS EN MODO DINÁMICO
+      // ✅ REGENERACIÓN AUTOMÁTICA CADA 10 MINUTOS SOLO EN MODO DINÁMICO
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
         const minutos = ahora.getMinutes();
         
         // Solo regenerar en horario dinámico y cada 10 minutos exactos
-        if (hora >= 7 && hora < 10 && minutos % 10 === 0 && ahora.getSeconds() === 0) {
+        if (hora >= 7 && hora < 10 && minutos % 10 === 0 && ahora.getSeconds() < 5) {
           console.log('🔄 Regeneración automática programada (modo dinámico)');
-          generarQR();
+          generarQR(false); // Regeneración automática, no incrementar contador
         }
-      }, 1000); // Verificar cada segundo para capturar el momento exacto
+      }, 1000);
 
-      // ✅ VERIFICACIÓN DE CAMBIO DE MODO CADA HORA
+      // ✅ VERIFICACIÓN DE CAMBIO DE MODO
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
         const minutos = ahora.getMinutes();
         
-        // Momentos clave de cambio de modo
-        if (minutos === 0) { // Al cambio de hora
+        if (minutos === 0 && ahora.getSeconds() < 5) {
           if (hora === 7) {
             console.log('🌅 Cambiando a modo dinámico (7 AM)');
-            generarQR();
+            generarQR(false);
           } else if (hora === 10) {
             console.log('🔒 Cambiando a modo estático (10 AM)');
-            generarQR();
+            generarQR(false);
           } else if (hora === 18) {
             console.log('🌙 Sistema inactivo (6 PM)');
             actualizarIndicadorModo();
           }
         }
-      }, 60000); // Verificar cada minuto
+      }, 1000);
 
       // ✅ ACTUALIZAR INDICADOR DE MODO CADA MINUTO
       setInterval(() => {
@@ -799,6 +824,6 @@
 
     // Inicialización
     await inicializar();
-  </script>
+</script>
 </body>
 </html>
