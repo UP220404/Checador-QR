@@ -32,7 +32,7 @@ const firebaseConfig = {
 
 // Constantes de configuración
 const CONFIG = {
-  MODO_PRUEBAS: true, // Cambiar a true para pruebas 
+  MODO_PRUEBAS: false, // Cambiar a true para pruebas 
   HORA_LIMITE_ENTRADA: { hours: 8, minutes: 10 }, // 8:10 AM
   HORA_LIMITE_SALIDA_BECARIO: { hours: 13, minutes: 0 }, // 1:00 PM
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
