@@ -7,8 +7,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- ✅ LIBRERÍA QRCode CORREGIDA -->
-  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>  <style>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <style>
     :root {
       --verde: #155d27;
       --verde-claro: #e6f0e9;
@@ -192,6 +192,28 @@
       line-height: 1.5;
     }
 
+    .mode-indicator {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 10px;
+      padding: 0.8rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .mode-dinamico {
+      background: rgba(255, 87, 34, 0.1);
+      border-color: rgba(255, 87, 34, 0.3);
+      color: #d84315;
+    }
+
+    .mode-estatico {
+      background: rgba(76, 175, 80, 0.1);
+      border-color: rgba(76, 175, 80, 0.3);
+      color: #388e3c;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .qr-container {
@@ -222,6 +244,7 @@
     .status-success { background: #198754; }
     .status-warning { background: #ffc107; color: #000; }
     .status-danger { background: #dc3545; }
+    .status-night { background: #6c757d; }
   </style>
 </head>
 <body>
@@ -230,22 +253,28 @@
     <div class="logo-section">
       <i class="bi bi-building logo-icon"></i>
       <h1 class="title">Cielito Home</h1>
-      <p class="subtitle">Código QR de Acceso</p>
+      <p class="subtitle">Código QR de Acceso Inteligente</p>
     </div>
 
     <!-- Área del QR -->
     <div class="qr-display">
       <div class="status-badge status-success" id="status-badge">
         <i class="bi bi-shield-check"></i>
-        <span id="status-text">Activo</span>
+        <span id="status-text">Iniciando...</span>
       </div>
       
       <div id="qr-loading" class="loading-spinner">
         <i class="bi bi-hourglass-split"></i>
-        <p class="mt-3 mb-0">Generando QR seguro...</p>
+        <p class="mt-3 mb-0">Generando QR inteligente...</p>
       </div>
       
       <canvas id="qr-canvas" class="qr-canvas" style="display: none;"></canvas>
+    </div>
+
+    <!-- Indicador de modo -->
+    <div id="mode-indicator" class="mode-indicator">
+      <i class="bi bi-info-circle me-2"></i>
+      <span id="mode-text">Detectando horario...</span>
     </div>
 
     <!-- Información del token -->
@@ -286,8 +315,9 @@
 
     <!-- Footer informativo -->
     <div class="footer-info">
-      <i class="bi bi-info-circle me-1"></i>
-      <strong>Importante:</strong> Este QR se regenera automáticamente cada 30 minutos y después de cada uso exitoso para máxima seguridad.
+      <i class="bi bi-lightbulb me-1"></i>
+      <strong>Sistema Inteligente:</strong> 
+      <span id="footer-text">QR dinámico cada 10min (7-10 AM) • QR estático (10 AM-6 PM) • Inactivo (6 PM-7 AM)</span>
     </div>
   </div>
 
@@ -312,6 +342,7 @@
     let tokenActual = null;
     let tiempoExpiracion = null;
     let intervaloCuenta = null;
+    let modoActual = 'detectando';
 
     // Elementos DOM
     const elements = {
@@ -324,21 +355,98 @@
       refreshBtn: document.getElementById('refresh-btn'),
       tokensCount: document.getElementById('tokens-count'),
       successCount: document.getElementById('success-count'),
-      blockedCount: document.getElementById('blocked-count')
+      blockedCount: document.getElementById('blocked-count'),
+      modeIndicator: document.getElementById('mode-indicator'),
+      modeText: document.getElementById('mode-text'),
+      footerText: document.getElementById('footer-text')
     };
+
+    // ✅ FUNCIÓN PARA DETECTAR MODO SEGÚN HORARIO
+    function detectarModo() {
+      const ahora = new Date();
+      const hora = ahora.getHours();
+      const minutos = ahora.getMinutes();
+      
+      if (hora < 7 || hora >= 18) {
+        return {
+          tipo: 'inactivo',
+          duracion: null,
+          descripcion: 'Fuera de horario laboral',
+          icono: 'bi-moon',
+          clase: 'status-night'
+        };
+      } else if (hora < 10 || (hora === 10 && minutos === 0)) {
+        return {
+          tipo: 'dinamico',
+          duracion: 10 * 60 * 1000, // 10 minutos
+          descripcion: 'Modo dinámico - QR cada 10 minutos',
+          icono: 'bi-arrow-repeat',
+          clase: 'mode-dinamico'
+        };
+      } else {
+        // Calcular tiempo hasta las 6 PM
+        const finLaboral = new Date();
+        finLaboral.setHours(18, 0, 0, 0);
+        const tiempoRestante = finLaboral.getTime() - ahora.getTime();
+        
+        return {
+          tipo: 'estatico',
+          duracion: tiempoRestante,
+          descripcion: 'Modo estático - QR fijo hasta 6 PM',
+          icono: 'bi-shield-lock',
+          clase: 'mode-estatico'
+        };
+      }
+    }
+
+    // ✅ ACTUALIZAR INDICADOR DE MODO
+    function actualizarIndicadorModo() {
+      const modo = detectarModo();
+      modoActual = modo.tipo;
+      
+      elements.modeIndicator.className = `mode-indicator ${modo.clase}`;
+      elements.modeText.innerHTML = `<i class="${modo.icono} me-2"></i>${modo.descripcion}`;
+      
+      // Actualizar footer según el modo
+      if (modo.tipo === 'inactivo') {
+        elements.footerText.textContent = 'Sistema inactivo • Horario: 7:00 AM - 6:00 PM';
+      } else if (modo.tipo === 'dinamico') {
+        elements.footerText.textContent = 'Horario de entrada • QR se regenera cada 10 minutos para máxima seguridad';
+      } else {
+        elements.footerText.textContent = 'Horario estable • QR fijo para registros de salida';
+      }
+      
+      return modo;
+    }
 
     // Generar token único
     function generarTokenSeguro() {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 15);
       const extra = Math.random().toString(36).substring(2, 8);
-      return `CH_${timestamp}_${random}_${extra}`.toUpperCase();
+      const modo = modoActual.charAt(0).toUpperCase(); // D, E, I
+      return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-    // ✅ FUNCIÓN GENERARQR MEJORADA CON VERIFICACIÓN
+    // ✅ FUNCIÓN GENERARQR CON LÓGICA HORARIA INTELIGENTE
     async function generarQR() {
       try {
-        console.log('🔄 Iniciando generación de QR...');
+        console.log('🔄 Iniciando generación de QR inteligente...');
+        
+        const modo = actualizarIndicadorModo();
+        
+        // ✅ VERIFICAR HORARIO LABORAL
+        if (modo.tipo === 'inactivo') {
+          elements.qrLoading.innerHTML = `
+            <i class="bi bi-moon text-warning" style="font-size: 3rem;"></i>
+            <p class="text-warning mt-3 mb-0">Sistema inactivo</p>
+            <small class="text-muted">Horario: 7:00 AM - 6:00 PM</small>
+          `;
+          elements.qrCanvas.style.display = 'none';
+          actualizarEstado('fuera-horario');
+          elements.countdown.textContent = 'Inactivo';
+          return;
+        }
         
         // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
         if (typeof QRious === 'undefined') {
@@ -349,19 +457,23 @@
         elements.qrCanvas.style.display = 'none';
         actualizarEstado('generando');
 
-        // Generar nuevo token
+        // ✅ GENERAR TOKEN CON LÓGICA HORARIA
         tokenActual = generarTokenSeguro();
-        tiempoExpiracion = Date.now() + (30 * 60 * 1000); // 30 minutos
+        tiempoExpiracion = Date.now() + modo.duracion;
 
-        console.log('📝 Token generado:', tokenActual);
+        console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
+        console.log(`⏰ Válido por: ${modo.duracion / 60000} minutos`);
 
-        // Guardar en Firebase
+        // Guardar en Firebase con información del modo
         await setDoc(doc(db, "qr_tokens", "current"), {
           token: tokenActual,
           expiracion: new Date(tiempoExpiracion),
           creado: new Date(),
           usado: false,
-          activo: true
+          activo: true,
+          modo: modo.tipo,
+          duracionMinutos: modo.duracion / 60000,
+          proximoCambio: new Date(tiempoExpiracion)
         });
 
         console.log('💾 Token guardado en Firebase');
@@ -372,13 +484,15 @@
 
         console.log('🔗 URL generada:', urlCompleta);
 
+        // Generar QR
         const qr = new QRious({
-        element: elements.qrCanvas,
-        value: urlCompleta,
-        size: 300,
-        foreground: '#155d27',
-        background: '#ffffff'
+          element: elements.qrCanvas,
+          value: urlCompleta,
+          size: 300,
+          foreground: '#155d27',
+          background: '#ffffff'
         });
+
         // Actualizar UI
         elements.currentToken.textContent = tokenActual;
         elements.qrLoading.style.display = 'none';
@@ -388,7 +502,7 @@
         iniciarCuentaRegresiva();
         await actualizarEstadisticas();
 
-        console.log('✅ QR generado exitosamente');
+        console.log(`✅ QR generado exitosamente en modo ${modo.tipo}`);
 
       } catch (error) {
         console.error('❌ Error generando QR:', error);
@@ -407,7 +521,7 @@
       }
     }
 
-    // Resto de funciones sin cambios...
+    // Cuenta regresiva
     function iniciarCuentaRegresiva() {
       if (intervaloCuenta) clearInterval(intervaloCuenta);
       
@@ -419,12 +533,25 @@
           clearInterval(intervaloCuenta);
           actualizarEstado('expirado');
           elements.countdown.textContent = 'Expirado';
+          
+          // Auto-regenerar si estamos en horario laboral
+          const modo = detectarModo();
+          if (modo.tipo !== 'inactivo') {
+            console.log('🔄 Token expirado, regenerando automáticamente...');
+            setTimeout(generarQR, 2000);
+          }
           return;
         }
         
-        const minutos = Math.floor(tiempoRestante / 60000);
+        const horas = Math.floor(tiempoRestante / 3600000);
+        const minutos = Math.floor((tiempoRestante % 3600000) / 60000);
         const segundos = Math.floor((tiempoRestante % 60000) / 1000);
-        elements.countdown.textContent = `${minutos}:${segundos.toString().padStart(2, '0')}`;
+        
+        if (horas > 0) {
+          elements.countdown.textContent = `${horas}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+        } else {
+          elements.countdown.textContent = `${minutos}:${segundos.toString().padStart(2, '0')}`;
+        }
       }, 1000);
     }
 
@@ -448,6 +575,10 @@
         case 'generando':
           elements.statusBadge.classList.add('status-warning');
           elements.statusText.innerHTML = '<i class="bi bi-hourglass me-1"></i>Generando';
+          break;
+        case 'fuera-horario':
+          elements.statusBadge.classList.add('status-night');
+          elements.statusText.innerHTML = '<i class="bi bi-moon me-1"></i>Inactivo';
           break;
       }
     }
@@ -485,10 +616,26 @@
       }
     }
 
-    // ✅ FUNCIÓN VERIFICARTOKEN MEJORADA
+    // ✅ FUNCIÓN VERIFICARTOKEN CON LÓGICA HORARIA
     async function verificarToken() {
       try {
         console.log('🔍 Verificando token existente...');
+        
+        const modo = actualizarIndicadorModo();
+        
+        // ✅ VERIFICAR HORARIO LABORAL PRIMERO
+        if (modo.tipo === 'inactivo') {
+          console.log('🌙 Fuera de horario laboral');
+          elements.qrLoading.innerHTML = `
+            <i class="bi bi-moon text-warning" style="font-size: 3rem;"></i>
+            <p class="text-warning mt-3 mb-0">Sistema inactivo</p>
+            <small class="text-muted">Horario: 7:00 AM - 6:00 PM</small>
+          `;
+          elements.qrCanvas.style.display = 'none';
+          actualizarEstado('fuera-horario');
+          elements.countdown.textContent = 'Inactivo';
+          return;
+        }
         
         // ✅ VERIFICAR QUE QRCODE ESTÉ DISPONIBLE
         if (typeof QRious === 'undefined') {
@@ -502,13 +649,27 @@
           const data = tokenDoc.data();
           const ahora = new Date();
           const expiracion = data.expiracion.toDate();
+          const modoToken = data.modo || 'dinamico';
           
           console.log('📄 Token encontrado:', data.token);
           console.log('⏰ Expira:', expiracion);
           console.log('🔵 Usado:', data.usado);
+          console.log('🎯 Modo token:', modoToken, '/ Modo actual:', modo.tipo);
           
-          if (data.usado || ahora > expiracion) {
-            console.log('🔄 Token expirado o usado, generando nuevo...');
+          // ✅ LÓGICA DE REGENERACIÓN INTELIGENTE
+          const debeRegenerar = 
+            data.usado || 
+            ahora > expiracion ||
+            (modoToken !== modo.tipo) || // Cambio de modo
+            (modo.tipo === 'dinamico' && (ahora.getTime() - data.creado.toDate().getTime()) > 10 * 60 * 1000); // Más de 10 min en modo dinámico
+          
+          if (debeRegenerar) {
+            console.log('🔄 Token necesita regeneración:', {
+              usado: data.usado,
+              expirado: ahora > expiracion,
+              cambioModo: modoToken !== modo.tipo,
+              tiempoExcedido: modo.tipo === 'dinamico' && (ahora.getTime() - data.creado.toDate().getTime()) > 10 * 60 * 1000
+            });
             await generarQR();
           } else {
             console.log('✅ Token válido, reutilizando...');
@@ -520,13 +681,12 @@
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
             const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
             
-           
             const qr = new QRious({
-            element: elements.qrCanvas,
-            value: urlCompleta,
-            size: 300,
-            foreground: '#155d27',
-            background: '#ffffff'
+              element: elements.qrCanvas,
+              value: urlCompleta,
+              size: 300,
+              foreground: '#155d27',
+              background: '#ffffff'
             });
 
             elements.qrLoading.style.display = 'none';
@@ -556,21 +716,19 @@
     // Event listeners
     elements.refreshBtn.addEventListener('click', generarQR);
 
-    // ✅ INICIALIZACIÓN MEJORADA CON VERIFICACIÓN DE LIBRERÍAS
+    // ✅ INICIALIZACIÓN CON GESTIÓN INTELIGENTE DE INTERVALOS
     async function inicializar() {
-      console.log('🚀 Iniciando aplicación QR...');
+      console.log('🚀 Iniciando sistema QR inteligente...');
       
-      // Verificar que todas las librerías estén cargadas
       if (typeof QRious === 'undefined') {
-        console.error('❌ QRCode library not loaded, waiting...');
-        
-        // Esperar un poco y verificar de nuevo
+        console.error('❌ QRious library not loaded, waiting...');
         setTimeout(async () => {
-          if (typeof QRCode !== 'undefined') {
-            console.log('✅ QRCode library loaded successfully');
+          if (typeof QRious !== 'undefined') {
+            console.log('✅ QRious library loaded successfully');
             await verificarToken();
+            configurarIntervalos();
           } else {
-            console.error('❌ QRCode library failed to load');
+            console.error('❌ QRious library failed to load');
             elements.qrLoading.innerHTML = `
               <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
               <p class="text-danger mt-3 mb-0">Error cargando librería QR</p>
@@ -581,19 +739,66 @@
           }
         }, 1000);
       } else {
-        console.log('✅ QRCode library ready');
+        console.log('✅ QRious library ready');
         await verificarToken();
+        configurarIntervalos();
       }
+    }
+
+    // ✅ CONFIGURAR INTERVALOS INTELIGENTES SEGÚN HORARIO
+    function configurarIntervalos() {
+      // Verificar estado cada 30 segundos
+      setInterval(() => {
+        const modo = detectarModo();
+        if (modo.tipo !== 'inactivo') {
+          verificarToken();
+        }
+      }, 30000);
+      
+      // ✅ REGENERACIÓN AUTOMÁTICA CADA 10 MINUTOS EN MODO DINÁMICO
+      setInterval(() => {
+        const ahora = new Date();
+        const hora = ahora.getHours();
+        const minutos = ahora.getMinutes();
+        
+        // Solo regenerar en horario dinámico y cada 10 minutos exactos
+        if (hora >= 7 && hora < 10 && minutos % 10 === 0 && ahora.getSeconds() === 0) {
+          console.log('🔄 Regeneración automática programada (modo dinámico)');
+          generarQR();
+        }
+      }, 1000); // Verificar cada segundo para capturar el momento exacto
+
+      // ✅ VERIFICACIÓN DE CAMBIO DE MODO CADA HORA
+      setInterval(() => {
+        const ahora = new Date();
+        const hora = ahora.getHours();
+        const minutos = ahora.getMinutes();
+        
+        // Momentos clave de cambio de modo
+        if (minutos === 0) { // Al cambio de hora
+          if (hora === 7) {
+            console.log('🌅 Cambiando a modo dinámico (7 AM)');
+            generarQR();
+          } else if (hora === 10) {
+            console.log('🔒 Cambiando a modo estático (10 AM)');
+            generarQR();
+          } else if (hora === 18) {
+            console.log('🌙 Sistema inactivo (6 PM)');
+            actualizarIndicadorModo();
+          }
+        }
+      }, 60000); // Verificar cada minuto
+
+      // ✅ ACTUALIZAR INDICADOR DE MODO CADA MINUTO
+      setInterval(() => {
+        if (modoActual !== 'inactivo') {
+          actualizarIndicadorModo();
+        }
+      }, 60000);
     }
 
     // Inicialización
     await inicializar();
-    
-    // Verificar cada 30 segundos
-    setInterval(verificarToken, 30000);
-    
-    // Auto-refresh cada 25 minutos (5 min antes de expirar)
-    setInterval(generarQR, 25 * 60 * 1000);
   </script>
 </body>
 </html>
