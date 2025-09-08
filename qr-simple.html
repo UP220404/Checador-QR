@@ -10,335 +10,306 @@
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   
   <style>
-  :root {
-    --verde: #155d27;
-    --verde-claro: #e6f0e9;
-    --dorado: #c1a35f;
-  }
-
-  body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, var(--verde) 0%, var(--dorado) 100%);
-    min-height: 100vh;
-    margin: 0;
-    color: white;
-    padding: 1rem;
-  }
-
-  /* ✅ LAYOUT HORIZONTAL - RECUADROS IGUALES */
-  .main-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    height: calc(100vh - 2rem);
-    align-items: stretch;
-  }
-
-  .qr-section, .info-section {
-    border-radius: 25px;
-    padding: 2rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 600px;
-  }
-
-  .qr-section {
-    background: white;
-    color: #333;
-    text-align: center;
-  }
-
-  .qr-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 6px;
-    background: linear-gradient(90deg, var(--verde), var(--dorado));
-  }
-
-  .info-section {
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.2);
-    color: white;
-  }
-
-  .logo-section {
-    margin-bottom: 1rem;
-  }
-
-  .title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--verde);
-    margin: 0 0 0.5rem 0;
-    letter-spacing: -0.5px;
-  }
-
-  .subtitle {
-    color: #6c757d;
-    font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 1rem;
-  }
-
-  .qr-display {
-    background: #f8f9fa;
-    border-radius: 20px;
-    padding: 1.5rem;
-    margin: 1rem 0;
-    border: 3px dashed var(--verde);
-    position: relative;
-    min-height: 320px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-  }
-
-  .status-badge {
-    position: absolute;
-    top: -12px;
-    right: 20px;
-    background: var(--verde);
-    color: white;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .qr-canvas {
-    max-width: 250px;
-    max-height: 250px;
-    border-radius: 15px;
-  }
-
-  .loading-spinner {
-    color: var(--verde);
-    font-size: 3rem;
-    animation: spin 2s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .mode-indicator {
-    background: rgba(255, 193, 7, 0.1);
-    border: 1px solid rgba(255, 193, 7, 0.3);
-    border-radius: 10px;
-    padding: 0.8rem;
-    margin: 1rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-  }
-
-  .mode-dinamico {
-    background: rgba(255, 87, 34, 0.1);
-    border-color: rgba(255, 87, 34, 0.3);
-    color: #d84315;
-  }
-
-  .mode-estatico {
-    background: rgba(76, 175, 80, 0.1);
-    border-color: rgba(76, 175, 80, 0.3);
-    color: #388e3c;
-  }
-
-  .refresh-button {
-    background: linear-gradient(135deg, var(--verde), var(--dorado));
-    border: none;
-    border-radius: 15px;
-    padding: 1rem 2rem;
-    color: white;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    margin-top: 1rem;
-  }
-
-  .refresh-button:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(21, 93, 39, 0.3);
-  }
-
-  .refresh-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .info-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    text-align: center;
-  }
-
-  .token-info {
-    background: rgba(255,255,255,0.15);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  .token-display {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-    background: rgba(255,255,255,0.9);
-    color: #333;
-    padding: 0.8rem;
-    border-radius: 8px;
-    margin: 1rem 0;
-    word-break: break-all;
-    text-align: center;
-    filter: blur(0px);
-    transition: filter 0.3s ease;
-  }
-
-  .token-display.blur {
-    filter: blur(3px);
-  }
-
-  .countdown {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: white;
-    text-align: center;
-    margin: 1rem 0;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin: 1.5rem 0;
-  }
-
-  .stat-card {
-    background: rgba(255,255,255,0.15);
-    padding: 1rem;
-    border-radius: 12px;
-    text-align: center;
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  .stat-number {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: white;
-    margin: 0;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.8);
-    margin: 0;
-  }
-
-  .footer-info {
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.8);
-    line-height: 1.4;
-    text-align: center;
-    margin-top: 1rem;
-  }
-
-  /* ✅ ALERTA DE SEGURIDAD */
-  .security-alert {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(220, 53, 69, 0.95);
-    color: white;
-    padding: 1rem;
-    border-radius: 10px;
-    max-width: 300px;
-    z-index: 1000;
-    transform: translateX(350px);
-    transition: transform 0.3s ease;
-    box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);
-  }
-
-  .security-alert.show {
-    transform: translateX(0);
-  }
-
-  .status-success { background: #198754; }
-  .status-warning { background: #ffc107; color: #000; }
-  .status-danger { background: #dc3545; }
-  .status-night { background: #6c757d; }
-
-  /* ✅ RESPONSIVE */
-  @media (max-width: 1024px) {
-    .main-container {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-      height: auto;
-      padding: 1rem 0;
+    :root {
+      --verde: #155d27;
+      --verde-claro: #e6f0e9;
+      --dorado: #c1a35f;
     }
-    
-    .qr-section, .info-section {
-      padding: 1.5rem;
-      min-height: auto;
-    }
-  }
 
-  @media (max-width: 768px) {
     body {
-      padding: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--verde) 0%, var(--dorado) 100%);
+      min-height: 100vh;
+      margin: 0;
+      color: white;
+      padding: 1rem;
     }
-    
+
+    .main-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      height: calc(100vh - 2rem);
+      align-items: stretch;
+    }
+
+    .qr-section, .info-section {
+      border-radius: 25px;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 600px;
+    }
+
+    .qr-section {
+      background: white;
+      color: #333;
+      text-align: center;
+    }
+
+    .qr-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--verde), var(--dorado));
+    }
+
+    .info-section {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    .logo-section {
+      margin-bottom: 1rem;
+    }
+
     .title {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--verde);
+      margin: 0 0 0.5rem 0;
+      letter-spacing: -0.5px;
     }
-    
-    .stats-grid {
-      grid-template-columns: 1fr;
+
+    .subtitle {
+      color: #6c757d;
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
     }
-    
+
     .qr-display {
-      min-height: 280px;
+      background: #f8f9fa;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      border: 3px dashed var(--verde);
+      position: relative;
+      min-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
     }
-  }
 
-  /* Animaciones */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+    .status-badge {
+      position: absolute;
+      top: -12px;
+      right: 20px;
+      background: var(--verde);
+      color: white;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-  .main-container {
-    animation: fadeIn 0.6s ease-out;
-  }
-</style>
+    .qr-canvas {
+      max-width: 250px;
+      max-height: 250px;
+      border-radius: 15px;
+    }
 
+    .loading-spinner {
+      color: var(--verde);
+      font-size: 3rem;
+      animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .mode-indicator {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 10px;
+      padding: 0.8rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .mode-dinamico {
+      background: rgba(255, 87, 34, 0.1);
+      border-color: rgba(255, 87, 34, 0.3);
+      color: #d84315;
+    }
+
+    .mode-estatico {
+      background: rgba(76, 175, 80, 0.1);
+      border-color: rgba(76, 175, 80, 0.3);
+      color: #388e3c;
+    }
+
+    .refresh-button {
+      background: linear-gradient(135deg, var(--verde), var(--dorado));
+      border: none;
+      border-radius: 15px;
+      padding: 1rem 2rem;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .refresh-button:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(21, 93, 39, 0.3);
+    }
+
+    .refresh-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .info-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .token-info {
+      background: rgba(255,255,255,0.15);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .token-display {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      padding: 0.8rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      word-break: break-all;
+      text-align: center;
+      filter: blur(0px);
+      transition: filter 0.3s ease;
+    }
+
+    /* ✅ NUEVO: Efecto blur para token encriptado */
+    .token-display.blur {
+      filter: blur(3px);
+    }
+
+    .countdown {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: white;
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.15);
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .stat-number {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: white;
+      margin: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.8);
+      margin: 0;
+    }
+
+    .footer-info {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.4;
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .status-success { background: #198754; }
+    .status-warning { background: #ffc107; color: #000; }
+    .status-danger { background: #dc3545; }
+    .status-night { background: #6c757d; }
+
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        height: auto;
+        padding: 1rem 0;
+      }
+      
+      .qr-section, .info-section {
+        padding: 1.5rem;
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 0.5rem;
+      }
+      
+      .title {
+        font-size: 1.5rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .qr-display {
+        min-height: 280px;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .main-container {
+      animation: fadeIn 0.6s ease-out;
+    }
+  </style>
 </head>
 <body>
-  <!-- ✅ ALERTA DE SEGURIDAD -->
-  <div id="security-alert" class="security-alert">
-    <strong><i class="bi bi-shield-exclamation me-1"></i>Alerta de Seguridad</strong>
-    <p class="mb-0 mt-1" id="security-message">Actividad sospechosa detectada</p>
-  </div>
-
   <div class="main-container">
-    <!-- ✅ SECCIÓN QR (IZQUIERDA) -->
+    <!-- SECCIÓN QR (IZQUIERDA) -->
     <div class="qr-section">
       <div class="logo-section">
         <h1 class="title">Cielito Home</h1>
@@ -370,7 +341,7 @@
       </button>
     </div>
 
-    <!-- ✅ SECCIÓN INFORMACIÓN (DERECHA) -->
+    <!-- SECCIÓN INFORMACIÓN (DERECHA) -->
     <div class="info-section">
       <h2 class="info-title">
         <i class="bi bi-info-circle me-2"></i>
@@ -416,23 +387,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ✅ CONFIGURACIÓN DE SEGURIDAD AVANZADA
-    const SECURITY_CONFIG = {
-      MAX_ATTEMPTS_PER_SESSION: 5,
-      RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutos
-      DEVICE_FINGERPRINT_REQUIRED: true,
-      TOKEN_ENCRYPTION_ENABLED: true,
-      DEVTOOLS_DETECTION: true,
-      OBFUSCATE_COORDINATES: true,
-      ANTI_AUTOMATION: true
-    };
-
-    // ✅ COORDENADAS OFUSCADAS (Base64)
-    const _0x4a2b = [
-      'MjEuOTI1NDU2NTc5MjU1MTc=', // Latitud ofuscada
-      'LTEwMi4zMTMyNzQzMTM5MjUxOQ==' // Longitud ofuscada
-    ];
-
     // Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
@@ -446,17 +400,13 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // ✅ VARIABLES GLOBALES CON SEGURIDAD
+    // Variables básicas
     let tokenActual = null;
     let tiempoExpiracion = null;
     let intervaloCuenta = null;
     let modoActual = 'detectando';
     let ultimaGeneracion = 0;
     let yaInicializado = false;
-    let intentosGeneracion = 0;
-    let deviceFingerprint = null;
-    let securityViolations = 0;
-    let lastUserActivity = Date.now();
 
     // Elementos DOM
     const elements = {
@@ -472,117 +422,14 @@
       blockedCount: document.getElementById('blocked-count'),
       modeIndicator: document.getElementById('mode-indicator'),
       modeText: document.getElementById('mode-text'),
-      footerText: document.getElementById('footer-text'),
-      securityAlert: document.getElementById('security-alert'),
-      securityMessage: document.getElementById('security-message')
+      footerText: document.getElementById('footer-text')
     };
 
-    // ✅ GENERACIÓN DE FINGERPRINT DEL DISPOSITIVO
-    function generarDeviceFingerprint() {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.fillText('Device fingerprint test', 2, 2);
-        
-        const fingerprint = btoa(JSON.stringify({
-          ua: navigator.userAgent.slice(0, 50),
-          screen: `${screen.width}x${screen.height}`,
-          timezone: new Date().getTimezoneOffset(),
-          language: navigator.language,
-          platform: navigator.platform.slice(0, 10),
-          canvas: canvas.toDataURL().slice(-50),
-          memory: navigator.deviceMemory || 'unknown',
-          cores: navigator.hardwareConcurrency || 'unknown',
-          timestamp: Math.floor(Date.now() / 3600000) // Hora actual
-        }));
-        
-        return fingerprint;
-      } catch (error) {
-        console.warn('Error generando fingerprint:', error);
-        return btoa(`fallback_${Date.now()}_${Math.random()}`);
-      }
-    }
-
-    // ✅ DETECCIÓN DE HERRAMIENTAS DE DESARROLLADOR
-    function detectarDevTools() {
-      if (!SECURITY_CONFIG.DEVTOOLS_DETECTION) return false;
-      
-      let devtools = {
-        open: false,
-        orientation: null
-      };
-      
-      const threshold = 160;
-      
-      setInterval(() => {
-        if (window.outerHeight - window.innerHeight > threshold || 
-            window.outerWidth - window.innerWidth > threshold) {
-          if (!devtools.open) {
-            devtools.open = true;
-            mostrarAlertaSeguridad('🔧 Herramientas de desarrollador detectadas');
-            registrarViolacionSeguridad('devtools_opened');
-          }
-        } else {
-          devtools.open = false;
-        }
-      }, 500);
-      
-      return devtools;
-    }
-
-    // ✅ DETECCIÓN ANTI-AUTOMATIZACIÓN
-    function configurarAntiAutomation() {
-      if (!SECURITY_CONFIG.ANTI_AUTOMATION) return;
-      
-      // Detectar movimientos de mouse humanos
-      let mouseMovements = [];
-      let lastMouseMove = 0;
-      
-      document.addEventListener('mousemove', (e) => {
-        const now = Date.now();
-        if (now - lastMouseMove > 100) { // Throttle
-          mouseMovements.push({
-            x: e.clientX,
-            y: e.clientY,
-            time: now
-          });
-          lastMouseMove = now;
-          
-          // Mantener solo los últimos 10 movimientos
-          if (mouseMovements.length > 10) {
-            mouseMovements.shift();
-          }
-        }
-      });
-      
-      // Detectar clicks demasiado rápidos
-      let lastClick = 0;
-      document.addEventListener('click', () => {
-        const now = Date.now();
-        if (now - lastClick < 100) { // Click demasiado rápido
-          mostrarAlertaSeguridad('🤖 Actividad automatizada detectada');
-          registrarViolacionSeguridad('rapid_clicking');
-        }
-        lastClick = now;
-      });
-      
-      // Detectar falta de actividad de mouse (bots)
-      setInterval(() => {
-        if (mouseMovements.length < 2 && Date.now() - lastUserActivity > 30000) {
-          console.warn('⚠️ Posible comportamiento automatizado');
-        }
-      }, 30000);
-    }
-
-    // ✅ ENCRIPTACIÓN SIMPLE DE TOKENS (Para mostrar)
+    // ✅ NUEVA FUNCIÓN: Encriptación simple de tokens para mostrar
     function encriptarTokenDisplay(token) {
-      if (!SECURITY_CONFIG.TOKEN_ENCRYPTION_ENABLED) return token;
-      
       try {
-        // Encriptación simple XOR para mostrar en pantalla
-        const key = 'CIELITO_HOME_2025';
+        // Encriptación XOR simple para ofuscar el token en pantalla
+        const key = 'CIELITO_HOME_2025_SECURE_KEY';
         let encrypted = '';
         
         for (let i = 0; i < token.length; i++) {
@@ -591,75 +438,28 @@
           );
         }
         
-        return `🔐 ${btoa(encrypted).slice(0, 32)}...`;
+        // Convertir a Base64 y mostrar solo una parte
+        const base64Encrypted = btoa(encrypted);
+        return `🔐 ${base64Encrypted.slice(0, 24)}...`;
       } catch (error) {
-        return `🔐 ${token.slice(0, 20)}...`;
+        console.warn('Error encriptando token para mostrar:', error);
+        return `🔐 ${token.slice(0, 16)}...`;
       }
     }
 
-    // ✅ REGISTRO DE VIOLACIONES DE SEGURIDAD
-    async function registrarViolacionSeguridad(tipo, detalles = {}) {
-      securityViolations++;
-      
+    // ✅ NUEVA FUNCIÓN: Desencriptar token (para uso interno si es necesario)
+    function desencriptarToken(encryptedDisplay) {
       try {
-        const violacionData = {
-          tipo: tipo,
-          timestamp: new Date(),
-          fingerprint: deviceFingerprint,
-          userAgent: navigator.userAgent.slice(0, 100),
-          url: window.location.href,
-          detalles: detalles,
-          violacionesTotal: securityViolations
-        };
-        
-        await setDoc(doc(db, "security_violations", `${Date.now()}_${tipo}`), violacionData);
-        
-        // Si hay demasiadas violaciones, bloquear temporalmente
-        if (securityViolations >= 5) {
-          mostrarAlertaSeguridad('🚨 Demasiadas violaciones de seguridad. Acceso restringido.');
-          elements.refreshBtn.disabled = true;
-          elements.refreshBtn.innerHTML = '<i class="bi bi-shield-x me-2"></i>Acceso Restringido';
-        }
-        
+        // Esta función es para referencia, normalmente no se usa
+        const base64Part = encryptedDisplay.replace('🔐 ', '').replace('...', '');
+        // En un caso real, tendrías el token completo guardado
+        return tokenActual; // Retornar el token real guardado en memoria
       } catch (error) {
-        console.error('Error registrando violación:', error);
+        return null;
       }
     }
 
-    // ✅ MOSTRAR ALERTAS DE SEGURIDAD
-    function mostrarAlertaSeguridad(mensaje) {
-      elements.securityMessage.textContent = mensaje;
-      elements.securityAlert.classList.add('show');
-      
-      setTimeout(() => {
-        elements.securityAlert.classList.remove('show');
-      }, 5000);
-    }
-
-    // ✅ RATE LIMITING AVANZADO
-    function verificarRateLimit() {
-      const ahora = Date.now();
-      const ventanaKey = Math.floor(ahora / SECURITY_CONFIG.RATE_LIMIT_WINDOW);
-      const storageKey = `rate_limit_${ventanaKey}`;
-      
-      try {
-        let intentos = parseInt(localStorage.getItem(storageKey) || '0');
-        
-        if (intentos >= SECURITY_CONFIG.MAX_ATTEMPTS_PER_SESSION) {
-          mostrarAlertaSeguridad(`⏰ Límite de intentos alcanzado. Espera ${Math.ceil(SECURITY_CONFIG.RATE_LIMIT_WINDOW / 60000)} minutos.`);
-          return false;
-        }
-        
-        localStorage.setItem(storageKey, (intentos + 1).toString());
-        return true;
-        
-      } catch (error) {
-        console.warn('Error en rate limiting:', error);
-        return true; // Permitir en caso de error
-      }
-    }
-
-    // ✅ FUNCIÓN PARA DETECTAR MODO SEGÚN HORARIO
+    // Función para detectar modo según horario
     function detectarModo() {
       const ahora = new Date();
       const hora = ahora.getHours();
@@ -676,13 +476,12 @@
       } else if (hora < 10 || (hora === 10 && minutos === 0)) {
         return {
           tipo: 'dinamico',
-          duracion: 10 * 60 * 1000, // 10 minutos
+          duracion: 10 * 60 * 1000,
           descripcion: 'Modo dinámico - QR cada 10 minutos',
           icono: 'bi-arrow-repeat',
           clase: 'mode-dinamico'
         };
       } else {
-        // Calcular tiempo hasta las 6 PM
         const finLaboral = new Date();
         finLaboral.setHours(18, 0, 0, 0);
         const tiempoRestante = finLaboral.getTime() - ahora.getTime();
@@ -697,7 +496,7 @@
       }
     }
 
-    // ✅ ACTUALIZAR INDICADOR DE MODO CON SEGURIDAD
+    // Actualizar indicador de modo
     function actualizarIndicadorModo() {
       const modo = detectarModo();
       modoActual = modo.tipo;
@@ -711,7 +510,7 @@
         elements.refreshBtn.innerHTML = '<i class="bi bi-moon me-2"></i>Sistema inactivo';
       } else if (modo.tipo === 'dinamico') {
         elements.footerText.innerHTML = 'Horario de entrada<br>QR se regenera cada 10 minutos para máxima seguridad';
-        elements.refreshBtn.disabled = securityViolations >= 5;
+        elements.refreshBtn.disabled = false;
         elements.refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Generar Nuevo QR';
       } else {
         elements.footerText.innerHTML = 'Horario estable<br>QR fijo para registros de salida';
@@ -722,64 +521,19 @@
       return modo;
     }
 
-    // ✅ GENERACIÓN DE TOKEN SEGURO CON FINGERPRINT
+    // Generar token único
     function generarTokenSeguro() {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 15);
       const extra = Math.random().toString(36).substring(2, 8);
       const modo = modoActual.charAt(0).toUpperCase();
-      const fingerprintHash = btoa(deviceFingerprint).slice(-8);
       
-      return `CH_${modo}_${timestamp}_${random}_${extra}_${fingerprintHash}`.toUpperCase();
+      return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-    // ✅ FUNCIÓN MANEJO DE ERRORES DE FIREBASE
-    function manejarErroresFirebase() {
-      window.addEventListener('unhandledrejection', event => {
-        const error = event.reason;
-        
-        if (error?.code?.includes('unavailable') || 
-            error?.message?.includes('QUIC') || 
-            error?.message?.includes('WebChannel') ||
-            error?.message?.includes('Failed to fetch')) {
-          
-          console.warn('⚠️ Error de conexión Firebase detectado, reintentando...');
-          
-          if (elements.statusText) {
-            const estadoAnterior = elements.statusText.innerHTML;
-            elements.statusText.innerHTML = '<i class="bi bi-wifi me-1"></i>Reconectando...';
-            
-            setTimeout(() => {
-              elements.statusText.innerHTML = estadoAnterior;
-            }, 3000);
-          }
-          
-          setTimeout(() => {
-            verificarToken();
-          }, 2000);
-          
-          event.preventDefault();
-        }
-      });
-    }
-
-    // ✅ FUNCIÓN GENERARQR CON SEGURIDAD AVANZADA
+    // Función para generar QR
     async function generarQR(forzarPorUsuario = false) {
       try {
-        // ✅ VERIFICACIONES DE SEGURIDAD
-        if (forzarPorUsuario) {
-          if (!verificarRateLimit()) {
-            return;
-          }
-          
-          intentosGeneracion++;
-          if (intentosGeneracion > 10) {
-            mostrarAlertaSeguridad('🚨 Demasiados intentos de generación');
-            registrarViolacionSeguridad('excessive_generation', { intentos: intentosGeneracion });
-            return;
-          }
-        }
-        
         console.log('🔄 Iniciando generación de QR...', { forzarPorUsuario });
         
         const modo = actualizarIndicadorModo();
@@ -810,14 +564,13 @@
         elements.qrCanvas.style.display = 'none';
         actualizarEstado('generando');
 
-        // ✅ GENERAR TOKEN CON SEGURIDAD
         tokenActual = generarTokenSeguro();
         tiempoExpiracion = Date.now() + modo.duracion;
         ultimaGeneracion = ahora;
 
         console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
 
-        // ✅ GUARDAR EN FIREBASE CON FINGERPRINT
+        // Guardar en Firebase
         await setDoc(doc(db, "qr_tokens", "current"), {
           token: tokenActual,
           expiracion: new Date(tiempoExpiracion),
@@ -825,16 +578,12 @@
           usado: false,
           activo: true,
           modo: modo.tipo,
-          duracionMinutos: modo.duracion / 60000,
-          deviceFingerprint: deviceFingerprint,
-          securityLevel: 'enhanced',
-          generadoPor: forzarPorUsuario ? 'usuario' : 'sistema'
+          duracionMinutos: modo.duracion / 60000
         });
 
-        // Crear URL con medidas anti-tampering
+        // Crear URL
         const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
-        const checksum = btoa(`${tokenActual}_${tiempoExpiracion}`).slice(-8);
-        const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&cs=${checksum}&t=${Date.now()}`;
+        const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
 
         // Generar QR
         const qr = new QRious({
@@ -845,11 +594,11 @@
           background: '#ffffff'
         });
 
-        // ✅ MOSTRAR TOKEN ENCRIPTADO
-        const tokenMostrar = encriptarTokenDisplay(tokenActual);
-        elements.currentToken.textContent = tokenMostrar;
+        // ✅ MOSTRAR TOKEN ENCRIPTADO CON EFECTOS
+        const tokenEncriptado = encriptarTokenDisplay(tokenActual);
+        elements.currentToken.textContent = tokenEncriptado;
         
-        // ✅ EFECTO DE BLUR AL TOKEN
+        // Efecto visual de actualización
         elements.currentToken.classList.add('blur');
         setTimeout(() => {
           elements.currentToken.classList.remove('blur');
@@ -863,20 +612,16 @@
         
         if (forzarPorUsuario) {
           await actualizarEstadisticas();
-          console.log('📊 Contador incrementado por acción manual');
         }
 
         console.log(`✅ QR generado exitosamente en modo ${modo.tipo}`);
 
       } catch (error) {
         console.error('❌ Error generando QR:', error);
-        registrarViolacionSeguridad('generation_error', { error: error.message });
         
         elements.qrLoading.innerHTML = `
           <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
           <p class="text-danger mt-3 mb-0">Error al generar QR</p>
-          <small class="text-muted">${error.message}</small>
-          <br>
           <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">
             <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
           </button>
@@ -886,7 +631,7 @@
       }
     }
 
-    // ✅ CUENTA REGRESIVA MEJORADA
+    // Cuenta regresiva
     function iniciarCuentaRegresiva() {
       if (intervaloCuenta) clearInterval(intervaloCuenta);
       
@@ -917,7 +662,7 @@
       }, 1000);
     }
 
-    // ✅ ACTUALIZAR ESTADO
+    // Actualizar estado
     function actualizarEstado(estado) {
       elements.statusBadge.className = 'status-badge';
       
@@ -945,7 +690,6 @@
       }
     }
 
-    // ✅ ESTADÍSTICAS CON SEGURIDAD
     async function actualizarEstadisticas() {
       try {
         const hoy = new Date().toISOString().split('T')[0];
@@ -954,8 +698,7 @@
         try {
           await updateDoc(statsRef, {
             generados: increment(1),
-            ultimaActualizacion: new Date(),
-            deviceFingerprint: deviceFingerprint
+            ultimaActualizacion: new Date()
           });
         } catch (updateError) {
           await setDoc(statsRef, {
@@ -963,8 +706,7 @@
             exitosos: 0,
             bloqueados: 0,
             fecha: hoy,
-            ultimaActualizacion: new Date(),
-            deviceFingerprint: deviceFingerprint
+            ultimaActualizacion: new Date()
           });
         }
 
@@ -981,7 +723,7 @@
       }
     }
 
-    // ✅ VERIFICAR TOKEN CON SEGURIDAD
+    // Verificar token
     async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
@@ -1030,12 +772,12 @@
             tokenActual = data.token;
             tiempoExpiracion = expiracion.getTime();
             
-            const tokenMostrar = encriptarTokenDisplay(tokenActual);
-            elements.currentToken.textContent = tokenMostrar;
+            // ✅ MOSTRAR TOKEN ENCRIPTADO
+            const tokenEncriptado = encriptarTokenDisplay(tokenActual);
+            elements.currentToken.textContent = tokenEncriptado;
             
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
-            const checksum = btoa(`${tokenActual}_${tiempoExpiracion}`).slice(-8);
-            const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&cs=${checksum}&t=${Date.now()}`;
+            const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
             
             const qr = new QRious({
               element: elements.qrCanvas,
@@ -1074,18 +816,11 @@
       } catch (error) {
         console.error('❌ Error verificando token:', error);
         
-        if (reintentos > 0 && 
-            (error.code === 'unavailable' || 
-             error.message?.includes('Failed to fetch') ||
-             error.message?.includes('network') ||
-             error.message?.includes('QUIC'))) {
-          
+        if (reintentos > 0) {
           console.log(`🔄 Reintentando verificación (${reintentos} intentos restantes)...`);
-          
           setTimeout(() => {
             verificarToken(reintentos - 1);
           }, 2000);
-          
           return;
         }
         
@@ -1094,16 +829,15 @@
       }
     }
 
-    // ✅ EVENT LISTENER CON SEGURIDAD
+    // Event listener
     elements.refreshBtn.addEventListener('click', () => {
-      lastUserActivity = Date.now();
       const modo = detectarModo();
-      if (modo.tipo === 'dinamico' && securityViolations < 5) {
+      if (modo.tipo === 'dinamico') {
         generarQR(true);
       }
     });
 
-    // ✅ INICIALIZACIÓN CON SEGURIDAD COMPLETA
+    // Inicialización
     async function inicializar() {
       if (yaInicializado) {
         console.log('⚠️ Sistema ya inicializado, evitando duplicación');
@@ -1111,23 +845,7 @@
       }
       
       yaInicializado = true;
-      console.log('🚀 Iniciando sistema QR inteligente con seguridad avanzada...');
-      
-      // ✅ GENERAR FINGERPRINT
-      deviceFingerprint = generarDeviceFingerprint();
-      console.log('🔍 Device fingerprint generado');
-      
-      // ✅ ACTIVAR SEGURIDADES
-      manejarErroresFirebase();
-      detectarDevTools();
-      configurarAntiAutomation();
-      
-      // ✅ MONITOREO DE ACTIVIDAD
-      ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
-        document.addEventListener(event, () => {
-          lastUserActivity = Date.now();
-        }, true);
-      });
+      console.log('🚀 Iniciando sistema QR inteligente con encriptación...');
       
       if (typeof QRious === 'undefined') {
         console.error('❌ QRious library not loaded, waiting...');
@@ -1136,16 +854,6 @@
             console.log('✅ QRious library loaded successfully');
             await verificarToken();
             configurarIntervalos();
-          } else {
-            console.error('❌ QRious library failed to load');
-            registrarViolacionSeguridad('library_load_failed');
-            elements.qrLoading.innerHTML = `
-              <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
-              <p class="text-danger mt-3 mb-0">Error cargando librería QR</p>
-              <button class="btn btn-primary mt-2" onclick="location.reload()">
-                <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
-              </button>
-            `;
           }
         }, 1000);
       } else {
@@ -1155,9 +863,8 @@
       }
     }
 
-    // ✅ CONFIGURAR INTERVALOS CON SEGURIDAD
+    // Configurar intervalos
     function configurarIntervalos() {
-      // Verificar estado cada 30 segundos
       setInterval(() => {
         const modo = detectarModo();
         if (modo.tipo !== 'inactivo') {
@@ -1165,7 +872,6 @@
         }
       }, 30000);
       
-      // Regeneración automática controlada
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
@@ -1178,11 +884,10 @@
         }
       }, 5000);
 
-      // Verificación de cambio de modo
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
-        const minutos = ahora.getMinutes();
+        const minutos = ahora.getMinutos();
         
         if (minutos === 0) {
           if (hora === 7) {
@@ -1197,38 +902,7 @@
           }
         }
       }, 60000);
-      
-      // ✅ LIMPIEZA DE RATE LIMITING ANTIGUO
-      setInterval(() => {
-        try {
-          const ahora = Date.now();
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('rate_limit_')) {
-              const timestamp = parseInt(key.split('_')[2]) * SECURITY_CONFIG.RATE_LIMIT_WINDOW;
-              if (ahora - timestamp > SECURITY_CONFIG.RATE_LIMIT_WINDOW) {
-                localStorage.removeItem(key);
-              }
-            }
-          }
-        } catch (error) {
-          console.warn('Error limpiando rate limiting:', error);
-        }
-      }, 300000); // Cada 5 minutos
     }
-
-    // ✅ PROTECCIÓN CONTRA CONSOLA
-    Object.defineProperty(window, 'console', {
-      value: new Proxy(console, {
-        get(target, prop) {
-          if (SECURITY_CONFIG.DEVTOOLS_DETECTION && 
-              ['log', 'warn', 'error', 'info', 'debug'].includes(prop)) {
-            registrarViolacionSeguridad('console_access', { method: prop });
-          }
-          return target[prop];
-        }
-      })
-    });
 
     // Inicialización
     await inicializar();
