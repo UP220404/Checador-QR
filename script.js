@@ -10,6 +10,8 @@ import {
   getFirestore,
   doc,
   getDoc,
+  updateDoc,
+  increment,
   collection,
   addDoc,
   query,
@@ -30,20 +32,21 @@ const firebaseConfig = {
 
 // Constantes de configuración
 const CONFIG = {
-  MODO_PRUEBAS: false, // Cambiar a true para pruebas 
+  MODO_PRUEBAS: true, // Cambiar a true para pruebas 
   HORA_LIMITE_ENTRADA: { hours: 8, minutes: 10 }, // 8:10 AM
   HORA_LIMITE_SALIDA_BECARIO: { hours: 13, minutes: 0 }, // 1:00 PM
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
 };
 
-function validarQR() {
+async function validarQR() {
   const params = new URLSearchParams(window.location.search);
   const qrParam = params.get('qr');
+  const tokenParam = params.get('token');
   
   // Verificar acceso sospechoso ANTES de validar QR
   const accesoSospechoso = verificarAccesoSospechoso();
   if (accesoSospechoso) {
-    registrarIntentoSospechoso(accesoSospechoso, usuarioActual);
+    await registrarIntentoSospechoso(accesoSospechoso, usuarioActual);
     
     if (usuarioActual) {
       mostrarEstado("error", "⚠️ Acceso no autorizado detectado. Debes escanear el QR.");
@@ -51,8 +54,64 @@ function validarQR() {
     }
   }
   
-  // Validación normal del QR
+  // Validación básica del QR
   if (qrParam !== 'OFICINA2025') {
+    return false;
+  }
+  
+  // 🔐 NUEVA VALIDACIÓN DE TOKEN
+  if (!tokenParam) {
+    mostrarEstado("error", "❌ Token de seguridad requerido. Escanea un QR válido.");
+    return false;
+  }
+  
+  try {
+    // Verificar token en Firebase
+    const tokenRef = doc(db, "qr_tokens", "current");
+    const tokenDoc = await getDoc(tokenRef);
+    
+    if (!tokenDoc.exists()) {
+      mostrarEstado("error", "❌ Token no encontrado. Solicita un nuevo QR.");
+      return false;
+    }
+    
+    const tokenData = tokenDoc.data();
+    const ahora = new Date();
+    const expiracion = tokenData.expiracion.toDate();
+    
+    // Verificar que el token coincida
+    if (tokenData.token !== tokenParam) {
+      mostrarEstado("error", "❌ Token inválido. Escanea el QR más reciente.");
+      await incrementarContador('bloqueados');
+      return false;
+    }
+    
+    // Verificar que no esté expirado
+    if (ahora > expiracion) {
+      mostrarEstado("error", "⏰ QR expirado. Solicita un nuevo código.");
+      await incrementarContador('bloqueados');
+      return false;
+    }
+    
+    // Verificar que no haya sido usado
+    if (tokenData.usado) {
+      mostrarEstado("error", "🚫 QR ya utilizado. Cada QR solo puede usarse una vez.");
+      await incrementarContador('bloqueados');
+      return false;
+    }
+    
+    // ✅ Token válido - marcarlo como usado
+    await updateDoc(tokenRef, {
+      usado: true,
+      fechaUso: new Date(),
+      activo: false
+    });
+    
+    await incrementarContador('exitosos');
+    
+  } catch (error) {
+    console.error('Error validando token:', error);
+    mostrarEstado("error", "❌ Error de conexión. Intenta nuevamente.");
     return false;
   }
   
@@ -64,6 +123,22 @@ function validarQR() {
   window.history.replaceState({}, document.title, nuevaUrl);
   
   return true;
+}
+
+// 📊 Función para incrementar contadores
+async function incrementarContador(tipo) {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const statsRef = doc(db, "qr_stats", hoy);
+    
+    const updateData = {};
+    updateData[tipo] = increment(1);
+    updateData.ultimaActualizacion = new Date();
+    
+    await updateDoc(statsRef, updateData);
+  } catch (error) {
+    console.error('Error actualizando contador:', error);
+  }
 }
 
 // Inicialización de Firebase
