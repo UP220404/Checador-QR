@@ -211,7 +211,6 @@
       transition: filter 0.3s ease;
     }
 
-    /* ✅ NUEVO: Efecto blur para token encriptado */
     .token-display.blur {
       filter: blur(3px);
     }
@@ -309,7 +308,6 @@
 </head>
 <body>
   <div class="main-container">
-    <!-- SECCIÓN QR (IZQUIERDA) -->
     <div class="qr-section">
       <div class="logo-section">
         <h1 class="title">Cielito Home</h1>
@@ -341,7 +339,6 @@
       </button>
     </div>
 
-    <!-- SECCIÓN INFORMACIÓN (DERECHA) -->
     <div class="info-section">
       <h2 class="info-title">
         <i class="bi bi-info-circle me-2"></i>
@@ -387,7 +384,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
       authDomain: "qr-acceso-cielito-home.firebaseapp.com",
@@ -400,7 +396,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Variables básicas
     let tokenActual = null;
     let tiempoExpiracion = null;
     let intervaloCuenta = null;
@@ -408,7 +403,6 @@
     let ultimaGeneracion = 0;
     let yaInicializado = false;
 
-    // Elementos DOM
     const elements = {
       qrCanvas: document.getElementById('qr-canvas'),
       qrLoading: document.getElementById('qr-loading'),
@@ -425,10 +419,8 @@
       footerText: document.getElementById('footer-text')
     };
 
-    // ✅ NUEVA FUNCIÓN: Encriptación simple de tokens para mostrar
     function encriptarTokenDisplay(token) {
       try {
-        // Encriptación XOR simple para ofuscar el token en pantalla
         const key = 'CIELITO_HOME_2025_SECURE_KEY';
         let encrypted = '';
         
@@ -438,7 +430,6 @@
           );
         }
         
-        // Convertir a Base64 y mostrar solo una parte
         const base64Encrypted = btoa(encrypted);
         return `🔐 ${base64Encrypted.slice(0, 24)}...`;
       } catch (error) {
@@ -447,19 +438,15 @@
       }
     }
 
-    // ✅ NUEVA FUNCIÓN: Desencriptar token (para uso interno si es necesario)
     function desencriptarToken(encryptedDisplay) {
       try {
-        // Esta función es para referencia, normalmente no se usa
         const base64Part = encryptedDisplay.replace('🔐 ', '').replace('...', '');
-        // En un caso real, tendrías el token completo guardado
-        return tokenActual; // Retornar el token real guardado en memoria
+        return tokenActual;
       } catch (error) {
         return null;
       }
     }
 
-    // Función para detectar modo según horario
     function detectarModo() {
       const ahora = new Date();
       const hora = ahora.getHours();
@@ -496,7 +483,6 @@
       }
     }
 
-    // Actualizar indicador de modo
     function actualizarIndicadorModo() {
       const modo = detectarModo();
       modoActual = modo.tipo;
@@ -521,7 +507,6 @@
       return modo;
     }
 
-    // Generar token único
     function generarTokenSeguro() {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 15);
@@ -531,7 +516,6 @@
       return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-    // Función para generar QR
     async function generarQR(forzarPorUsuario = false) {
       try {
         console.log('🔄 Iniciando generación de QR...', { forzarPorUsuario });
@@ -570,7 +554,6 @@
 
         console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
 
-        // Guardar en Firebase
         await setDoc(doc(db, "qr_tokens", "current"), {
           token: tokenActual,
           expiracion: new Date(tiempoExpiracion),
@@ -581,11 +564,9 @@
           duracionMinutos: modo.duracion / 60000
         });
 
-        // Crear URL
         const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
         const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
 
-        // Generar QR
         const qr = new QRious({
           element: elements.qrCanvas,
           value: urlCompleta,
@@ -594,11 +575,9 @@
           background: '#ffffff'
         });
 
-        // ✅ MOSTRAR TOKEN ENCRIPTADO CON EFECTOS
         const tokenEncriptado = encriptarTokenDisplay(tokenActual);
         elements.currentToken.textContent = tokenEncriptado;
         
-        // Efecto visual de actualización
         elements.currentToken.classList.add('blur');
         setTimeout(() => {
           elements.currentToken.classList.remove('blur');
@@ -631,7 +610,6 @@
       }
     }
 
-    // Cuenta regresiva
     function iniciarCuentaRegresiva() {
       if (intervaloCuenta) clearInterval(intervaloCuenta);
       
@@ -662,7 +640,6 @@
       }, 1000);
     }
 
-    // Actualizar estado
     function actualizarEstado(estado) {
       elements.statusBadge.className = 'status-badge';
       
@@ -723,7 +700,6 @@
       }
     }
 
-    // Verificar token
     async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
@@ -772,7 +748,6 @@
             tokenActual = data.token;
             tiempoExpiracion = expiracion.getTime();
             
-            // ✅ MOSTRAR TOKEN ENCRIPTADO
             const tokenEncriptado = encriptarTokenDisplay(tokenActual);
             elements.currentToken.textContent = tokenEncriptado;
             
@@ -802,7 +777,6 @@
           await generarQR(true);
         }
 
-        // Cargar estadísticas
         const hoy = new Date().toISOString().split('T')[0];
         const statsRef = doc(db, "qr_stats", hoy);
         const statsDoc = await getDoc(statsRef);
@@ -829,7 +803,6 @@
       }
     }
 
-    // Event listener
     elements.refreshBtn.addEventListener('click', () => {
       const modo = detectarModo();
       if (modo.tipo === 'dinamico') {
@@ -837,7 +810,6 @@
       }
     });
 
-    // Inicialización
     async function inicializar() {
       if (yaInicializado) {
         console.log('⚠️ Sistema ya inicializado, evitando duplicación');
@@ -863,7 +835,6 @@
       }
     }
 
-    // Configurar intervalos
     function configurarIntervalos() {
       setInterval(() => {
         const modo = detectarModo();
@@ -875,7 +846,7 @@
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
-        const minutos = ahora.getMinutos();
+        const minutos = ahora.getMinutes();
         const segundos = ahora.getSeconds();
         
         if (hora >= 7 && hora < 10 && minutos % 10 === 0 && segundos < 5) {
@@ -887,7 +858,7 @@
       setInterval(() => {
         const ahora = new Date();
         const hora = ahora.getHours();
-        const minutos = ahora.getMinutos();
+        const minutos = ahora.getMinutes();
         
         if (minutos === 0) {
           if (hora === 7) {
@@ -904,7 +875,6 @@
       }, 60000);
     }
 
-    // Inicialización
     await inicializar();
   </script>
 </body>
