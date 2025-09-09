@@ -135,9 +135,31 @@ async function incrementarContador(tipo) {
     updateData[tipo] = increment(1);
     updateData.ultimaActualizacion = new Date();
     
+    console.log(`📊 Incrementando contador ${tipo} para fecha ${hoy}`);
     await updateDoc(statsRef, updateData);
+    console.log(`✅ Contador ${tipo} incrementado exitosamente`);
+    
   } catch (error) {
     console.error('Error actualizando contador:', error);
+    
+    // Si el documento no existe, crearlo
+    if (error.code === 'not-found') {
+      try {
+        const newData = {
+          generados: 0,
+          exitosos: 0,
+          bloqueados: 0,
+          fecha: hoy,
+          ultimaActualizacion: new Date()
+        };
+        newData[tipo] = 1;
+        
+        await setDoc(statsRef, newData);
+        console.log(`✅ Documento creado y contador ${tipo} inicializado`);
+      } catch (createError) {
+        console.error('Error creando documento de estadísticas:', createError);
+      }
+    }
   }
 }
 
