@@ -487,22 +487,27 @@
     console.error('Error cargando estadísticas:', error);
   }
 }
-    async function verificarToken(reintentos = 3) {
+  
+  async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
         
         const modo = actualizarIndicadorModo();
         
+        // ✅ VERIFICAR HORARIO PERO NO SALIR INMEDIATAMENTE
         if (modo.tipo === 'inactivo') {
           console.log('🌙 Fuera de horario laboral');
           elements.qrLoading.innerHTML = `
-            <i class="bi bi-moon text-warning" style="font-size: 3rem;"></i>
-            <p class="text-warning mt-3 mb-0">Sistema inactivo</p>
+            <div class="loading-icon">
+              <i class="bi bi-moon text-warning"></i>
+            </div>
+            <p class="loading-text text-warning">Sistema inactivo</p>
             <small class="text-muted">Horario: 7:00 AM - 6:00 PM</small>
           `;
           elements.qrCanvas.style.display = 'none';
           actualizarEstado('fuera-horario');
           elements.countdown.textContent = 'Inactivo';
+          await cargarEstadisticasCompletas(); // ✅ CARGAR ESTADÍSTICAS AUNQUE ESTÉ INACTIVO
           return;
         }
         
@@ -529,7 +534,7 @@
           
           if (debeRegenerar) {
             console.log('🔄 Token necesita regeneración');
-            await generarQR(false);
+            await generarQR(false); // ✅ ESTO FUNCIONA BIEN
           } else {
             console.log('✅ Token válido, reutilizando...');
             tokenActual = data.token;
@@ -560,11 +565,24 @@
             }
           }
         } else {
-          console.log('📝 No hay token, generando nuevo...');
-          await generarQR(true);
+          // ✅ AQUÍ ESTÁ EL PROBLEMA - MEJORAR ESTA PARTE
+          console.log('📝 No hay token existente, generando nuevo...');
+          
+          // Mostrar estado de generación inmediatamente
+          elements.qrLoading.innerHTML = `
+            <div class="loading-icon">
+              <i class="bi bi-shield-check"></i>
+            </div>
+            <p class="loading-text">Generando primer QR...</p>
+          `;
+          elements.qrLoading.style.display = 'flex';
+          actualizarEstado('generando');
+          
+          // ✅ GENERAR QR FORZADAMENTE
+          await generarQR(true); // ✅ CAMBIAR A true PARA FORZAR GENERACIÓN
         }
 
-        // ✅ CARGAR ESTADÍSTICAS COMPLETAS AL FINAL
+        // ✅ CARGAR ESTADÍSTICAS AL FINAL
         await cargarEstadisticasCompletas();
 
       } catch (error) {
@@ -578,19 +596,24 @@
           return;
         }
         
-        console.log('🔄 Intentando generar nuevo QR...');
-        await generarQR(true);
+        // ✅ SI HAY ERROR, FORZAR GENERACIÓN DE QR
+        console.log('🔄 Error persistente, forzando generación de QR...');
+        try {
+          await generarQR(true); // ✅ FORZAR GENERACIÓN EN CASO DE ERROR
+        } catch (genError) {
+          console.error('❌ Error crítico generando QR:', genError);
+          elements.qrLoading.innerHTML = `
+            <div class="loading-icon">
+              <i class="bi bi-exclamation-triangle text-danger"></i>
+            </div>
+            <p class="loading-text text-danger">Error crítico</p>
+            <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
+            </button>
+          `;
+        }
       }
     }
-
-
-
-    elements.refreshBtn.addEventListener('click', () => {
-      const modo = detectarModo();
-      if (modo.tipo === 'dinamico') {
-        generarQR(true);
-      }
-    });
 
     async function inicializar() {
       if (yaInicializado) {
@@ -601,13 +624,41 @@
       yaInicializado = true;
       console.log('🚀 Iniciando sistema QR inteligente con encriptación...');
       
+      // ✅ MOSTRAR ESTADO DE CARGA INMEDIATAMENTE
+      elements.qrLoading.innerHTML = `
+        <div class="loading-icon">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+        <p class="loading-text">Iniciando sistema...</p>
+      `;
+      elements.qrLoading.style.display = 'flex';
+      
       if (typeof QRious === 'undefined') {
         console.error('❌ QRious library not loaded, waiting...');
+        
+        elements.qrLoading.innerHTML = `
+          <div class="loading-icon">
+            <i class="bi bi-download"></i>
+          </div>
+          <p class="loading-text">Cargando librerías...</p>
+        `;
+        
         setTimeout(async () => {
           if (typeof QRious !== 'undefined') {
             console.log('✅ QRious library loaded successfully');
             await verificarToken();
             configurarIntervalos();
+          } else {
+            console.error('❌ QRious library failed to load');
+            elements.qrLoading.innerHTML = `
+              <div class="loading-icon">
+                <i class="bi bi-exclamation-triangle text-danger"></i>
+              </div>
+              <p class="loading-text text-danger">Error cargando librerías</p>
+              <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
+              </button>
+            `;
           }
         }, 1000);
       } else {
@@ -616,6 +667,9 @@
         configurarIntervalos();
       }
     }
+
+
+    
 
 
      function configurarIntervalos() {
