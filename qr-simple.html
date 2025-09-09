@@ -487,14 +487,13 @@
     console.error('Error cargando estadísticas:', error);
   }
 }
-  
-  async function verificarToken(reintentos = 3) {
+
+    async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
         
         const modo = actualizarIndicadorModo();
         
-        // ✅ VERIFICAR HORARIO PERO NO SALIR INMEDIATAMENTE
         if (modo.tipo === 'inactivo') {
           console.log('🌙 Fuera de horario laboral');
           elements.qrLoading.innerHTML = `
@@ -507,7 +506,7 @@
           elements.qrCanvas.style.display = 'none';
           actualizarEstado('fuera-horario');
           elements.countdown.textContent = 'Inactivo';
-          await cargarEstadisticasCompletas(); // ✅ CARGAR ESTADÍSTICAS AUNQUE ESTÉ INACTIVO
+          await cargarEstadisticasCompletas();
           return;
         }
         
@@ -534,18 +533,24 @@
           
           if (debeRegenerar) {
             console.log('🔄 Token necesita regeneración');
-            await generarQR(false); // ✅ ESTO FUNCIONA BIEN
+            await generarQR(false);
           } else {
             console.log('✅ Token válido, reutilizando...');
             tokenActual = data.token;
             tiempoExpiracion = expiracion.getTime();
             
+            // ✅ MOSTRAR TOKEN ENCRIPTADO
             const tokenEncriptado = encriptarTokenDisplay(tokenActual);
             elements.currentToken.textContent = tokenEncriptado;
             
+            // ✅ GENERAR URL COMPLETA
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
             const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
             
+            // ✅ OCULTAR LOADING Y MOSTRAR QR (ESTO ESTABA MAL)
+            elements.qrLoading.style.display = 'none';
+            
+            // ✅ GENERAR QR VISUAL
             const qr = new QRious({
               element: elements.qrCanvas,
               value: urlCompleta,
@@ -554,21 +559,24 @@
               background: '#ffffff'
             });
 
-            elements.qrLoading.style.display = 'none';
+            // ✅ MOSTRAR CANVAS Y APLICAR ESTILOS
             elements.qrCanvas.style.display = 'block';
+            elements.qrCanvas.style.opacity = '1';
+            elements.qrCanvas.style.transform = 'scale(1)';
             
+            // ✅ ACTUALIZAR ESTADO
             if (ahora < expiracion) {
               actualizarEstado('activo');
               iniciarCuentaRegresiva();
             } else {
               actualizarEstado('expirado');
             }
+            
+            console.log('🎯 QR reutilizado y mostrado correctamente');
           }
         } else {
-          // ✅ AQUÍ ESTÁ EL PROBLEMA - MEJORAR ESTA PARTE
           console.log('📝 No hay token existente, generando nuevo...');
           
-          // Mostrar estado de generación inmediatamente
           elements.qrLoading.innerHTML = `
             <div class="loading-icon">
               <i class="bi bi-shield-check"></i>
@@ -578,11 +586,9 @@
           elements.qrLoading.style.display = 'flex';
           actualizarEstado('generando');
           
-          // ✅ GENERAR QR FORZADAMENTE
-          await generarQR(true); // ✅ CAMBIAR A true PARA FORZAR GENERACIÓN
+          await generarQR(true);
         }
 
-        // ✅ CARGAR ESTADÍSTICAS AL FINAL
         await cargarEstadisticasCompletas();
 
       } catch (error) {
@@ -596,10 +602,9 @@
           return;
         }
         
-        // ✅ SI HAY ERROR, FORZAR GENERACIÓN DE QR
         console.log('🔄 Error persistente, forzando generación de QR...');
         try {
-          await generarQR(true); // ✅ FORZAR GENERACIÓN EN CASO DE ERROR
+          await generarQR(true);
         } catch (genError) {
           console.error('❌ Error crítico generando QR:', genError);
           elements.qrLoading.innerHTML = `
@@ -614,6 +619,7 @@
         }
       }
     }
+
 
     async function inicializar() {
       if (yaInicializado) {
