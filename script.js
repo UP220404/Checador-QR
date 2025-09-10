@@ -93,19 +93,35 @@ async function validarQR() {
       return false;
     }
     
-    // Verificar que no haya sido usado
-    if (tokenData.usado) {
-      mostrarEstado("error", "🚫 QR ya utilizado. Cada QR solo puede usarse una vez.");
-      await incrementarContador('bloqueados');
-      return false;
-    }
+    // ✅ NUEVA LÓGICA: Permitir múltiples usos en modo estático
+    const modoToken = tokenData.modo || 'dinamico';
     
-    // ✅ Token válido - marcarlo como usado
-    await updateDoc(tokenRef, {
-      usado: true,
-      fechaUso: new Date(),
-      activo: false
-    });
+    if (modoToken === 'dinamico') {
+      // En modo dinámico: solo un uso
+      if (tokenData.usado) {
+        mostrarEstado("error", "🚫 QR ya utilizado. Cada QR solo puede usarse una vez en horario de entrada.");
+        await incrementarContador('bloqueados');
+        return false;
+      }
+      
+      // ✅ Marcar como usado SOLO en modo dinámico
+      await updateDoc(tokenRef, {
+        usado: true,
+        fechaUso: new Date(),
+        ultimoUsuario: usuarioActual?.email || 'desconocido'
+      });
+      
+    } else if (modoToken === 'estatico') {
+      // En modo estático: múltiples usos permitidos
+      console.log('🔓 Modo estático: permitiendo múltiples usos');
+      
+      // Opcional: registrar quién lo usó sin marcarlo como usado
+      await updateDoc(tokenRef, {
+        ultimoAcceso: new Date(),
+        ultimoUsuario: usuarioActual?.email || 'desconocido',
+        contadorUsos: increment(1)
+      });
+    }
     
     await incrementarContador('exitosos');
     

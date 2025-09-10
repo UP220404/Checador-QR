@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="qr-simple.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-  
 </head>
 <body>
   <div class="main-container">
@@ -125,6 +124,7 @@
       footerText: document.getElementById('footer-text')
     };
 
+    // ✅ FUNCIÓN DE ENCRIPTACIÓN COMPLETA
     function encriptarTokenDisplay(token) {
       try {
         const key = 'CIELITO_HOME_2025_SECURE_KEY';
@@ -144,15 +144,7 @@
       }
     }
 
-    function desencriptarToken(encryptedDisplay) {
-      try {
-        const base64Part = encryptedDisplay.replace('🔐 ', '').replace('...', '');
-        return tokenActual;
-      } catch (error) {
-        return null;
-      }
-    }
-
+    // ✅ FUNCIÓN DETECTAR MODO COMPLETA
     function detectarModo() {
       const ahora = new Date();
       const hora = ahora.getHours();
@@ -222,137 +214,126 @@
       return `CH_${modo}_${timestamp}_${random}_${extra}`.toUpperCase();
     }
 
-
-      async function generarQR(forzarPorUsuario = false) {
-    try {
-      console.log('🔄 Iniciando generación de QR...', { forzarPorUsuario });
-      
-      const modo = actualizarIndicadorModo();
-      
-      if (modo.tipo === 'inactivo') {
-        // ✅ NUEVA ANIMACIÓN PARA INACTIVO
+    // ✅ FUNCIÓN GENERAR QR COMPLETA
+    async function generarQR(forzarPorUsuario = false) {
+      try {
+        console.log('🔄 Iniciando generación de QR...', { forzarPorUsuario });
+        
+        const modo = actualizarIndicadorModo();
+        
+        if (modo.tipo === 'inactivo') {
+          elements.qrLoading.innerHTML = `
+            <div class="loading-icon">
+              <i class="bi bi-moon text-warning"></i>
+            </div>
+            <p class="loading-text text-warning">Sistema inactivo</p>
+            <small class="text-muted">Horario: 7:00 AM - 6:00 PM</small>
+          `;
+          elements.qrCanvas.style.display = 'none';
+          actualizarEstado('fuera-horario');
+          elements.countdown.textContent = 'Inactivo';
+          return;
+        }
+        
+        const ahora = Date.now();
+        if (!forzarPorUsuario && (ahora - ultimaGeneracion) < 15000) {
+          console.log('🚫 Regeneración muy reciente, omitiendo...');
+          return;
+        }
+        
+        if (typeof QRious === 'undefined') {
+          throw new Error('QRCode library not available');
+        }
+        
         elements.qrLoading.innerHTML = `
           <div class="loading-icon">
-            <i class="bi bi-moon text-warning"></i>
+            <i class="bi bi-shield-check"></i>
           </div>
-          <p class="loading-text text-warning">Sistema inactivo</p>
-          <small class="text-muted">Horario: 7:00 AM - 6:00 PM</small>
+          <p class="loading-text">Generando QR seguro</p>
         `;
-        elements.qrCanvas.style.display = 'none';
-        actualizarEstado('fuera-horario', true);
-        elements.countdown.textContent = 'Inactivo';
-        return;
-      }
-      
-      const ahora = Date.now();
-      if (!forzarPorUsuario && (ahora - ultimaGeneracion) < 15000) {
-        console.log('🚫 Regeneración muy reciente, omitiendo...');
-        return;
-      }
-      
-      if (typeof QRious === 'undefined') {
-        throw new Error('QRCode library not available');
-      }
-      
-      // ✅ MOSTRAR LOADING CON NUEVA ANIMACIÓN
-      elements.qrLoading.innerHTML = `
-        <div class="loading-icon">
-          <i class="bi bi-shield-check"></i>
-        </div>
-        <p class="loading-text">Generando QR seguro</p>
-      `;
-      elements.qrLoading.style.display = 'flex';
-      
-      // ✅ ANIMAR SALIDA DEL QR ANTERIOR
-      if (elements.qrCanvas.style.display !== 'none') {
-        elements.qrCanvas.style.opacity = '0';
-        elements.qrCanvas.style.transform = 'scale(0.9)';
-        setTimeout(() => {
-          elements.qrCanvas.style.display = 'none';
-        }, 200);
-      }
-      
-      // ✅ ANIMAR ESTADO
-      actualizarEstado('generando', true);
+        elements.qrLoading.style.display = 'flex';
+        
+        if (elements.qrCanvas.style.display !== 'none') {
+          elements.qrCanvas.style.opacity = '0';
+          elements.qrCanvas.style.transform = 'scale(0.9)';
+          setTimeout(() => {
+            elements.qrCanvas.style.display = 'none';
+          }, 200);
+        }
+        
+        actualizarEstado('generando');
 
-      tokenActual = generarTokenSeguro();
-      tiempoExpiracion = Date.now() + modo.duracion;
-      ultimaGeneracion = ahora;
+        tokenActual = generarTokenSeguro();
+        tiempoExpiracion = Date.now() + modo.duracion;
+        ultimaGeneracion = ahora;
 
-      console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
+        console.log(`📝 Token generado (${modo.tipo}):`, tokenActual);
 
-      await setDoc(doc(db, "qr_tokens", "current"), {
-        token: tokenActual,
-        expiracion: new Date(tiempoExpiracion),
-        creado: new Date(),
-        usado: false,
-        activo: true,
-        modo: modo.tipo,
-        duracionMinutos: modo.duracion / 60000
-      });
-
-      const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
-      const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
-
-      // ✅ GENERAR QR CON DELAY PARA ANIMACIÓN
-      setTimeout(() => {
-        const qr = new QRious({
-          element: elements.qrCanvas,
-          value: urlCompleta,
-          size: 250,
-          foreground: '#155d27',
-          background: '#ffffff'
+        await setDoc(doc(db, "qr_tokens", "current"), {
+          token: tokenActual,
+          expiracion: new Date(tiempoExpiracion),
+          creado: new Date(),
+          usado: false,
+          activo: true,
+          modo: modo.tipo,
+          duracionMinutos: modo.duracion / 60000,
+          contadorUsos: 0,
+          ultimoUsuario: null,
+          ultimoAcceso: null
         });
 
-        // ✅ ANIMAR TOKEN CON EFECTO SHIMMER
-        const tokenEncriptado = encriptarTokenDisplay(tokenActual);
-        elements.currentToken.classList.add('updating');
-        elements.currentToken.textContent = tokenEncriptado;
-        
+        const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
+        const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
+
         setTimeout(() => {
-          elements.currentToken.classList.remove('updating');
-        }, 1000);
-        
-        // ✅ ANIMAR APARICIÓN DEL QR
-        elements.qrLoading.style.display = 'none';
-        elements.qrCanvas.style.display = 'block';
-        elements.qrCanvas.classList.add('animate-in');
-        
-        setTimeout(() => {
+          const qr = new QRious({
+            element: elements.qrCanvas,
+            value: urlCompleta,
+            size: 250,
+            foreground: '#155d27',
+            background: '#ffffff'
+          });
+
+          const tokenEncriptado = encriptarTokenDisplay(tokenActual);
+          elements.currentToken.classList.add('updating');
+          elements.currentToken.textContent = tokenEncriptado;
+          
+          setTimeout(() => {
+            elements.currentToken.classList.remove('updating');
+          }, 1000);
+          
+          elements.qrLoading.style.display = 'none';
+          elements.qrCanvas.style.display = 'block';
           elements.qrCanvas.style.opacity = '1';
           elements.qrCanvas.style.transform = 'scale(1)';
-          elements.qrCanvas.classList.remove('animate-in');
-        }, 100);
-        
-        actualizarEstado('activo', true);
-        iniciarCuentaRegresiva();
-        
-      }, 800); // Delay para que se vea la animación de loading
+          
+          actualizarEstado('activo');
+          iniciarCuentaRegresiva();
+          
+        }, 800);
 
-      if (forzarPorUsuario) {
-        await actualizarEstadisticas();
+        if (forzarPorUsuario) {
+          await actualizarEstadisticas();
+        }
+
+        console.log(`✅ QR generado exitosamente en modo ${modo.tipo}`);
+
+      } catch (error) {
+        console.error('❌ Error generando QR:', error);
+        
+        elements.qrLoading.innerHTML = `
+          <div class="loading-icon">
+            <i class="bi bi-exclamation-triangle text-danger"></i>
+          </div>
+          <p class="loading-text text-danger">Error al generar QR</p>
+          <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
+          </button>
+        `;
+        
+        actualizarEstado('error');
       }
-
-      console.log(`✅ QR generado exitosamente en modo ${modo.tipo}`);
-
-    } catch (error) {
-      console.error('❌ Error generando QR:', error);
-      
-      // ✅ NUEVA ANIMACIÓN PARA ERROR
-      elements.qrLoading.innerHTML = `
-        <div class="loading-icon">
-          <i class="bi bi-exclamation-triangle text-danger"></i>
-        </div>
-        <p class="loading-text text-danger">Error al generar QR</p>
-        <button class="btn btn-sm btn-outline-primary mt-2" onclick="location.reload()">
-          <i class="bi bi-arrow-clockwise me-1"></i>Recargar página
-        </button>
-      `;
-      
-      actualizarEstado('error', true);
     }
-  }
-
 
     function iniciarCuentaRegresiva() {
       if (intervaloCuenta) clearInterval(intervaloCuenta);
@@ -384,40 +365,32 @@
       }, 1000);
     }
 
-   function actualizarEstado(estado, animar = false) {
-  elements.statusBadge.className = 'status-badge';
-  
-  // ✅ AGREGAR ANIMACIÓN SI SE SOLICITA
-  if (animar) {
-    elements.statusBadge.classList.add('updating');
-    setTimeout(() => {
-      elements.statusBadge.classList.remove('updating');
-    }, 600);
-  }
-  
-  switch(estado) {
-    case 'activo':
-      elements.statusBadge.classList.add('status-success');
-      elements.statusText.innerHTML = '<i class="bi bi-shield-check me-1"></i>Activo';
-      break;
-    case 'expirado':
-      elements.statusBadge.classList.add('status-warning');
-      elements.statusText.innerHTML = '<i class="bi bi-clock me-1"></i>Expirado';
-      break;
-    case 'error':
-      elements.statusBadge.classList.add('status-danger');
-      elements.statusText.innerHTML = '<i class="bi bi-x-circle me-1"></i>Error';
-      break;
-    case 'generando':
-      elements.statusBadge.classList.add('status-warning');
-      elements.statusText.innerHTML = '<i class="bi bi-hourglass me-1"></i>Generando';
-      break;
-    case 'fuera-horario':
-      elements.statusBadge.classList.add('status-night');
-      elements.statusText.innerHTML = '<i class="bi bi-moon me-1"></i>Inactivo';
-      break;
+    function actualizarEstado(estado) {
+      elements.statusBadge.className = 'status-badge';
+      
+      switch(estado) {
+        case 'activo':
+          elements.statusBadge.classList.add('status-success');
+          elements.statusText.innerHTML = '<i class="bi bi-shield-check me-1"></i>Activo';
+          break;
+        case 'expirado':
+          elements.statusBadge.classList.add('status-warning');
+          elements.statusText.innerHTML = '<i class="bi bi-clock me-1"></i>Expirado';
+          break;
+        case 'error':
+          elements.statusBadge.classList.add('status-danger');
+          elements.statusText.innerHTML = '<i class="bi bi-x-circle me-1"></i>Error';
+          break;
+        case 'generando':
+          elements.statusBadge.classList.add('status-warning');
+          elements.statusText.innerHTML = '<i class="bi bi-hourglass me-1"></i>Generando';
+          break;
+        case 'fuera-horario':
+          elements.statusBadge.classList.add('status-night');
+          elements.statusText.innerHTML = '<i class="bi bi-moon me-1"></i>Inactivo';
+          break;
+      }
     }
-  }
 
     async function actualizarEstadisticas() {
       try {
@@ -439,55 +412,55 @@
           });
         }
 
-         await cargarEstadisticasCompletas();
+        await cargarEstadisticasCompletas();
 
       } catch (error) {
         console.error('Error actualizando estadísticas:', error);
       }
     }
 
-   async function cargarEstadisticasCompletas() {
-  try {
-    const hoy = new Date().toISOString().split('T')[0];
-    const statsRef = doc(db, "qr_stats", hoy);
-    const statsDoc = await getDoc(statsRef);
-    
-    if (statsDoc.exists()) {
-      const data = statsDoc.data();
-      
-      // ✅ ANIMAR CONTADORES AL CAMBIAR
-      const updateCounter = (element, newValue) => {
-        if (element.textContent !== newValue.toString()) {
-          element.classList.add('updating');
-          element.textContent = newValue;
-          setTimeout(() => {
-            element.classList.remove('updating');
-          }, 500);
+    async function cargarEstadisticasCompletas() {
+      try {
+        const hoy = new Date().toISOString().split('T')[0];
+        const statsRef = doc(db, "qr_stats", hoy);
+        const statsDoc = await getDoc(statsRef);
+        
+        if (statsDoc.exists()) {
+          const data = statsDoc.data();
+          
+          const updateCounter = (element, newValue) => {
+            if (element.textContent !== newValue.toString()) {
+              element.classList.add('updating');
+              element.textContent = newValue;
+              setTimeout(() => {
+                element.classList.remove('updating');
+              }, 500);
+            } else {
+              element.textContent = newValue;
+            }
+          };
+          
+          updateCounter(elements.tokensCount, data.generados || 0);
+          updateCounter(elements.successCount, data.exitosos || 0);
+          updateCounter(elements.blockedCount, data.bloqueados || 0);
+          
+          console.log('📊 Estadísticas cargadas:', {
+            generados: data.generados || 0,
+            exitosos: data.exitosos || 0,
+            bloqueados: data.bloqueados || 0
+          });
         } else {
-          element.textContent = newValue;
+          elements.tokensCount.textContent = 0;
+          elements.successCount.textContent = 0;
+          elements.blockedCount.textContent = 0;
         }
-      };
-      
-      updateCounter(elements.tokensCount, data.generados || 0);
-      updateCounter(elements.successCount, data.exitosos || 0);
-      updateCounter(elements.blockedCount, data.bloqueados || 0);
-      
-      console.log('📊 Estadísticas cargadas:', {
-        generados: data.generados || 0,
-        exitosos: data.exitosos || 0,
-        bloqueados: data.bloqueados || 0
-      });
-    } else {
-      elements.tokensCount.textContent = 0;
-      elements.successCount.textContent = 0;
-      elements.blockedCount.textContent = 0;
+
+      } catch (error) {
+        console.error('Error cargando estadísticas:', error);
+      }
     }
 
-  } catch (error) {
-    console.error('Error cargando estadísticas:', error);
-  }
-}
-
+    // ✅ FUNCIÓN VERIFICAR TOKEN COMPLETA
     async function verificarToken(reintentos = 3) {
       try {
         console.log('🔍 Verificando token existente...');
@@ -526,6 +499,7 @@
           console.log('📄 Token encontrado:', data.token);
           console.log('🎯 Modo token:', modoToken, '/ Modo actual:', modo.tipo);
           
+          // ✅ CONDICIÓN COMPLETA
           const debeRegenerar = 
             data.usado || 
             ahora > expiracion ||
@@ -539,18 +513,12 @@
             tokenActual = data.token;
             tiempoExpiracion = expiracion.getTime();
             
-            // ✅ MOSTRAR TOKEN ENCRIPTADO
             const tokenEncriptado = encriptarTokenDisplay(tokenActual);
             elements.currentToken.textContent = tokenEncriptado;
             
-            // ✅ GENERAR URL COMPLETA
             const baseUrl = window.location.origin + window.location.pathname.replace('qr-simple.html', 'index.html');
             const urlCompleta = `${baseUrl}?qr=OFICINA2025&token=${tokenActual}&t=${Date.now()}`;
             
-            // ✅ OCULTAR LOADING Y MOSTRAR QR (ESTO ESTABA MAL)
-            elements.qrLoading.style.display = 'none';
-            
-            // ✅ GENERAR QR VISUAL
             const qr = new QRious({
               element: elements.qrCanvas,
               value: urlCompleta,
@@ -559,12 +527,11 @@
               background: '#ffffff'
             });
 
-            // ✅ MOSTRAR CANVAS Y APLICAR ESTILOS
+            elements.qrLoading.style.display = 'none';
             elements.qrCanvas.style.display = 'block';
             elements.qrCanvas.style.opacity = '1';
             elements.qrCanvas.style.transform = 'scale(1)';
             
-            // ✅ ACTUALIZAR ESTADO
             if (ahora < expiracion) {
               actualizarEstado('activo');
               iniciarCuentaRegresiva();
@@ -620,7 +587,6 @@
       }
     }
 
-
     async function inicializar() {
       if (yaInicializado) {
         console.log('⚠️ Sistema ya inicializado, evitando duplicación');
@@ -628,9 +594,8 @@
       }
       
       yaInicializado = true;
-      console.log('🚀 Iniciando sistema QR inteligente con encriptación...');
+      console.log('🚀 Iniciando sistema QR inteligente...');
       
-      // ✅ MOSTRAR ESTADO DE CARGA INMEDIATAMENTE
       elements.qrLoading.innerHTML = `
         <div class="loading-icon">
           <i class="bi bi-hourglass-split"></i>
@@ -674,11 +639,7 @@
       }
     }
 
-
-    
-
-
-     function configurarIntervalos() {
+    function configurarIntervalos() {
       setInterval(() => {
         const modo = detectarModo();
         if (modo.tipo !== 'inactivo') {
@@ -717,14 +678,20 @@
         }
       }, 60000);
 
-      // ✅ ACTUALIZAR ESTADÍSTICAS CADA 30 SEGUNDOS
       setInterval(() => {
         cargarEstadisticasCompletas();
       }, 30000);
     }
 
+    // Event listener
+    elements.refreshBtn.addEventListener('click', () => {
+      const modo = detectarModo();
+      if (modo.tipo === 'dinamico') {
+        generarQR(true);
+      }
+    });
 
-
+    // Inicialización
     await inicializar();
   </script>
 </body>
