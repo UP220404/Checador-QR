@@ -571,6 +571,7 @@ function getBadgeClass(tipoEvento) {
  * @param {object} datosUsuario - Datos adicionales del usuario
  * @param {object} coords - Coordenadas de geolocalización
  */
+
 async function registrarAsistencia(user, datosUsuario, coords) {
   const esRemoto = USUARIOS_REMOTOS.includes(user.email);
 
@@ -592,11 +593,11 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const finEntrada = new Date();
   const horaSalida = new Date();
   if (datosUsuario.tipo === "becario") {
-    finEntrada.setHours(13, 0, 0, 0); // 13:00
-    horaSalida.setHours(13, 0, 0, 0); // 13:00
+    finEntrada.setHours(13, 0, 0, 0);
+    horaSalida.setHours(13, 0, 0, 0);
   } else {
-    finEntrada.setHours(16, 0, 0, 0); // 16:00
-    horaSalida.setHours(16, 0, 0, 0); // 16:00
+    finEntrada.setHours(16, 0, 0, 0);
+    horaSalida.setHours(16, 0, 0, 0);
   }
 
   // SEGUNDO: Verificar horarios y lógica de negocio
@@ -641,13 +642,10 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     return;
   }
 
-  // TERCERO: Solo validar QR y ubicación si NO es remoto Y si pasó las validaciones anteriores
+  // TERCERO: Solo validar ubicación si NO es remoto (QR ya fue validado antes)
   if (!esRemoto) {
-    if (!validarQR()) {
-      mostrarEstado("error", "⛔ Debes escanear el QR de la oficina para registrar tu entrada.");
-      return;
-    }
-
+    // ✅ QUITAR LA VALIDACIÓN DE QR AQUÍ - ya se hizo antes
+    
     // RESTRICCIÓN: No permitir registros en fin de semana
     const diaSemana = ahora.getDay(); 
     if (diaSemana === 0 || diaSemana === 6) {
@@ -664,10 +662,10 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
     // Coordenadas de la oficina
     const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
-    const RADIO_METROS = 40; // Radio permitido en metros
+    const RADIO_METROS = 40;
 
     function distanciaMetros(lat1, lng1, lat2, lng2) {
-      const R = 6371e3; // metros
+      const R = 6371e3;
       const φ1 = lat1 * Math.PI/180;
       const φ2 = lat2 * Math.PI/180;
       const Δφ = (lat2-lat1) * Math.PI/180;
@@ -779,7 +777,7 @@ onAuthStateChanged(auth, async (user) => {
     if (accesoSospechoso && !sesionValidada) {
       await registrarIntentoSospechoso(accesoSospechoso, user);
       mostrarEstado("error", `⚠️ ${user.displayName || user.email}, debes escanear el QR para registrar asistencia.`);
-      return;
+      return; // ✅ IMPORTANTE: Salir aquí si no está validado
     }
     
     // Usuario autenticado
@@ -799,9 +797,22 @@ onAuthStateChanged(auth, async (user) => {
 
       const userData = userDoc.data();
       
-      // Verificar si es usuario remoto ANTES de obtener ubicación
+      // ✅ CORREGIR AQUÍ: Validar QR ANTES de continuar
       const esRemoto = USUARIOS_REMOTOS.includes(user.email);
       
+      // Solo validar QR si NO es usuario remoto
+      if (!esRemoto) {
+        const qrValido = await validarQR();
+        if (!qrValido) {
+          // ✅ Si el QR no es válido, NO continuar con el registro
+          console.log('❌ QR inválido, deteniendo flujo de registro');
+          return; // ✅ DETENER AQUÍ
+        }
+      }
+      
+      // Si llegamos aquí, el usuario está autorizado y el QR es válido (o es remoto)
+      
+      // Verificar si es usuario remoto ANTES de obtener ubicación
       if (esRemoto) {
         // Usuario remoto: registrar sin ubicación
         registrarAsistencia(user, userData, null);
