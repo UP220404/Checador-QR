@@ -59,77 +59,98 @@ async function validarQR() {
     return false;
   }
   
-  // 🔐 NUEVA VALIDACIÓN DE TOKEN
-  if (!tokenParam) {
-    mostrarEstado("error", "❌ Token de seguridad requerido. Escanea un QR válido.");
-    return false;
-  }
-  
-  try {
-    // Verificar token en Firebase
-    const tokenRef = doc(db, "qr_tokens", "current");
-    const tokenDoc = await getDoc(tokenRef);
+  // ✅ SISTEMA HÍBRIDO: Soportar QR con token Y QR estático anterior
+  if (tokenParam) {
+    // ===== NUEVO SISTEMA CON TOKEN =====
+    console.log('🔐 Validando QR con token (nuevo sistema)...');
     
-    if (!tokenDoc.exists()) {
-      mostrarEstado("error", "❌ Token no encontrado. Solicita un nuevo QR.");
-      return false;
-    }
-    
-    const tokenData = tokenDoc.data();
-    const ahora = new Date();
-    const expiracion = tokenData.expiracion.toDate();
-    
-    // Verificar que el token coincida
-    if (tokenData.token !== tokenParam) {
-      mostrarEstado("error", "❌ Token inválido. Escanea el QR más reciente.");
-      await incrementarContador('bloqueados');
-      return false;
-    }
-    
-    // Verificar que no esté expirado
-    if (ahora > expiracion) {
-      mostrarEstado("error", "⏰ QR expirado. Solicita un nuevo código.");
-      await incrementarContador('bloqueados');
-      return false;
-    }
-    
-    // ✅ NUEVA LÓGICA: Permitir múltiples usos en modo estático
-    const modoToken = tokenData.modo || 'dinamico';
-    
-    if (modoToken === 'dinamico') {
-      // En modo dinámico: solo un uso
-      if (tokenData.usado) {
-        mostrarEstado("error", "🚫 QR ya utilizado. Cada QR solo puede usarse una vez en horario de entrada.");
+    try {
+      // Verificar token en Firebase
+      const tokenRef = doc(db, "qr_tokens", "current");
+      const tokenDoc = await getDoc(tokenRef);
+      
+      if (!tokenDoc.exists()) {
+        mostrarEstado("error", "❌ Token no encontrado. Solicita un nuevo QR.");
         await incrementarContador('bloqueados');
         return false;
       }
       
-      // ✅ Marcar como usado SOLO en modo dinámico
-      await updateDoc(tokenRef, {
-        usado: true,
-        fechaUso: new Date(),
-        ultimoUsuario: usuarioActual?.email || 'desconocido'
-      });
+      const tokenData = tokenDoc.data();
+      const ahora = new Date();
+      const expiracion = tokenData.expiracion.toDate();
       
-    } else if (modoToken === 'estatico') {
-      // En modo estático: múltiples usos permitidos
-      console.log('🔓 Modo estático: permitiendo múltiples usos');
+      // Verificar que el token coincida
+      if (tokenData.token !== tokenParam) {
+        mostrarEstado("error", "❌ Token inválido. Escanea el QR más reciente.");
+        await incrementarContador('bloqueados');
+        return false;
+      }
       
-      // Opcional: registrar quién lo usó sin marcarlo como usado
-      await updateDoc(tokenRef, {
-        ultimoAcceso: new Date(),
-        ultimoUsuario: usuarioActual?.email || 'desconocido',
-        contadorUsos: increment(1)
-      });
+      // Verificar que no esté expirado
+      if (ahora > expiracion) {
+        mostrarEstado("error", "⏰ QR expirado. Solicita un nuevo código.");
+        await incrementarContador('bloqueados');
+        return false;
+      }
+      
+      // Lógica de múltiples usos según modo
+      const modoToken = tokenData.modo || 'dinamico';
+      
+      if (modoToken === 'dinamico') {
+        // En modo dinámico: solo un uso
+        if (tokenData.usado) {
+          mostrarEstado("error", "🚫 QR ya utilizado. Cada QR solo puede usarse una vez en horario de entrada.");
+          await incrementarContador('bloqueados');
+          return false;
+        }
+        
+        // Marcar como usado SOLO en modo dinámico
+        await updateDoc(tokenRef, {
+          usado: true,
+          fechaUso: new Date(),
+          ultimoUsuario: usuarioActual?.email || 'desconocido'
+        });
+        
+      } else if (modoToken === 'estatico') {
+        // En modo estático: múltiples usos permitidos
+        console.log('🔓 Modo estático: permitiendo múltiples usos');
+        
+        // Registrar quién lo usó sin marcarlo como usado
+        await updateDoc(tokenRef, {
+          ultimoAcceso: new Date(),
+          ultimoUsuario: usuarioActual?.email || 'desconocido',
+          contadorUsos: increment(1)
+        });
+      }
+      
+      await incrementarContador('exitosos');
+      console.log('✅ Token validado exitosamente (nuevo sistema)');
+      
+    } catch (error) {
+      console.error('Error validando token:', error);
+      mostrarEstado("error", "❌ Error de conexión. Intenta nuevamente.");
+      return false;
     }
     
+  } else {
+  // ===== SISTEMA ANTERIOR SIN TOKEN (COMPATIBILIDAD) =====
+  console.log('📋 Validando QR estático anterior (sin token)...');
+  
+  // Verificar horarios permitidos para QR estático anterior
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  const minutos = ahora.getMinutes();
+  
+  // ✅ PERMITIR QR ESTÁTICO ANTERIOR EN TODO EL HORARIO LABORAL
+  if (hora >= 7 && hora < 18) {
+    console.log('✅ QR estático anterior permitido en horario laboral completo');
     await incrementarContador('exitosos');
-    
-  } catch (error) {
-    console.error('Error validando token:', error);
-    mostrarEstado("error", "❌ Error de conexión. Intenta nuevamente.");
+  } else {
+    mostrarEstado("error", "❌ QR estático anterior solo permitido en horario laboral (7 AM - 6 PM).");
+    await incrementarContador('bloqueados');
     return false;
   }
+}
   
   // Si todo está bien, marcar sesión como válida
   sesionValidada = true;
