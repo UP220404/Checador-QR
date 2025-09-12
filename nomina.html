@@ -3,359 +3,434 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Nómina - Próximamente | Cielito Home</title>
+  <title>Sistema de Nómina Quincenal | Cielito Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary-color: #0f5132;
-      --secondary-color: #198754;
-      --accent-color: #20c997;
-      --light-color: #f8f9fa;
-      --dark-color: #212529;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #0f5132 0%, #198754 50%, #20c997 100%);
-      margin: 0;
-      color: white;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .background-pattern {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
-      z-index: 1;
-    }
-
-    .floating-icons {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    .floating-icon {
-      position: absolute;
-      color: rgba(255,255,255,0.1);
-      animation: float 6s ease-in-out infinite;
-      font-size: 2rem;
-    }
-
-    .floating-icon:nth-child(1) {
-      top: 10%;
-      left: 10%;
-      animation-delay: 0s;
-    }
-
-    .floating-icon:nth-child(2) {
-      top: 20%;
-      right: 15%;
-      animation-delay: 1s;
-      font-size: 1.5rem;
-    }
-
-    .floating-icon:nth-child(3) {
-      bottom: 30%;
-      left: 20%;
-      animation-delay: 2s;
-      font-size: 3rem;
-    }
-
-    .floating-icon:nth-child(4) {
-      bottom: 20%;
-      right: 10%;
-      animation-delay: 3s;
-      font-size: 1.8rem;
-    }
-
-    .floating-icon:nth-child(5) {
-      top: 50%;
-      left: 5%;
-      animation-delay: 4s;
-      font-size: 2.5rem;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0px) rotate(0deg); }
-      50% { transform: translateY(-20px) rotate(5deg); }
-    }
-
-    .main-content {
-      text-align: center;
-      z-index: 10;
-      position: relative;
-      max-width: 800px;
-      padding: 3rem;
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(20px);
-      border-radius: 30px;
-      border: 1px solid rgba(255,255,255,0.2);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      animation: slideIn 1s ease-out;
-    }
-
-    @keyframes slideIn {
-      from { 
-        opacity: 0; 
-        transform: translateY(30px); 
-      }
-      to { 
-        opacity: 1; 
-        transform: translateY(0); 
-      }
-    }
-
-    .logo-icon {
-      font-size: 5rem;
-      margin-bottom: 2rem;
-      color: white;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    .main-title {
-      font-size: 3.5rem;
-      font-weight: 900;
-      margin-bottom: 1rem;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-      letter-spacing: -1px;
-    }
-
-    .subtitle {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 2rem;
-      opacity: 0.9;
-    }
-
-    .coming-soon {
-      font-size: 1.2rem;
-      font-weight: 500;
-      margin-bottom: 3rem;
-      padding: 1rem 2rem;
-      background: rgba(255,255,255,0.15);
-      border-radius: 50px;
-      border: 1px solid rgba(255,255,255,0.2);
-      display: inline-block;
-      backdrop-filter: blur(10px);
-    }
-
-    .features-preview {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      margin: 3rem 0;
-    }
-
-    .feature-card {
-      background: rgba(255,255,255,0.1);
-      padding: 2rem;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .feature-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-    }
-
-    .feature-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      color: var(--accent-color);
-    }
-
-    .feature-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 0.8rem;
-    }
-
-    .feature-description {
-      font-size: 1rem;
-      opacity: 0.9;
-      line-height: 1.5;
-    }
-
-    .back-button {
-      position: absolute;
-      top: 2rem;
-      left: 2rem;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      color: white;
-      padding: 0.8rem 1.5rem;
-      border-radius: 50px;
-      text-decoration: none;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
-      z-index: 20;
-    }
-
-    .back-button:hover {
-      background: rgba(255,255,255,0.3);
-      color: white;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-
-    .progress-indicator {
-      margin-top: 3rem;
-      padding: 1.5rem;
-      background: rgba(255,255,255,0.1);
-      border-radius: 15px;
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    .progress-text {
-      font-size: 0.9rem;
-      opacity: 0.8;
-      margin-bottom: 1rem;
-    }
-
-    .progress-bar-container {
-      background: rgba(0,0,0,0.2);
-      height: 8px;
-      border-radius: 10px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-color), white);
-      border-radius: 10px;
-      width: 35%;
-      animation: progressPulse 2s ease-in-out infinite;
-    }
-
-    @keyframes progressPulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .main-content {
-        margin: 1rem;
-        padding: 2rem;
-      }
-      
-      .main-title {
-        font-size: 2.5rem;
-      }
-      
-      .subtitle {
-        font-size: 1.2rem;
-      }
-      
-      .back-button {
-        top: 1rem;
-        left: 1rem;
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
-      }
-      
-      .features-preview {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-      }
-      
-      .feature-card {
-        padding: 1.5rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="nomina.css">
 </head>
 <body>
-  <div class="background-pattern"></div>
-  
-  <div class="floating-icons">
-    <i class="floating-icon bi bi-calculator"></i>
-    <i class="floating-icon bi bi-people"></i>
-    <i class="floating-icon bi bi-clock"></i>
-    <i class="floating-icon bi bi-graph-up"></i>
-    <i class="floating-icon bi bi-currency-dollar"></i>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="admin.html">
+        <i class="bi bi-calculator-fill me-2"></i>
+        Sistema de Nómina - Cielito Home
+      </a>
+      <a href="admin.html" class="btn btn-outline-light">
+        <i class="bi bi-arrow-left me-2"></i>Volver al Panel
+      </a>
+    </div>
+  </nav>
+
+  <div class="container main-container">
+    <!-- Selector de Período -->
+    <div class="period-selector">
+      <h4><i class="bi bi-calendar-range me-2"></i>Período de Nómina</h4>
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label">Mes y Año</label>
+          <input type="month" id="monthSelect" class="form-control" value="">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Quincena</label>
+          <select id="quinceSelect" class="form-select">
+            <option value="primera">Primera Quincena (1-15)</option>
+            <option value="segunda">Segunda Quincena (16-30/31)</option>
+          </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button onclick="calcularNomina()" class="btn btn-primary">
+            <i class="bi bi-calculator me-2"></i>Calcular Nómina
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuración de Salarios -->
+    <div class="salary-config">
+      <h4><i class="bi bi-currency-dollar me-2"></i>Configuración de Salarios</h4>
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Salario Mensual Empleado Tiempo Completo</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" id="salarioCompleto" class="form-control" value="8000" min="0">
+            <span class="input-group-text">.00</span>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Salario Mensual Becario</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" id="salarioBecario" class="form-control" value="4000" min="0">
+            <span class="input-group-text">.00</span>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col-md-4">
+          <label class="form-label">Horas por Día (Tiempo Completo)</label>
+          <input type="number" id="horasCompleto" class="form-control" value="8" min="1" max="12">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Horas por Día (Becario)</label>
+          <input type="number" id="horasBecario" class="form-control" value="6" min="1" max="12">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Días Laborales por Mes</label>
+          <input type="number" id="diasMes" class="form-control" value="22" min="20" max="25">
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen General -->
+    <div id="summaryCard" class="summary-card" style="display: none;">
+      <h4><i class="bi bi-graph-up me-2"></i>Resumen General</h4>
+      <div class="summary-stats">
+        <div class="summary-stat">
+          <span id="totalEmployees" class="summary-number">0</span>
+          <div class="summary-label">Empleados</div>
+        </div>
+        <div class="summary-stat">
+          <span id="totalRetards" class="summary-number">0</span>
+          <div class="summary-label">Retardos Totales</div>
+        </div>
+        <div class="summary-stat">
+          <span id="employeesWithPenalty" class="summary-number">0</span>
+          <div class="summary-label">Con Descuento</div>
+        </div>
+        <div class="summary-stat">
+          <span id="totalPayout" class="summary-number">$0</span>
+          <div class="summary-label">Total a Pagar</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <span class="ms-3">Calculando nómina...</span>
+    </div>
+
+    <!-- Resultados -->
+    <div id="resultsContainer"></div>
   </div>
 
-  <a href="admin.html" class="back-button">
-    <i class="bi bi-arrow-left me-2"></i>Volver al Panel
-  </a>
+  <!-- Firebase Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  <div class="main-content">
-    <div class="logo-icon">
-      <i class="bi bi-calculator-fill"></i>
-    </div>
-    
-    <h1 class="main-title">Sistema de Nómina</h1>
-    <p class="subtitle">Cielito Home</p>
-    
-    <div class="coming-soon">
-      <i class="bi bi-hourglass-split me-2"></i>
-      Próximamente
-    </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
+      authDomain: "qr-acceso-cielito-home.firebaseapp.com",
+      projectId: "qr-acceso-cielito-home",
+      storageBucket: "qr-acceso-cielito-home.appspot.com",
+      messagingSenderId: "229634415256",
+      appId: "1:229634415256:web:c576ba8879e58e441c4eed"
+    };
 
-    <div class="features-preview">
-      <div class="feature-card">
-        <div class="feature-icon">
-          <i class="bi bi-cloud-upload"></i>
-        </div>
-        <h3 class="feature-title">Carga de Datos</h3>
-        <p class="feature-description">Sistema inteligente para procesar información de asistencia de múltiples fuentes</p>
-      </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Configurar fecha actual por defecto
+    const hoy = new Date();
+    document.getElementById('monthSelect').value = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+
+    // Verificar autenticación
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
       
-      <div class="feature-card">
-        <div class="feature-icon">
-          <i class="bi bi-graph-up-arrow"></i>
-        </div>
-        <h3 class="feature-title">Cálculos Precisos</h3>
-        <p class="feature-description">Algoritmos optimizados para días laborales, retardos y penalizaciones</p>
-      </div>
+      const adminEmails = [
+        'sistemas16ch@gmail.com',
+        'sistemas16cielitohome@gmail.com',
+        'leticia@cielitohome.com',
+        'sistemas@cielitohome.com',
+        'direcciongeneral@cielitohome.com'
+      ];
       
-      <div class="feature-card">
-        <div class="feature-icon">
-          <i class="bi bi-shield-check"></i>
-        </div>
-        <h3 class="feature-title">Sistema Eficiente</h3>
-        <p class="feature-description">Solución optimizada que garantiza rendimiento y confiabilidad</p>
-      </div>
-    </div>
+      if (!adminEmails.includes(user.email)) {
+        alert('No tienes permisos para acceder a esta sección');
+        window.location.href = 'admin.html';
+        return;
+      }
+    });
 
-    <div class="progress-indicator">
-      <div class="progress-text">
-        <i class="bi bi-gear-fill me-2"></i>
-        Desarrollando funcionalidades avanzadas...
-      </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar"></div>
-      </div>
-    </div>
+    // Función para calcular días laborales (excluir fines de semana)
+    function esDiaLaboral(fecha) {
+      const diaSemana = fecha.getDay();
+      return diaSemana !== 0 && diaSemana !== 6; // No domingo (0) ni sábado (6)
+    }
 
-    <p style="margin-top: 2rem; opacity: 0.7; font-size: 0.9rem;">
-      Estamos trabajando en una solución completa para el manejo de nóminas.<br>
-      Mantente al pendiente de las actualizaciones.
-    </p>
-  </div>
+    // Función principal para calcular nómina
+    window.calcularNomina = async function() {
+      const monthSelect = document.getElementById('monthSelect').value;
+      const quinceSelect = document.getElementById('quinceSelect').value;
+      
+      // Obtener configuración de salarios
+      const salarioCompleto = parseFloat(document.getElementById('salarioCompleto').value) || 8000;
+      const salarioBecario = parseFloat(document.getElementById('salarioBecario').value) || 4000;
+      const horasCompleto = parseInt(document.getElementById('horasCompleto').value) || 8;
+      const horasBecario = parseInt(document.getElementById('horasBecario').value) || 6;
+      const diasMes = parseInt(document.getElementById('diasMes').value) || 22;
+      
+      if (!monthSelect) {
+        alert('Selecciona un mes');
+        return;
+      }
+
+      document.getElementById('loadingSpinner').style.display = 'flex';
+      document.getElementById('summaryCard').style.display = 'none';
+      document.getElementById('resultsContainer').innerHTML = '';
+
+      try {
+        const [año, mes] = monthSelect.split('-');
+        const mesNum = parseInt(mes);
+        const añoNum = parseInt(año);
+
+        // Calcular fechas de la quincena
+        let fechaInicio, fechaFin;
+        if (quinceSelect === 'primera') {
+          fechaInicio = new Date(añoNum, mesNum - 1, 1);
+          fechaFin = new Date(añoNum, mesNum - 1, 15);
+        } else {
+          fechaInicio = new Date(añoNum, mesNum - 1, 16);
+          fechaFin = new Date(añoNum, mesNum, 0);
+        }
+
+        // Obtener todos los empleados
+        const usuariosQuery = query(collection(db, "usuarios"));
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        
+        const empleados = [];
+        usuariosSnapshot.forEach(doc => {
+          const userData = doc.data();
+          empleados.push({
+            uid: doc.id,
+            nombre: userData.nombre,
+            email: userData.email,
+            tipo: userData.tipo
+          });
+        });
+
+        // Obtener registros del período
+        const fechaInicioStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaInicio.getDate()).padStart(2, '0')}`;
+        const fechaFinStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaFin.getDate()).padStart(2, '0')}`;
+        
+        console.log(`📅 Calculando quincena: ${fechaInicioStr} a ${fechaFinStr}`);
+
+        const registrosQuery = query(
+          collection(db, "registros"),
+          where("fecha", ">=", fechaInicioStr),
+          where("fecha", "<=", fechaFinStr),
+          where("tipoEvento", "==", "entrada"),
+          orderBy("fecha", "asc")
+        );
+
+        const registrosSnapshot = await getDocs(registrosQuery);
+        
+        // Procesar registros por empleado
+        const registrosPorEmpleado = {};
+        registrosSnapshot.forEach(doc => {
+          const registro = doc.data();
+          const uid = registro.uid;
+          
+          if (!registrosPorEmpleado[uid]) {
+            registrosPorEmpleado[uid] = [];
+          }
+          
+          registrosPorEmpleado[uid].push(registro);
+        });
+
+        // Calcular estadísticas por empleado
+        const resultados = [];
+        let totalRetardos = 0;
+        let empleadosConDescuento = 0;
+        let totalDiasDescontados = 0;
+        let totalNominaPagada = 0;
+
+        for (const empleado of empleados) {
+          const registros = registrosPorEmpleado[empleado.uid] || [];
+          const esBecario = empleado.tipo === 'becario';
+          
+          // Configuración según tipo de empleado
+          const salarioMensual = esBecario ? salarioBecario : salarioCompleto;
+          const horasPorDia = esBecario ? horasBecario : horasCompleto;
+          
+          // 💰 CÁLCULO DE PAGO POR HORA (SIMPLE)
+          const pagoPorHora = salarioMensual / (diasMes * horasPorDia);
+          
+          // Contar días laborales en la quincena
+          let diasLaborales = 0;
+          for (let fecha = new Date(fechaInicio); fecha <= fechaFin; fecha.setDate(fecha.getDate() + 1)) {
+            if (esDiaLaboral(fecha)) {
+              diasLaborales++;
+            }
+          }
+
+          // Contar retardos y asistencias (HORAS COMPLETAS - NO PERFECTCIONISTA)
+          let retardos = 0;
+          let diasTrabajados = 0;
+          const detalleRetardos = [];
+
+          for (const registro of registros) {
+            const fechaRegistro = new Date(registro.fecha + 'T' + registro.hora);
+            
+            if (esDiaLaboral(fechaRegistro)) {
+              diasTrabajados++; // ✅ SIMPLE: 1 entrada = 1 día completo
+              
+              if (registro.estado === 'retardo') {
+                retardos++;
+                detalleRetardos.push({
+                  fecha: registro.fecha,
+                  hora: registro.hora
+                });
+              }
+            }
+          }
+
+          // Calcular penalizaciones
+          const diasDescuento = Math.floor(retardos / 4);
+          const diasEfectivos = diasTrabajados - diasDescuento;
+          
+          // 💰 CÁLCULO FINAL DE PAGO (SIMPLE)
+          const horasTrabajadas = diasEfectivos * horasPorDia; // ✅ HORAS ENTERAS
+          const pagoTotal = Math.round(horasTrabajadas * pagoPorHora); // ✅ REDONDEAR
+          
+          if (diasDescuento > 0) {
+            empleadosConDescuento++;
+            totalDiasDescontados += diasDescuento;
+          }
+          
+          totalRetardos += retardos;
+          totalNominaPagada += pagoTotal;
+
+          // Determinar status
+          let status, statusClass;
+          if (diasDescuento > 0) {
+            status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
+            statusClass = 'status-penalty';
+          } else if (retardos >= 3) {
+            status = 'En límite de retardos';
+            statusClass = 'status-warning';
+          } else {
+            status = 'Sin penalizaciones';
+            statusClass = 'status-ok';
+          }
+
+          resultados.push({
+            empleado,
+            diasLaborales,
+            diasTrabajados,
+            retardos,
+            diasDescuento,
+            diasEfectivos,
+            horasTrabajadas,
+            pagoPorHora,
+            pagoTotal,
+            status,
+            statusClass,
+            detalleRetardos
+          });
+        }
+
+        // Mostrar resultados con pagos
+        mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalDiasDescontados, totalNominaPagada, quinceSelect, monthSelect);
+
+      } catch (error) {
+        console.error('Error calculando nómina:', error);
+        alert('Error al calcular la nómina: ' + error.message);
+      } finally {
+        document.getElementById('loadingSpinner').style.display = 'none';
+      }
+    };
+
+    // Función para mostrar resultados
+    function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalDiasDescontados, totalNominaPagada, quincena, mes) {
+      // Actualizar resumen
+      document.getElementById('totalEmployees').textContent = totalEmpleados;
+      document.getElementById('totalRetards').textContent = totalRetardos;
+      document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
+      document.getElementById('totalPayout').textContent = `$${totalNominaPagada.toLocaleString()}`;
+      document.getElementById('summaryCard').style.display = 'block';
+
+      // Mostrar tarjetas de empleados con información de pago
+      const container = document.getElementById('resultsContainer');
+      container.innerHTML = '';
+
+      resultados.forEach(resultado => {
+        const card = document.createElement('div');
+        card.className = 'employee-card';
+        
+        card.innerHTML = `
+          <div class="employee-header">
+            <div class="employee-name">
+              <i class="bi bi-person-fill me-2"></i>
+              ${resultado.empleado.nombre}
+              <span class="badge bg-secondary ms-2">${resultado.empleado.tipo}</span>
+            </div>
+            <div class="status-badge ${resultado.statusClass}">
+              ${resultado.status}
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-number text-primary">${resultado.diasTrabajados}</div>
+              <div class="stat-label">Días Trabajados</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number text-warning">${resultado.retardos}</div>
+              <div class="stat-label">Retardos</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number text-info">${resultado.horasTrabajadas}</div>
+              <div class="stat-label">Horas Totales</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number text-success">$${resultado.pagoTotal.toLocaleString()}</div>
+              <div class="stat-label">Pago Total</div>
+            </div>
+          </div>
+          
+          <!-- Información de Pago -->
+          <div class="payment-details">
+            <div class="row">
+              <div class="col-6">
+                <small class="text-muted">Pago por hora: <strong>$${Math.round(resultado.pagoPorHora)}</strong></small>
+              </div>
+              <div class="col-6">
+                <small class="text-muted">Días efectivos: <strong>${resultado.diasEfectivos}</strong></small>
+              </div>
+            </div>
+          </div>
+          
+          ${resultado.detalleRetardos.length > 0 ? `
+            <div class="retard-details">
+              <h6><i class="bi bi-clock me-2"></i>Detalle de Retardos:</h6>
+              ${resultado.detalleRetardos.map(retardo => `
+                <div class="retard-item">
+                  <span>${retardo.fecha}</span>
+                  <span class="text-warning">${retardo.hora}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        `;
+        
+        container.appendChild(card);
+      });
+
+      console.log(`✅ Nómina calculada: ${resultados.length} empleados, Total: $${totalNominaPagada.toLocaleString()}`);
+    }
+  </script>
 </body>
 </html>
