@@ -8,6 +8,19 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="nomina.css">
+  <style>
+    /* Estilos compactos para menos scroll */
+    .main-container { padding: 1rem 0; }
+    .period-selector, .salary-config { padding: 1rem; margin-bottom: 1rem; }
+    .summary-card { padding: 1rem; margin-bottom: 1rem; }
+    .summary-stats { gap: 1rem; }
+    .employee-card { margin-bottom: 1rem; padding: 1rem; }
+    .stats-grid { gap: 0.5rem; }
+    .stat-item { padding: 0.5rem; }
+    .payment-details { padding: 0.75rem; margin-top: 0.75rem; }
+    .retard-details { padding: 0.75rem; margin-top: 0.75rem; }
+    .employee-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1rem; }
+  </style>
 </head>
 <body>
   <!-- Navbar -->
@@ -17,115 +30,171 @@
         <i class="bi bi-calculator-fill me-2"></i>
         Sistema de Nómina - Cielito Home
       </a>
-      <a href="admin.html" class="btn btn-outline-light">
-        <i class="bi bi-arrow-left me-2"></i>Volver al Panel
-      </a>
+      <div>
+        <button onclick="toggleSalaryManager()" class="btn btn-outline-light me-2">
+          <i class="bi bi-person-gear me-2"></i>Gestionar Salarios
+        </button>
+        <a href="admin.html" class="btn btn-outline-light">
+          <i class="bi bi-arrow-left me-2"></i>Volver al Panel
+        </a>
+      </div>
     </div>
   </nav>
 
   <div class="container main-container">
-    <!-- Selector de Período -->
+    <!-- Gestión de Salarios Individuales -->
+    <div id="salaryManager" class="salary-config" style="display: none;">
+      <h4><i class="bi bi-person-gear me-2"></i>Gestión de Salarios Individuales</h4>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <select id="employeeSelect" class="form-select">
+            <option value="">Seleccionar empleado...</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <button onclick="loadEmployeeSalary()" class="btn btn-info">
+            <i class="bi bi-person-check me-2"></i>Cargar Datos
+          </button>
+        </div>
+      </div>
+      
+      <div id="employeeSalaryForm" style="display: none;">
+        <div class="row">
+          <div class="col-md-4">
+            <label class="form-label">Salario Quincenal</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" id="individualSalary" class="form-control" min="0">
+              <span class="input-group-text">.00</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Horas por Quincena</label>
+            <input type="number" id="individualHours" class="form-control" min="1" max="160">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Pago por Hora</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" id="hourlyRate" class="form-control" readonly>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div class="col-md-12">
+            <button onclick="saveEmployeeSalary()" class="btn btn-success me-2">
+              <i class="bi bi-floppy me-2"></i>Guardar Configuración
+            </button>
+            <button onclick="clearEmployeeSalary()" class="btn btn-warning me-2">
+              <i class="bi bi-arrow-clockwise me-2"></i>Usar Por Defecto
+            </button>
+            <button onclick="toggleSalaryManager()" class="btn btn-secondary">
+              <i class="bi bi-x me-2"></i>Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selector de Período (Compacto) -->
     <div class="period-selector">
-      <h4><i class="bi bi-calendar-range me-2"></i>Período de Nómina</h4>
-      <div class="row">
-        <div class="col-md-4">
+      <div class="row align-items-end">
+        <div class="col-md-3">
           <label class="form-label">Mes y Año</label>
           <input type="month" id="monthSelect" class="form-control" value="">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label">Quincena</label>
           <select id="quinceSelect" class="form-select">
-            <option value="primera">Primera Quincena (1-15)</option>
-            <option value="segunda">Segunda Quincena (16-30)</option>
+            <option value="primera">Primera (1-15)</option>
+            <option value="segunda">Segunda (16-30)</option>
           </select>
         </div>
-        <div class="col-md-4 d-flex align-items-end">
+        <div class="col-md-6">
           <button onclick="calcularNomina()" class="btn btn-primary">
             <i class="bi bi-calculator me-2"></i>Calcular Nómina
+          </button>
+          <button onclick="exportarExcel()" class="btn btn-success ms-2" id="exportBtn" style="display: none;">
+            <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Configuración de Salarios -->
+    <!-- Configuración de Salarios Por Defecto (Compacto) -->
     <div class="salary-config">
-      <h4><i class="bi bi-currency-dollar me-2"></i>Configuración de Salarios por Defecto</h4>
+      <h5><i class="bi bi-currency-dollar me-2"></i>Salarios Por Defecto</h5>
       <div class="row">
-        <div class="col-md-6">
-          <label class="form-label">Salario Quincenal - Tiempo Completo (80hrs)</label>
-          <div class="input-group">
+        <div class="col-md-3">
+          <label class="form-label text-sm">T.Completo (80hrs)</label>
+          <div class="input-group input-group-sm">
             <span class="input-group-text">$</span>
             <input type="number" id="salarioCompleto" class="form-control" value="4000" min="0">
-            <span class="input-group-text">.00</span>
           </div>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Salario Quincenal - Becario</label>
-          <div class="input-group">
+        <div class="col-md-3">
+          <label class="form-label text-sm">Becario (50hrs)</label>
+          <div class="input-group input-group-sm">
             <span class="input-group-text">$</span>
             <input type="number" id="salarioBecario" class="form-control" value="2000" min="0">
-            <span class="input-group-text">.00</span>
           </div>
         </div>
-      </div>
-      <div class="row mt-3">
-        <div class="col-md-4">
-          <label class="form-label">Horas Quincenal - Tiempo Completo</label>
-          <input type="number" id="horasCompleto" class="form-control" value="80" min="1" readonly>
-          <small class="text-muted">8 hrs/día × 10 días = 80 hrs</small>
+        <div class="col-md-3">
+          <label class="form-label text-sm">H.Especial (60hrs)</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text">$</span>
+            <input type="number" id="salarioEspecial" class="form-control" value="3000" min="0">
+          </div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Horas Quincenal - Becario</label>
-          <input type="number" id="horasBecario" class="form-control" value="50" min="1">
-          <small class="text-muted">5 hrs/día × 10 días = 50 hrs</small>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Horas Quincenal - Horario Especial</label>
-          <input type="number" id="horasEspecial" class="form-control" value="60" min="1">
-          <small class="text-muted">6 hrs/día × 10 días = 60 hrs</small>
+        <div class="col-md-3">
+          <small class="text-muted">Estos valores se usan solo si el empleado no tiene configuración individual</small>
         </div>
       </div>
     </div>
 
-    <!-- Resumen General -->
+    <!-- Resumen General (Compacto) -->
     <div id="summaryCard" class="summary-card" style="display: none;">
-      <h4><i class="bi bi-graph-up me-2"></i>Resumen General</h4>
-      <div class="summary-stats">
-        <div class="summary-stat">
-          <span id="totalEmployees" class="summary-number">0</span>
-          <div class="summary-label">Empleados</div>
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <div class="summary-stats">
+            <div class="summary-stat">
+              <span id="totalEmployees" class="summary-number">0</span>
+              <div class="summary-label">Empleados</div>
+            </div>
+            <div class="summary-stat">
+              <span id="totalRetards" class="summary-number">0</span>
+              <div class="summary-label">Retardos</div>
+            </div>
+            <div class="summary-stat">
+              <span id="employeesWithPenalty" class="summary-number">0</span>
+              <div class="summary-label">Con Descuento</div>
+            </div>
+            <div class="summary-stat">
+              <span id="totalPayout" class="summary-number">$0</span>
+              <div class="summary-label">Total a Pagar</div>
+            </div>
+          </div>
         </div>
-        <div class="summary-stat">
-          <span id="totalRetards" class="summary-number">0</span>
-          <div class="summary-label">Retardos Totales</div>
-        </div>
-        <div class="summary-stat">
-          <span id="employeesWithPenalty" class="summary-number">0</span>
-          <div class="summary-label">Con Descuento</div>
-        </div>
-        <div class="summary-stat">
-          <span id="totalPayout" class="summary-number">$0</span>
-          <div class="summary-label">Total a Pagar</div>
+        <div class="col-md-4 text-end">
+          <h4 class="mb-0"><i class="bi bi-graph-up me-2"></i>Resumen General</h4>
         </div>
       </div>
     </div>
 
     <!-- Loading -->
-    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Cargando...</span>
-      </div>
+    <div id="loadingSpinner" class="loading-spinner text-center" style="display: none;">
+      <div class="spinner-border text-primary" role="status"></div>
       <span class="ms-3">Calculando nómina...</span>
     </div>
 
-    <!-- Resultados -->
-    <div id="resultsContainer"></div>
+    <!-- Resultados en Grid -->
+    <div id="resultsContainer" class="employee-grid"></div>
   </div>
 
   <!-- Firebase Scripts -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -140,6 +209,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    let empleadosGlobales = []; // Para usar en gestión de salarios
 
     // Configurar fecha actual por defecto
     const hoy = new Date();
@@ -165,7 +236,120 @@
         window.location.href = 'admin.html';
         return;
       }
+
+      // Cargar empleados para gestión de salarios
+      cargarEmpleados();
     });
+
+    // Función para cargar empleados
+    async function cargarEmpleados() {
+      try {
+        const usuariosQuery = query(collection(db, "usuarios"));
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        
+        empleadosGlobales = [];
+        const select = document.getElementById('employeeSelect');
+        select.innerHTML = '<option value="">Seleccionar empleado...</option>';
+        
+        usuariosSnapshot.forEach(doc => {
+          const userData = doc.data();
+          empleadosGlobales.push({
+            uid: doc.id,
+            ...userData
+          });
+          
+          const option = document.createElement('option');
+          option.value = doc.id;
+          option.textContent = `${userData.nombre} (${userData.tipo || 'Sin tipo'})`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error cargando empleados:', error);
+      }
+    }
+
+    // Gestión de salarios individuales
+    window.toggleSalaryManager = function() {
+      const manager = document.getElementById('salaryManager');
+      manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
+    };
+
+    window.loadEmployeeSalary = function() {
+      const employeeId = document.getElementById('employeeSelect').value;
+      if (!employeeId) return;
+
+      const empleado = empleadosGlobales.find(emp => emp.uid === employeeId);
+      if (!empleado) return;
+
+      document.getElementById('employeeSalaryForm').style.display = 'block';
+      document.getElementById('individualSalary').value = empleado.salarioQuincenal || '';
+      document.getElementById('individualHours').value = empleado.horasQuincenal || '';
+      
+      calcularPagoPorHora();
+    };
+
+    // Calcular pago por hora automáticamente
+    document.getElementById('individualSalary').addEventListener('input', calcularPagoPorHora);
+    document.getElementById('individualHours').addEventListener('input', calcularPagoPorHora);
+
+    function calcularPagoPorHora() {
+      const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
+      const hours = parseInt(document.getElementById('individualHours').value) || 1;
+      const hourlyRate = hours > 0 ? (salary / hours).toFixed(2) : 0;
+      document.getElementById('hourlyRate').value = hourlyRate;
+    }
+
+    window.saveEmployeeSalary = async function() {
+      const employeeId = document.getElementById('employeeSelect').value;
+      const salary = parseFloat(document.getElementById('individualSalary').value);
+      const hours = parseInt(document.getElementById('individualHours').value);
+
+      if (!employeeId || !salary || !hours) {
+        alert('Complete todos los campos');
+        return;
+      }
+
+      try {
+        const empleadoRef = doc(db, 'usuarios', employeeId);
+        await updateDoc(empleadoRef, {
+          salarioQuincenal: salary,
+          horasQuincenal: hours,
+          pagoPorHora: salary / hours
+        });
+
+        alert('Configuración guardada correctamente');
+        await cargarEmpleados(); // Recargar datos
+        document.getElementById('employeeSalaryForm').style.display = 'none';
+        document.getElementById('employeeSelect').value = '';
+      } catch (error) {
+        console.error('Error guardando configuración:', error);
+        alert('Error al guardar la configuración');
+      }
+    };
+
+    window.clearEmployeeSalary = async function() {
+      const employeeId = document.getElementById('employeeSelect').value;
+      if (!employeeId) return;
+
+      if (!confirm('¿Eliminar configuración individual y usar valores por defecto?')) return;
+
+      try {
+        const empleadoRef = doc(db, 'usuarios', employeeId);
+        await updateDoc(empleadoRef, {
+          salarioQuincenal: null,
+          horasQuincenal: null,
+          pagoPorHora: null
+        });
+
+        alert('Configuración eliminada. Se usarán valores por defecto.');
+        await cargarEmpleados();
+        document.getElementById('employeeSalaryForm').style.display = 'none';
+        document.getElementById('employeeSelect').value = '';
+      } catch (error) {
+        console.error('Error eliminando configuración:', error);
+        alert('Error al eliminar la configuración');
+      }
+    };
 
     // Función para calcular días laborales
     function esDiaLaboral(fecha) {
@@ -181,32 +365,31 @@
       // Obtener configuraciones por defecto
       const salarioCompletoDefault = parseFloat(document.getElementById('salarioCompleto').value) || 4000;
       const salarioBecarioDefault = parseFloat(document.getElementById('salarioBecario').value) || 2000;
-      const horasCompletoDefault = parseInt(document.getElementById('horasCompleto').value) || 80;
-      const horasBecarioDefault = parseInt(document.getElementById('horasBecario').value) || 50;
-      const horasEspecialDefault = parseInt(document.getElementById('horasEspecial').value) || 60;
+      const salarioEspecialDefault = parseFloat(document.getElementById('salarioEspecial').value) || 3000;
       
       if (!monthSelect) {
         alert('Selecciona un mes');
         return;
       }
 
-      document.getElementById('loadingSpinner').style.display = 'flex';
+      document.getElementById('loadingSpinner').style.display = 'block';
       document.getElementById('summaryCard').style.display = 'none';
       document.getElementById('resultsContainer').innerHTML = '';
+      document.getElementById('exportBtn').style.display = 'none';
 
       try {
         const [año, mes] = monthSelect.split('-');
         const mesNum = parseInt(mes);
         const añoNum = parseInt(año);
 
-        // Calcular fechas de la quincena (siempre 30 días el mes)
+        // Calcular fechas de la quincena
         let fechaInicio, fechaFin;
         if (quinceSelect === 'primera') {
           fechaInicio = new Date(añoNum, mesNum - 1, 1);
           fechaFin = new Date(añoNum, mesNum - 1, 15);
         } else {
           fechaInicio = new Date(añoNum, mesNum - 1, 16);
-          fechaFin = new Date(añoNum, mesNum - 1, 30); // ✅ Siempre 30 días
+          fechaFin = new Date(añoNum, mesNum - 1, 30);
         }
 
         // ✅ CONSULTA 1: Obtener empleados
@@ -217,35 +400,30 @@
         usuariosSnapshot.forEach(doc => {
           const userData = doc.data();
           
-          // ✅ CONFIGURACIÓN SEGÚN TIPO DE EMPLEADO
+          // ✅ CONFIGURACIÓN INDIVIDUAL O POR DEFECTO
           let salarioQuincenal, horasQuincenal, pagoPorHora;
           
-          // Verificar si el empleado tiene configuración individual en Firebase
           if (userData.salarioQuincenal && userData.horasQuincenal) {
-            // Configuración individual del empleado
+            // ✅ CONFIGURACIÓN INDIVIDUAL (guardada en Firebase)
             salarioQuincenal = userData.salarioQuincenal;
             horasQuincenal = userData.horasQuincenal;
-            pagoPorHora = salarioQuincenal / horasQuincenal;
+            pagoPorHora = userData.pagoPorHora || (salarioQuincenal / horasQuincenal);
           } else {
-            // Configuración por tipo de empleado
+            // ✅ CONFIGURACIÓN POR DEFECTO SEGÚN TIPO
             if (userData.tipo === 'tiempo_completo') {
               salarioQuincenal = salarioCompletoDefault;
-              horasQuincenal = horasCompletoDefault; // 80 horas
-              pagoPorHora = salarioQuincenal / horasQuincenal;
+              horasQuincenal = 80;
             } else if (userData.tipo === 'becario') {
               salarioQuincenal = salarioBecarioDefault;
-              horasQuincenal = horasBecarioDefault; // 50 horas
-              pagoPorHora = salarioQuincenal / horasQuincenal;
+              horasQuincenal = 50;
             } else if (userData.tipo === 'horario_especial') {
-              salarioQuincenal = salarioCompletoDefault * 0.75; // 75% del tiempo completo
-              horasQuincenal = horasEspecialDefault; // 60 horas
-              pagoPorHora = salarioQuincenal / horasQuincenal;
+              salarioQuincenal = salarioEspecialDefault;
+              horasQuincenal = 60;
             } else {
-              // Por defecto como becario
               salarioQuincenal = salarioBecarioDefault;
-              horasQuincenal = horasBecarioDefault;
-              pagoPorHora = salarioQuincenal / horasQuincenal;
+              horasQuincenal = 50;
             }
+            pagoPorHora = salarioQuincenal / horasQuincenal;
           }
           
           empleados.push({
@@ -255,17 +433,17 @@
             tipo: userData.tipo,
             salarioQuincenal: salarioQuincenal,
             horasQuincenal: horasQuincenal,
-            pagoPorHora: pagoPorHora
+            pagoPorHora: pagoPorHora,
+            esIndividual: !!(userData.salarioQuincenal && userData.horasQuincenal)
           });
         });
 
-        // ✅ CONSULTA 2: Obtener registros (CORREGIDA - SIN ERROR DE ÍNDICE)
+        // ✅ CONSULTA 2: Obtener registros
         const fechaInicioStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaInicio.getDate()).padStart(2, '0')}`;
         const fechaFinStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaFin.getDate()).padStart(2, '0')}`;
         
         console.log(`📅 Calculando quincena: ${fechaInicioStr} a ${fechaFinStr}`);
 
-        // ✅ CONSULTA SIMPLE - SOLO POR TIPO DE EVENTO (evita error de índice)
         const registrosQuery = query(
           collection(db, "registros"),
           where("tipoEvento", "==", "entrada")
@@ -273,18 +451,16 @@
 
         const registrosSnapshot = await getDocs(registrosQuery);
         
-        // ✅ FILTRAR MANUALMENTE POR FECHAS (en el cliente)
+        // Filtrar manualmente por fechas
         const registrosPorEmpleado = {};
         registrosSnapshot.forEach(doc => {
           const registro = doc.data();
           const uid = registro.uid;
           
-          // Filtro manual por rango de fechas
           if (registro.fecha >= fechaInicioStr && registro.fecha <= fechaFinStr) {
             if (!registrosPorEmpleado[uid]) {
               registrosPorEmpleado[uid] = [];
             }
-            
             registrosPorEmpleado[uid].push(registro);
           }
         });
@@ -293,17 +469,15 @@
         const resultados = [];
         let totalRetardos = 0;
         let empleadosConDescuento = 0;
-        let totalDiasDescontados = 0;
         let totalNominaPagada = 0;
 
         for (const empleado of empleados) {
           const registros = registrosPorEmpleado[empleado.uid] || [];
           
-          // ✅ LÓGICA SIMPLE Y DIRECTA
           const salarioQuincenal = empleado.salarioQuincenal;
           const horasQuincenal = empleado.horasQuincenal;
           const pagoPorHora = empleado.pagoPorHora;
-          const horasPorDia = horasQuincenal / 10; // 10 días laborales por quincena
+          const horasPorDia = horasQuincenal / 10;
 
           // Contar retardos y asistencias
           let retardos = 0;
@@ -314,7 +488,7 @@
             const fechaRegistro = new Date(registro.fecha + 'T' + registro.hora);
             
             if (esDiaLaboral(fechaRegistro)) {
-              diasTrabajados++; // ✅ 1 entrada = 1 día trabajado
+              diasTrabajados++;
               
               if (registro.estado === 'retardo') {
                 retardos++;
@@ -326,19 +500,15 @@
             }
           }
 
-          // ✅ CÁLCULO DE PENALIZACIONES (cada 4 retardos = -1 día)
+          // Penalizaciones
           const diasDescuento = Math.floor(retardos / 4);
           const diasEfectivos = diasTrabajados - diasDescuento;
           
-          // ✅ PAGO FINAL
+          // Pago final
           const horasTrabajadas = diasEfectivos * horasPorDia;
           const pagoTotal = Math.round(horasTrabajadas * pagoPorHora);
           
-          if (diasDescuento > 0) {
-            empleadosConDescuento++;
-            totalDiasDescontados += diasDescuento;
-          }
-          
+          if (diasDescuento > 0) empleadosConDescuento++;
           totalRetardos += retardos;
           totalNominaPagada += pagoTotal;
 
@@ -364,7 +534,7 @@
             diasDescuento,
             diasEfectivos,
             horasTrabajadas: Math.round(horasTrabajadas),
-            pagoPorHora: Math.round(pagoPorHora * 100) / 100, // 2 decimales
+            pagoPorHora: Math.round(pagoPorHora * 100) / 100,
             pagoTotal,
             status,
             statusClass,
@@ -373,7 +543,7 @@
         }
 
         // Mostrar resultados
-        mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalDiasDescontados, totalNominaPagada, quinceSelect, monthSelect);
+        mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaPagada, quinceSelect, monthSelect);
 
       } catch (error) {
         console.error('Error calculando nómina:', error);
@@ -383,16 +553,17 @@
       }
     };
 
-    // Función para mostrar resultados
-    function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalDiasDescontados, totalNominaPagada, quincena, mes) {
+    // Función para mostrar resultados (más compacta)
+    function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalNominaPagada, quincena, mes) {
       // Actualizar resumen
       document.getElementById('totalEmployees').textContent = totalEmpleados;
       document.getElementById('totalRetards').textContent = totalRetardos;
       document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
       document.getElementById('totalPayout').textContent = `$${Math.round(totalNominaPagada).toLocaleString()}`;
       document.getElementById('summaryCard').style.display = 'block';
+      document.getElementById('exportBtn').style.display = 'inline-block';
 
-      // Mostrar tarjetas de empleados
+      // Mostrar tarjetas de empleados en grid
       const container = document.getElementById('resultsContainer');
       container.innerHTML = '';
 
@@ -400,12 +571,11 @@
         const card = document.createElement('div');
         card.className = 'employee-card';
         
-        // Función para obtener el nombre del tipo en español
         function getTipoNombre(tipo) {
           switch(tipo) {
-            case 'tiempo_completo': return 'Tiempo Completo';
+            case 'tiempo_completo': return 'T.Completo';
             case 'becario': return 'Becario';
-            case 'horario_especial': return 'Horario Especial';
+            case 'horario_especial': return 'H.Especial';
             default: return tipo;
           }
         }
@@ -416,7 +586,7 @@
               <i class="bi bi-person-fill me-2"></i>
               ${resultado.empleado.nombre}
               <span class="badge bg-secondary ms-2">${getTipoNombre(resultado.empleado.tipo)}</span>
-              <span class="badge bg-info ms-1">$${resultado.salarioQuincenal.toLocaleString()}/quincena</span>
+              ${resultado.empleado.esIndividual ? '<span class="badge bg-warning ms-1">Individual</span>' : ''}
             </div>
             <div class="status-badge ${resultado.statusClass}">
               ${resultado.status}
@@ -426,7 +596,7 @@
           <div class="stats-grid">
             <div class="stat-item">
               <div class="stat-number text-primary">${resultado.diasTrabajados}</div>
-              <div class="stat-label">Días Trabajados</div>
+              <div class="stat-label">Días</div>
             </div>
             <div class="stat-item">
               <div class="stat-number text-warning">${resultado.retardos}</div>
@@ -434,41 +604,31 @@
             </div>
             <div class="stat-item">
               <div class="stat-number text-info">${resultado.horasTrabajadas}</div>
-              <div class="stat-label">Horas Totales</div>
+              <div class="stat-label">Horas</div>
             </div>
             <div class="stat-item">
               <div class="stat-number text-success">$${resultado.pagoTotal.toLocaleString()}</div>
-              <div class="stat-label">Pago Total</div>
+              <div class="stat-label">Total</div>
             </div>
           </div>
           
           <div class="payment-details">
             <div class="row">
               <div class="col-6">
-                <small class="text-muted">Pago por hora: <strong>$${resultado.pagoPorHora}</strong></small>
+                <small>💰 <strong>$${resultado.pagoPorHora}/hr</strong></small><br>
+                <small>📊 <strong>${resultado.horasQuincenal}hrs/quincena</strong></small>
               </div>
               <div class="col-6">
-                <small class="text-muted">Días efectivos: <strong>${resultado.diasEfectivos}</strong></small>
+                <small>✅ <strong>${resultado.diasEfectivos} días efectivos</strong></small><br>
+                <small>💸 <strong>$${resultado.salarioQuincenal.toLocaleString()} base</strong></small>
               </div>
             </div>
-            <div class="row mt-1">
-              <div class="col-12">
-                <small class="text-info"><strong>Base:</strong> ${resultado.horasQuincenal} horas/quincena (${resultado.horasQuincenal/10} hrs/día)</small>
+            ${resultado.detalleRetardos.length > 0 ? `
+              <div class="mt-2">
+                <small class="text-warning"><strong>Retardos:</strong> ${resultado.detalleRetardos.map(r => r.fecha).join(', ')}</small>
               </div>
-            </div>
+            ` : ''}
           </div>
-          
-          ${resultado.detalleRetardos.length > 0 ? `
-            <div class="retard-details">
-              <h6><i class="bi bi-clock me-2"></i>Detalle de Retardos:</h6>
-              ${resultado.detalleRetardos.map(retardo => `
-                <div class="retard-item">
-                  <span>${retardo.fecha}</span>
-                  <span class="text-warning">${retardo.hora}</span>
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
         `;
         
         container.appendChild(card);
@@ -476,6 +636,11 @@
 
       console.log(`✅ Nómina calculada: ${resultados.length} empleados, Total: $${Math.round(totalNominaPagada).toLocaleString()}`);
     }
+
+    // Función para exportar a Excel (placeholder)
+    window.exportarExcel = function() {
+      alert('Función de exportar a Excel próximamente');
+    };
   </script>
 </body>
 </html>
