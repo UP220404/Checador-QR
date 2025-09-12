@@ -259,32 +259,34 @@
           });
         });
 
-        // ✅ CONSULTA 2: Obtener registros
+        // ✅ CONSULTA 2: Obtener registros (CORREGIDA - SIN ERROR DE ÍNDICE)
         const fechaInicioStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaInicio.getDate()).padStart(2, '0')}`;
         const fechaFinStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaFin.getDate()).padStart(2, '0')}`;
         
         console.log(`📅 Calculando quincena: ${fechaInicioStr} a ${fechaFinStr}`);
 
+        // ✅ CONSULTA SIMPLE - SOLO POR TIPO DE EVENTO (evita error de índice)
         const registrosQuery = query(
           collection(db, "registros"),
-          where("fecha", ">=", fechaInicioStr),
-          where("fecha", "<=", fechaFinStr),
           where("tipoEvento", "==", "entrada")
         );
 
         const registrosSnapshot = await getDocs(registrosQuery);
         
-        // Procesar registros por empleado
+        // ✅ FILTRAR MANUALMENTE POR FECHAS (en el cliente)
         const registrosPorEmpleado = {};
         registrosSnapshot.forEach(doc => {
           const registro = doc.data();
           const uid = registro.uid;
           
-          if (!registrosPorEmpleado[uid]) {
-            registrosPorEmpleado[uid] = [];
+          // Filtro manual por rango de fechas
+          if (registro.fecha >= fechaInicioStr && registro.fecha <= fechaFinStr) {
+            if (!registrosPorEmpleado[uid]) {
+              registrosPorEmpleado[uid] = [];
+            }
+            
+            registrosPorEmpleado[uid].push(registro);
           }
-          
-          registrosPorEmpleado[uid].push(registro);
         });
 
         // Calcular estadísticas por empleado
