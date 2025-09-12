@@ -36,7 +36,7 @@
           <label class="form-label">Quincena</label>
           <select id="quinceSelect" class="form-select">
             <option value="primera">Primera Quincena (1-15)</option>
-            <option value="segunda">Segunda Quincena (16-30/31)</option>
+            <option value="segunda">Segunda Quincena (16-30)</option>
           </select>
         </div>
         <div class="col-md-4 d-flex align-items-end">
@@ -49,37 +49,40 @@
 
     <!-- Configuración de Salarios -->
     <div class="salary-config">
-      <h4><i class="bi bi-currency-dollar me-2"></i>Configuración de Salarios</h4>
+      <h4><i class="bi bi-currency-dollar me-2"></i>Configuración de Salarios por Defecto</h4>
       <div class="row">
         <div class="col-md-6">
-          <label class="form-label">Salario Mensual Empleado Tiempo Completo</label>
+          <label class="form-label">Salario Quincenal - Tiempo Completo (80hrs)</label>
           <div class="input-group">
             <span class="input-group-text">$</span>
-            <input type="number" id="salarioCompleto" class="form-control" value="8000" min="0">
+            <input type="number" id="salarioCompleto" class="form-control" value="4000" min="0">
             <span class="input-group-text">.00</span>
           </div>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Salario Mensual Becario</label>
+          <label class="form-label">Salario Quincenal - Becario</label>
           <div class="input-group">
             <span class="input-group-text">$</span>
-            <input type="number" id="salarioBecario" class="form-control" value="4000" min="0">
+            <input type="number" id="salarioBecario" class="form-control" value="2000" min="0">
             <span class="input-group-text">.00</span>
           </div>
         </div>
       </div>
       <div class="row mt-3">
         <div class="col-md-4">
-          <label class="form-label">Horas por Día (Tiempo Completo)</label>
-          <input type="number" id="horasCompleto" class="form-control" value="8" min="1" max="12">
+          <label class="form-label">Horas Quincenal - Tiempo Completo</label>
+          <input type="number" id="horasCompleto" class="form-control" value="80" min="1" readonly>
+          <small class="text-muted">8 hrs/día × 10 días = 80 hrs</small>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Horas por Día (Becario)</label>
-          <input type="number" id="horasBecario" class="form-control" value="6" min="1" max="12">
+          <label class="form-label">Horas Quincenal - Becario</label>
+          <input type="number" id="horasBecario" class="form-control" value="50" min="1">
+          <small class="text-muted">5 hrs/día × 10 días = 50 hrs</small>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Días Laborales por Mes</label>
-          <input type="number" id="diasMes" class="form-control" value="22" min="20" max="25">
+          <label class="form-label">Horas Quincenal - Horario Especial</label>
+          <input type="number" id="horasEspecial" class="form-control" value="60" min="1">
+          <small class="text-muted">6 hrs/día × 10 días = 60 hrs</small>
         </div>
       </div>
     </div>
@@ -122,7 +125,7 @@
   <!-- Firebase Scripts -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -164,10 +167,10 @@
       }
     });
 
-    // Función para calcular días laborales (excluir fines de semana)
+    // Función para calcular días laborales
     function esDiaLaboral(fecha) {
       const diaSemana = fecha.getDay();
-      return diaSemana !== 0 && diaSemana !== 6; // No domingo (0) ni sábado (6)
+      return diaSemana !== 0 && diaSemana !== 6;
     }
 
     // Función principal para calcular nómina
@@ -175,12 +178,12 @@
       const monthSelect = document.getElementById('monthSelect').value;
       const quinceSelect = document.getElementById('quinceSelect').value;
       
-      // Obtener configuración de salarios
-      const salarioCompleto = parseFloat(document.getElementById('salarioCompleto').value) || 8000;
-      const salarioBecario = parseFloat(document.getElementById('salarioBecario').value) || 4000;
-      const horasCompleto = parseInt(document.getElementById('horasCompleto').value) || 8;
-      const horasBecario = parseInt(document.getElementById('horasBecario').value) || 6;
-      const diasMes = parseInt(document.getElementById('diasMes').value) || 22;
+      // Obtener configuraciones por defecto
+      const salarioCompletoDefault = parseFloat(document.getElementById('salarioCompleto').value) || 4000;
+      const salarioBecarioDefault = parseFloat(document.getElementById('salarioBecario').value) || 2000;
+      const horasCompletoDefault = parseInt(document.getElementById('horasCompleto').value) || 80;
+      const horasBecarioDefault = parseInt(document.getElementById('horasBecario').value) || 50;
+      const horasEspecialDefault = parseInt(document.getElementById('horasEspecial').value) || 60;
       
       if (!monthSelect) {
         alert('Selecciona un mes');
@@ -196,32 +199,67 @@
         const mesNum = parseInt(mes);
         const añoNum = parseInt(año);
 
-        // Calcular fechas de la quincena
+        // Calcular fechas de la quincena (siempre 30 días el mes)
         let fechaInicio, fechaFin;
         if (quinceSelect === 'primera') {
           fechaInicio = new Date(añoNum, mesNum - 1, 1);
           fechaFin = new Date(añoNum, mesNum - 1, 15);
         } else {
           fechaInicio = new Date(añoNum, mesNum - 1, 16);
-          fechaFin = new Date(añoNum, mesNum, 0);
+          fechaFin = new Date(añoNum, mesNum - 1, 30); // ✅ Siempre 30 días
         }
 
-        // Obtener todos los empleados
+        // ✅ CONSULTA 1: Obtener empleados
         const usuariosQuery = query(collection(db, "usuarios"));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         
         const empleados = [];
         usuariosSnapshot.forEach(doc => {
           const userData = doc.data();
+          
+          // ✅ CONFIGURACIÓN SEGÚN TIPO DE EMPLEADO
+          let salarioQuincenal, horasQuincenal, pagoPorHora;
+          
+          // Verificar si el empleado tiene configuración individual en Firebase
+          if (userData.salarioQuincenal && userData.horasQuincenal) {
+            // Configuración individual del empleado
+            salarioQuincenal = userData.salarioQuincenal;
+            horasQuincenal = userData.horasQuincenal;
+            pagoPorHora = salarioQuincenal / horasQuincenal;
+          } else {
+            // Configuración por tipo de empleado
+            if (userData.tipo === 'tiempo_completo') {
+              salarioQuincenal = salarioCompletoDefault;
+              horasQuincenal = horasCompletoDefault; // 80 horas
+              pagoPorHora = salarioQuincenal / horasQuincenal;
+            } else if (userData.tipo === 'becario') {
+              salarioQuincenal = salarioBecarioDefault;
+              horasQuincenal = horasBecarioDefault; // 50 horas
+              pagoPorHora = salarioQuincenal / horasQuincenal;
+            } else if (userData.tipo === 'horario_especial') {
+              salarioQuincenal = salarioCompletoDefault * 0.75; // 75% del tiempo completo
+              horasQuincenal = horasEspecialDefault; // 60 horas
+              pagoPorHora = salarioQuincenal / horasQuincenal;
+            } else {
+              // Por defecto como becario
+              salarioQuincenal = salarioBecarioDefault;
+              horasQuincenal = horasBecarioDefault;
+              pagoPorHora = salarioQuincenal / horasQuincenal;
+            }
+          }
+          
           empleados.push({
             uid: doc.id,
             nombre: userData.nombre,
             email: userData.email,
-            tipo: userData.tipo
+            tipo: userData.tipo,
+            salarioQuincenal: salarioQuincenal,
+            horasQuincenal: horasQuincenal,
+            pagoPorHora: pagoPorHora
           });
         });
 
-        // Obtener registros del período
+        // ✅ CONSULTA 2: Obtener registros
         const fechaInicioStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaInicio.getDate()).padStart(2, '0')}`;
         const fechaFinStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(fechaFin.getDate()).padStart(2, '0')}`;
         
@@ -231,8 +269,7 @@
           collection(db, "registros"),
           where("fecha", ">=", fechaInicioStr),
           where("fecha", "<=", fechaFinStr),
-          where("tipoEvento", "==", "entrada"),
-          orderBy("fecha", "asc")
+          where("tipoEvento", "==", "entrada")
         );
 
         const registrosSnapshot = await getDocs(registrosQuery);
@@ -259,24 +296,14 @@
 
         for (const empleado of empleados) {
           const registros = registrosPorEmpleado[empleado.uid] || [];
-          const esBecario = empleado.tipo === 'becario';
           
-          // Configuración según tipo de empleado
-          const salarioMensual = esBecario ? salarioBecario : salarioCompleto;
-          const horasPorDia = esBecario ? horasBecario : horasCompleto;
-          
-          // 💰 CÁLCULO DE PAGO POR HORA (SIMPLE)
-          const pagoPorHora = salarioMensual / (diasMes * horasPorDia);
-          
-          // Contar días laborales en la quincena
-          let diasLaborales = 0;
-          for (let fecha = new Date(fechaInicio); fecha <= fechaFin; fecha.setDate(fecha.getDate() + 1)) {
-            if (esDiaLaboral(fecha)) {
-              diasLaborales++;
-            }
-          }
+          // ✅ LÓGICA SIMPLE Y DIRECTA
+          const salarioQuincenal = empleado.salarioQuincenal;
+          const horasQuincenal = empleado.horasQuincenal;
+          const pagoPorHora = empleado.pagoPorHora;
+          const horasPorDia = horasQuincenal / 10; // 10 días laborales por quincena
 
-          // Contar retardos y asistencias (HORAS COMPLETAS - NO PERFECTCIONISTA)
+          // Contar retardos y asistencias
           let retardos = 0;
           let diasTrabajados = 0;
           const detalleRetardos = [];
@@ -285,7 +312,7 @@
             const fechaRegistro = new Date(registro.fecha + 'T' + registro.hora);
             
             if (esDiaLaboral(fechaRegistro)) {
-              diasTrabajados++; // ✅ SIMPLE: 1 entrada = 1 día completo
+              diasTrabajados++; // ✅ 1 entrada = 1 día trabajado
               
               if (registro.estado === 'retardo') {
                 retardos++;
@@ -297,13 +324,13 @@
             }
           }
 
-          // Calcular penalizaciones
+          // ✅ CÁLCULO DE PENALIZACIONES (cada 4 retardos = -1 día)
           const diasDescuento = Math.floor(retardos / 4);
           const diasEfectivos = diasTrabajados - diasDescuento;
           
-          // 💰 CÁLCULO FINAL DE PAGO (SIMPLE)
-          const horasTrabajadas = diasEfectivos * horasPorDia; // ✅ HORAS ENTERAS
-          const pagoTotal = Math.round(horasTrabajadas * pagoPorHora); // ✅ REDONDEAR
+          // ✅ PAGO FINAL
+          const horasTrabajadas = diasEfectivos * horasPorDia;
+          const pagoTotal = Math.round(horasTrabajadas * pagoPorHora);
           
           if (diasDescuento > 0) {
             empleadosConDescuento++;
@@ -313,7 +340,7 @@
           totalRetardos += retardos;
           totalNominaPagada += pagoTotal;
 
-          // Determinar status
+          // Status
           let status, statusClass;
           if (diasDescuento > 0) {
             status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
@@ -328,13 +355,14 @@
 
           resultados.push({
             empleado,
-            diasLaborales,
+            salarioQuincenal,
+            horasQuincenal,
             diasTrabajados,
             retardos,
             diasDescuento,
             diasEfectivos,
-            horasTrabajadas,
-            pagoPorHora,
+            horasTrabajadas: Math.round(horasTrabajadas),
+            pagoPorHora: Math.round(pagoPorHora * 100) / 100, // 2 decimales
             pagoTotal,
             status,
             statusClass,
@@ -342,7 +370,7 @@
           });
         }
 
-        // Mostrar resultados con pagos
+        // Mostrar resultados
         mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalDiasDescontados, totalNominaPagada, quinceSelect, monthSelect);
 
       } catch (error) {
@@ -359,10 +387,10 @@
       document.getElementById('totalEmployees').textContent = totalEmpleados;
       document.getElementById('totalRetards').textContent = totalRetardos;
       document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
-      document.getElementById('totalPayout').textContent = `$${totalNominaPagada.toLocaleString()}`;
+      document.getElementById('totalPayout').textContent = `$${Math.round(totalNominaPagada).toLocaleString()}`;
       document.getElementById('summaryCard').style.display = 'block';
 
-      // Mostrar tarjetas de empleados con información de pago
+      // Mostrar tarjetas de empleados
       const container = document.getElementById('resultsContainer');
       container.innerHTML = '';
 
@@ -370,12 +398,23 @@
         const card = document.createElement('div');
         card.className = 'employee-card';
         
+        // Función para obtener el nombre del tipo en español
+        function getTipoNombre(tipo) {
+          switch(tipo) {
+            case 'tiempo_completo': return 'Tiempo Completo';
+            case 'becario': return 'Becario';
+            case 'horario_especial': return 'Horario Especial';
+            default: return tipo;
+          }
+        }
+        
         card.innerHTML = `
           <div class="employee-header">
             <div class="employee-name">
               <i class="bi bi-person-fill me-2"></i>
               ${resultado.empleado.nombre}
-              <span class="badge bg-secondary ms-2">${resultado.empleado.tipo}</span>
+              <span class="badge bg-secondary ms-2">${getTipoNombre(resultado.empleado.tipo)}</span>
+              <span class="badge bg-info ms-1">$${resultado.salarioQuincenal.toLocaleString()}/quincena</span>
             </div>
             <div class="status-badge ${resultado.statusClass}">
               ${resultado.status}
@@ -401,14 +440,18 @@
             </div>
           </div>
           
-          <!-- Información de Pago -->
           <div class="payment-details">
             <div class="row">
               <div class="col-6">
-                <small class="text-muted">Pago por hora: <strong>$${Math.round(resultado.pagoPorHora)}</strong></small>
+                <small class="text-muted">Pago por hora: <strong>$${resultado.pagoPorHora}</strong></small>
               </div>
               <div class="col-6">
                 <small class="text-muted">Días efectivos: <strong>${resultado.diasEfectivos}</strong></small>
+              </div>
+            </div>
+            <div class="row mt-1">
+              <div class="col-12">
+                <small class="text-info"><strong>Base:</strong> ${resultado.horasQuincenal} horas/quincena (${resultado.horasQuincenal/10} hrs/día)</small>
               </div>
             </div>
           </div>
@@ -429,7 +472,7 @@
         container.appendChild(card);
       });
 
-      console.log(`✅ Nómina calculada: ${resultados.length} empleados, Total: $${totalNominaPagada.toLocaleString()}`);
+      console.log(`✅ Nómina calculada: ${resultados.length} empleados, Total: $${Math.round(totalNominaPagada).toLocaleString()}`);
     }
   </script>
 </body>
