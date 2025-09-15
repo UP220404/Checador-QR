@@ -9,24 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="nomina.css">
   <link rel="icon" href="img/cielitohome.png" type="image/png">
-
-  <style>
-    /* Estilos compactos para menos scroll */
-    .main-container { padding: 1rem 0; }
-    .period-selector, .salary-config { padding: 1rem; margin-bottom: 1rem; }
-    .summary-card { padding: 1.5rem; margin-bottom: 1rem; background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3); }
-    .summary-stats { display: flex; justify-content: space-between; align-items: center; gap: 2rem; }
-    .summary-stat { text-align: center; }
-    .summary-number { font-size: 2.5rem; font-weight: 800; display: block; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-    .summary-label { font-size: 0.9rem; font-weight: 500; opacity: 0.9; margin-top: 0.5rem; }
-    .employee-card { margin-bottom: 1rem; padding: 1rem; }
-    .stats-grid { gap: 0.5rem; }
-    .stat-item { padding: 0.5rem; }
-    .payment-details { padding: 0.75rem; margin-top: 0.75rem; }
-    .retard-details { padding: 0.75rem; margin-top: 0.75rem; }
-    .employee-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1rem; }
-    .stat-card { background: rgba(255,255,255,0.1); border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); }
-  </style>
 </head>
 <body>
   <!-- Navbar Mejorado -->
@@ -102,7 +84,7 @@
           </div>
         </div>
         
-        <!-- ✅ NUEVAS OPCIONES: IMSS Y CAJA DE AHORRO -->
+        <!-- Nuevas opciones: IMSS y Caja de Ahorro -->
         <div class="row mt-3">
           <div class="col-md-6">
             <div class="card p-3">
@@ -171,7 +153,7 @@
       </div>
     </div>
 
-    <!-- Selector de Período (Compacto) -->
+    <!-- Selector de Período -->
     <div class="period-selector">
       <div class="row align-items-end">
         <div class="col-md-3">
@@ -196,7 +178,7 @@
       </div>
     </div>
 
-    <!-- Resumen General (Mejorado) -->
+    <!-- Resumen General -->
     <div id="summaryCard" class="summary-card" style="display: none;">
       <div class="summary-stats">
         <div class="summary-stat">
@@ -229,9 +211,141 @@
 
     <!-- Resultados en Grid -->
     <div id="resultsContainer" class="employee-grid"></div>
+    
+    <!-- Modal para Editar Nómina Manual -->
+    <div class="modal fade" id="modalEditarNomina" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-pencil-square me-2"></i>Editar Nómina Manual
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Edición Manual:</strong> Los cambios aquí tienen prioridad sobre el sistema automático.
+            </div>
+            
+            <form id="formEditarNomina">
+              <input type="hidden" id="editEmpleadoId">
+              
+              <!-- Información del empleado -->
+              <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                  <h6 class="mb-0" id="editEmpleadoNombre">Empleado</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <span class="badge bg-secondary" id="editEmpleadoTipo">Tipo</span>
+                      <span class="badge bg-success ms-2" id="editSalarioBase">$0</span>
+                    </div>
+                    <div class="col-md-6 text-end">
+                      <small class="text-muted">Período: <span id="editPeriodo"></span></small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ajustes de asistencia -->
+              <div class="card mb-3">
+                <div class="card-header">
+                  <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Ajustes de Asistencia</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-3">
+                      <label class="form-label">Días Trabajados</label>
+                      <input type="number" id="editDiasTrabajados" class="form-control" min="0" max="10">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Retardos</label>
+                      <input type="number" id="editRetardos" class="form-control" min="0" max="20">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Días Extra (Sábados)</label>
+                      <input type="number" id="editDiasExtra" class="form-control" min="0" max="5">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Bono Extra ($)</label>
+                      <input type="number" id="editBonoExtra" class="form-control" min="0" step="50">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Justificaciones -->
+              <div class="card mb-3">
+                <div class="card-header">
+                  <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Ausencias y Justificaciones</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-4">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="tieneVacaciones">
+                        <label class="form-check-label" for="tieneVacaciones">
+                          <strong>Vacaciones</strong>
+                        </label>
+                      </div>
+                      <input type="number" id="diasVacaciones" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="tieneIncapacidad">
+                        <label class="form-check-label" for="tieneIncapacidad">
+                          <strong>Incapacidad</strong>
+                        </label>
+                      </div>
+                      <input type="number" id="diasIncapacidad" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="tieneViaje">
+                        <label class="form-check-label" for="tieneViaje">
+                          <strong>Viaje de Negocios</strong>
+                        </label>
+                      </div>
+                      <input type="number" id="diasViaje" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Comentarios -->
+              <div class="mb-3">
+                <label class="form-label">Comentarios/Observaciones</label>
+                <textarea id="editComentarios" class="form-control" rows="3" placeholder="Ejemplo: Paulina estuvo en viaje de negocios en Alemania del 1 al 6 de septiembre"></textarea>
+              </div>
+
+              <!-- Vista previa del cálculo -->
+              <div class="card bg-light">
+                <div class="card-header">
+                  <h6 class="mb-0"><i class="bi bi-calculator me-2"></i>Vista Previa del Cálculo</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row" id="previaCálculo">
+                    <!-- Se llena dinámicamente -->
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="btnGuardarEdicion">
+              <i class="bi bi-save me-2"></i>Guardar Cambios
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <!-- Firebase Scripts -->
   <script type="module">
@@ -252,28 +366,26 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    let empleadosGlobales = []; // Para usar en gestión de salarios
+    let empleadosGlobales = [];
+    let resultadosNomina = [];
 
     // Configurar fecha actual por defecto
     const hoy = new Date();
     document.getElementById('monthSelect').value = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
 
-    // ✅ FUNCIÓN PARA FORMATEAR NÚMEROS CON COMAS
+    // Función para formatear números con comas
     function formatearNumero(numero) {
       return numero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    // ✅ SISTEMA DE NOTIFICACIONES MEJORADO
+    // Sistema de notificaciones
     function mostrarNotificacion(mensaje, tipo = 'info', duracion = 4000) {
-      // Remover notificaciones anteriores
       const existingNotifications = document.querySelectorAll('.custom-notification');
       existingNotifications.forEach(notif => notif.remove());
 
-      // Crear nueva notificación
       const notification = document.createElement('div');
       notification.className = `custom-notification notification-${tipo}`;
       
-      // Iconos según tipo
       const iconos = {
         'success': 'bi-check-circle-fill',
         'error': 'bi-x-circle-fill',
@@ -295,11 +407,8 @@
       `;
 
       document.body.appendChild(notification);
-
-      // Animar entrada
       setTimeout(() => notification.classList.add('show'), 100);
 
-      // Auto-remover
       if (duracion > 0) {
         setTimeout(() => {
           notification.classList.remove('show');
@@ -307,20 +416,6 @@
         }, duracion);
       }
     }
-
-    // Reemplazar todas las llamadas a alert() con notificaciones
-    const originalAlert = window.alert;
-    window.alert = function(mensaje) {
-      if (mensaje.includes('Error') || mensaje.includes('❌')) {
-        mostrarNotificacion(mensaje, 'error');
-      } else if (mensaje.includes('correctamente') || mensaje.includes('✅')) {
-        mostrarNotificacion(mensaje, 'success');
-      } else if (mensaje.includes('configurados') || mensaje.includes('⚠️')) {
-        mostrarNotificacion(mensaje, 'warning', 6000);
-      } else {
-        mostrarNotificacion(mensaje, 'info');
-      }
-    };
 
     // Verificar autenticación
     onAuthStateChanged(auth, (user) => {
@@ -343,11 +438,10 @@
         return;
       }
 
-      // Cargar empleados para gestión de salarios
       cargarEmpleados();
     });
 
-    // ✅ FUNCIÓN PARA MANEJAR CAJA DE AHORRO
+    // Función para manejar caja de ahorro
     window.toggleCajaAhorro = function() {
       const checkbox = document.getElementById('tieneCajaAhorro');
       const options = document.getElementById('cajaAhorroOptions');
@@ -381,7 +475,6 @@
           select.appendChild(option);
         });
         
-        // ✅ ACTUALIZAR DASHBOARD AUTOMÁTICAMENTE
         await actualizarDashboardCajaAhorro();
         
       } catch (error) {
@@ -407,12 +500,11 @@
       document.getElementById('individualSalary').value = empleado.salarioQuincenal || '';
       document.getElementById('individualHours').value = empleado.horasQuincenal || '';
       
-      // ✅ CARGAR NUEVOS CAMPOS
       document.getElementById('tieneIMSS').checked = empleado.tieneIMSS || false;
       document.getElementById('tieneCajaAhorro').checked = empleado.tieneCajaAhorro || false;
       document.getElementById('montoCajaAhorro').value = empleado.montoCajaAhorro || '';
       
-      toggleCajaAhorro(); // Mostrar/ocultar opciones de caja de ahorro
+      toggleCajaAhorro();
       calcularPagoPorDia();
     };
 
@@ -422,7 +514,7 @@
 
     function calcularPagoPorDia() {
       const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
-      const dailyRate = salary / 10; // 10 días laborales por período
+      const dailyRate = salary / 10;
       document.getElementById('dailyRate').value = dailyRate.toFixed(2);
     }
 
@@ -451,7 +543,6 @@
           horasQuincenal: hours,
           pagoPorHora: salary / hours,
           pagoPorDia: salary / 10,
-          // ✅ NUEVOS CAMPOS
           tieneIMSS: tieneIMSS,
           tieneCajaAhorro: tieneCajaAhorro,
           montoCajaAhorro: tieneCajaAhorro ? montoCajaAhorro : 0
@@ -459,7 +550,7 @@
 
         mostrarNotificacion('Configuración guardada correctamente', 'success');
         await cargarEmpleados();
-        await actualizarDashboardCajaAhorro(); // ✅ ACTUALIZAR DASHBOARD
+        await actualizarDashboardCajaAhorro();
         document.getElementById('employeeSalaryForm').style.display = 'none';
         document.getElementById('employeeSelect').value = '';
       } catch (error) {
@@ -481,7 +572,6 @@
           horasQuincenal: null,
           pagoPorHora: null,
           pagoPorDia: null,
-          // ✅ LIMPIAR NUEVOS CAMPOS
           tieneIMSS: false,
           tieneCajaAhorro: false,
           montoCajaAhorro: 0
@@ -498,12 +588,9 @@
       }
     };
 
-    // ✅ NUEVA FUNCIÓN: DASHBOARD CAJA DE AHORRO
+    // Dashboard caja de ahorro
     async function actualizarDashboardCajaAhorro() {
       try {
-        console.log('📊 Actualizando dashboard caja de ahorro...');
-        
-        // Filtrar empleados con caja de ahorro (SIN NUEVA CONSULTA - usar datos ya cargados)
         const empleadosConCaja = empleadosGlobales.filter(emp => emp.tieneCajaAhorro);
         
         if (empleadosConCaja.length === 0) {
@@ -513,10 +600,9 @@
         
         document.getElementById('cajaAhorroDashboard').style.display = 'block';
         
-        // Calcular estadísticas
         let totalParticipantes = empleadosConCaja.length;
         let ahorroQuincenalTotal = empleadosConCaja.reduce((sum, emp) => sum + (emp.montoCajaAhorro || 0), 0);
-        let ahorroMensualTotal = ahorroQuincenalTotal * 2; // 2 quincenas por mes
+        let ahorroMensualTotal = ahorroQuincenalTotal * 2;
         let ahorroAnualTotal = ahorroMensualTotal * 12;
         
         const statsContainer = document.getElementById('cajaAhorroStats');
@@ -547,7 +633,6 @@
           </div>
         `;
         
-        // Mostrar detalle por empleado
         if (totalParticipantes > 0) {
           const detalleHTML = empleadosConCaja.map(emp => `
             <div class="col-md-6 mb-2">
@@ -568,40 +653,48 @@
           `;
         }
         
-        console.log('✅ Dashboard caja de ahorro actualizado');
-        
       } catch (error) {
         console.error('Error actualizando dashboard caja de ahorro:', error);
       }
     }
 
-    // ✅ FUNCIÓN CORREGIDA PARA CALCULAR DÍAS LABORALES EN PERÍODOS
+    // Función para calcular días laborales en períodos
     function calcularDiasLaboralesPeriodo(año, mes, periodo) {
       const diasLaborales = [];
-      const fechaInicio = new Date(año, mes - 1, 1); // Primer día del mes
-      
-      // Obtener todos los días laborales del mes
-      const ultimoDia = new Date(año, mes, 0).getDate(); // Último día del mes
+      const ultimoDia = new Date(año, mes, 0).getDate();
       
       for (let dia = 1; dia <= ultimoDia; dia++) {
         const fecha = new Date(año, mes - 1, dia);
         const diaSemana = fecha.getDay();
         
-        // Solo días laborales (Lunes=1 a Viernes=5)
         if (diaSemana >= 1 && diaSemana <= 5) {
           diasLaborales.push(dia);
         }
       }
       
-      // Dividir en 2 períodos de 10 días laborales cada uno
       if (periodo === 'primera') {
-        return diasLaborales.slice(0, 10); // Primeros 10 días laborales
+        return diasLaborales.slice(0, 10);
       } else {
-        return diasLaborales.slice(10, 20); // Siguientes 10 días laborales
+        return diasLaborales.slice(10, 20);
       }
     }
 
-    // ✅ FUNCIÓN OPTIMIZADA SIN ÍNDICES - CON FALLBACK AUTOMÁTICO
+    // Variables globales para edición
+    let quinceActual = '';
+    let mesActual = '';
+    let mesActualNum = 0;
+    let añoActualNum = 0;
+
+    function getTipoNombre(tipo) {
+      switch(tipo) {
+        case 'tiempo_completo': return 'T.Completo';
+        case 'becario': return 'Becario';
+        case 'horario_especial': return 'H.Especial';
+        default: return tipo;
+      }
+    }
+
+    // Función principal para calcular nómina
     window.calcularNomina = async function() {
       const monthSelect = document.getElementById('monthSelect').value;
       const quinceSelect = document.getElementById('quinceSelect').value;
@@ -623,13 +716,12 @@
 
         console.log(`📅 Calculando período: ${quinceSelect} de ${mesNum}/${añoNum}`);
 
-        // ✅ OBTENER DÍAS LABORALES DEL PERÍODO
         const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, quinceSelect);
         
         console.log(`📊 Días laborales del período:`, diasLaborales);
         console.log(`📊 Total días laborales esperados: ${diasLaborales.length}`);
 
-        // ✅ OBTENER EMPLEADOS CON CONFIGURACIÓN INCLUYENDO NUEVOS CAMPOS
+        // Obtener empleados con configuración
         const usuariosQuery = query(collection(db, "usuarios"));
         const usuariosSnapshot = await getDocs(usuariosQuery);
         
@@ -646,7 +738,6 @@
               salarioQuincenal: userData.salarioQuincenal,
               horasQuincenal: userData.horasQuincenal,
               pagoPorDia: userData.salarioQuincenal / 10,
-              // ✅ NUEVOS CAMPOS PARA DESCUENTOS
               tieneIMSS: userData.tieneIMSS || false,
               tieneCajaAhorro: userData.tieneCajaAhorro || false,
               montoCajaAhorro: userData.montoCajaAhorro || 0,
@@ -661,8 +752,7 @@
           return;
         }
 
-        // ✅ CONSULTA SIN ÍNDICES - SOLO POR TIPO DE EVENTO
-        console.log('🔍 Consultando TODOS los registros de entrada (filtraremos en memoria)...');
+        console.log('🔍 Consultando registros de entrada...');
         
         const registrosQuery = query(
           collection(db, "registros"),
@@ -672,7 +762,7 @@
         const registrosSnapshot = await getDocs(registrosQuery);
         console.log(`📊 Registros obtenidos de Firestore: ${registrosSnapshot.size}`);
         
-        // ✅ FILTRAR EN MEMORIA POR FECHA Y DÍAS LABORALES DEL PERÍODO
+        // Filtrar en memoria por fecha y días laborales del período
         const registrosPorEmpleado = {};
         let registrosProcesados = 0;
         
@@ -680,13 +770,11 @@
           const registro = doc.data();
           const uid = registro.uid;
           
-          // Extraer día de la fecha del registro
-          const fechaRegistro = registro.fecha; // formato "YYYY-MM-DD"
-          if (!fechaRegistro) return; // Skip si no tiene fecha
+          const fechaRegistro = registro.fecha;
+          if (!fechaRegistro) return;
           
           const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
           
-          // Filtrar por año, mes y días laborales del período específico
           if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
             if (!registrosPorEmpleado[uid]) {
               registrosPorEmpleado[uid] = [];
@@ -698,13 +786,10 @@
 
         console.log(`📊 Registros filtrados por período: ${registrosProcesados}`);
 
-        // ✅ CALCULAR ESTADÍSTICAS CON DESCUENTOS
+        // Calcular estadísticas con descuentos
         const resultados = [];
         let totalRetardos = 0;
         let empleadosConDescuento = 0;
-        let totalNominaPagada = 0;
-        let totalDescuentosIMSS = 0;
-        let totalDescuentosCaja = 0;
         let totalNominaFinal = 0;
 
         for (const empleado of empleados) {
@@ -736,28 +821,23 @@
           const diasEfectivos = diasTrabajados - diasDescuento;
           const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
 
-          // ✅ APLICAR DESCUENTOS
+          // Aplicar descuentos
           let descuentoIMSS = 0;
           let descuentoCaja = 0;
           
           if (empleado.tieneIMSS) {
-            descuentoIMSS = 300; // $300 fijos por quincena
-            totalDescuentosIMSS += descuentoIMSS;
+            descuentoIMSS = 300;
           }
           
           if (empleado.tieneCajaAhorro && empleado.montoCajaAhorro) {
             descuentoCaja = empleado.montoCajaAhorro;
-            totalDescuentosCaja += descuentoCaja;
           }
           
-          // Calcular pago final
           const pagoConDescuentos = pagoTotal - descuentoIMSS - descuentoCaja;
           const pagoFinal = Math.max(0, pagoConDescuentos);
           
           if (diasDescuento > 0 || descuentoIMSS > 0 || descuentoCaja > 0) empleadosConDescuento++;
           totalRetardos += retardos;
-          totalNominaPagada += pagoTotal;
-          totalNominaFinal += pagoFinal;
 
           let status, statusClass;
           if (diasFaltantes.length > 0) {
@@ -774,7 +854,7 @@
             statusClass = 'status-ok';
           }
 
-          resultados.push({
+          let resultadoBase = {
             empleado,
             salarioQuincenal,
             diasLaboralesEsperados: diasLaborales.length,
@@ -785,7 +865,6 @@
             diasEfectivos,
             pagoPorDia: Math.round(pagoPorDia),
             pagoTotal: Math.round(pagoTotal),
-            // ✅ NUEVOS CAMPOS CON DESCUENTOS
             descuentoIMSS,
             descuentoCaja,
             totalDescuentos: descuentoIMSS + descuentoCaja,
@@ -795,8 +874,21 @@
             detalleRetardos,
             diasAsistidos,
             diasFaltantesDetalle: diasFaltantes
-          });
+          };
+          
+          const resultadoConAusencias = await aplicarAusenciasAutomaticas(empleado.uid, resultadoBase);
+          resultados.push(resultadoConAusencias);
+          
+          totalNominaFinal += Math.round(resultadoConAusencias.pagoFinalConJustificaciones || resultadoConAusencias.pagoFinal);
         }
+
+        // Guardar variables para edición
+        quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
+        mesActual = `${mesNum}/${añoNum}`;
+        mesActualNum = mesNum;
+        añoActualNum = añoNum;
+
+        resultadosNomina = resultados;
 
         mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaFinal, quinceSelect, monthSelect);
 
@@ -808,112 +900,414 @@
       }
     };
 
-    // ✅ FUNCIÓN MOSTRAR RESULTADOS CON DESCUENTOS
-    function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalNominaFinal, quincena, mes) {
-      // Actualizar resumen
-      document.getElementById('totalEmployees').textContent = formatearNumero(totalEmpleados);
-      document.getElementById('totalRetards').textContent = formatearNumero(totalRetardos);
-      document.getElementById('employeesWithPenalty').textContent = formatearNumero(empleadosConDescuento);
-      document.getElementById('totalPayout').textContent = `$${formatearNumero(Math.round(totalNominaFinal))}`;
-      document.getElementById('summaryCard').style.display = 'block';
-      document.getElementById('exportBtn').style.display = 'inline-block';
+    // Función para aplicar ausencias automáticamente
+    async function aplicarAusenciasAutomaticas(empleadoId, resultado) {
+      try {
+        const ausencias = await obtenerAusenciasAprobadas(empleadoId, mesActualNum, añoActualNum, quinceActual);
+        
+        if (ausencias.length === 0) return resultado;
+        
+        let diasVacaciones = 0;
+        let diasIncapacidad = 0;
+        let diasViaje = 0;
+        let comentarios = [];
+        
+        ausencias.forEach(ausencia => {
+          switch (ausencia.tipo) {
+            case 'vacaciones':
+              diasVacaciones += ausencia.dias;
+              comentarios.push(`Vacaciones: ${ausencia.dias} días`);
+              break;
+            case 'incapacidad':
+              diasIncapacidad += ausencia.dias;
+              comentarios.push(`Incapacidad: ${ausencia.dias} días`);
+              break;
+            case 'permiso':
+              if (ausencia.motivo.toLowerCase().includes('viaje') || ausencia.motivo.toLowerCase().includes('negocios')) {
+                diasViaje += ausencia.dias;
+                comentarios.push(`Viaje de negocios: ${ausencia.dias} días`);
+              }
+              break;
+          }
+        });
+        
+        const diasJustificados = diasVacaciones + diasIncapacidad + diasViaje;
+        const diasEfectivosOriginales = resultado.diasEfectivos;
+        const diasTotalesAPagar = diasEfectivosOriginales + diasJustificados;
+        
+        const pagoConJustificaciones = diasTotalesAPagar * resultado.pagoPorDia;
+        const pagoFinalConJustificaciones = Math.max(0, pagoConJustificaciones - resultado.totalDescuentos);
+        
+        resultado.diasJustificados = diasJustificados;
+        resultado.diasVacaciones = diasVacaciones;
+        resultado.diasIncapacidad = diasIncapacidad;
+        resultado.diasViaje = diasViaje;
+        resultado.pagoTotalConJustificaciones = Math.round(pagoConJustificaciones);
+        resultado.pagoFinalConJustificaciones = Math.round(pagoFinalConJustificaciones);
+        resultado.tieneAusenciasAprobadas = true;
+        resultado.comentariosAusencias = comentarios.join(', ');
+        
+        console.log(`✅ Ausencias aplicadas para ${resultado.empleado.nombre}:`, {
+          diasJustificados,
+          pagoFinal: pagoFinalConJustificaciones
+        });
+        
+        return resultado;
+      } catch (error) {
+        console.error('Error aplicando ausencias:', error);
+        return resultado;
+      }
+    }
 
-      // Mostrar tarjetas de empleados
+    // Función para obtener ausencias aprobadas
+    async function obtenerAusenciasAprobadas(empleadoId, mesNum, añoNum, periodo) {
+      try {
+        console.log(`🔍 Buscando ausencias aprobadas para empleado ${empleadoId} en ${mesNum}/${añoNum}`);
+        
+        const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, periodo);
+        const fechaInicio = new Date(añoNum, mesNum - 1, Math.min(...diasLaborales));
+        const fechaFin = new Date(añoNum, mesNum - 1, Math.max(...diasLaborales));
+        
+        const ausenciasQuery = query(
+          collection(db, "ausencias"),
+          where("uidUsuario", "==", empleadoId),
+          where("estado", "==", "aprobada"),
+          where("fechaInicio", ">=", fechaInicio),
+          where("fechaInicio", "<=", fechaFin)
+        );
+        
+        const ausenciasSnapshot = await getDocs(ausenciasQuery);
+        const ausencias = [];
+        
+        ausenciasSnapshot.forEach(doc => {
+          const ausencia = doc.data();
+          ausencias.push({
+            tipo: ausencia.tipo,
+            fechaInicio: ausencia.fechaInicio.toDate(),
+            fechaFin: ausencia.fechaFin?.toDate() || ausencia.fechaInicio.toDate(),
+            motivo: ausencia.motivo,
+            dias: calcularDiasLaboralesEnRango(ausencia.fechaInicio.toDate(), ausencia.fechaFin?.toDate() || ausencia.fechaInicio.toDate())
+          });
+        });
+        
+        return ausencias;
+      } catch (error) {
+        console.error('Error obteniendo ausencias:', error);
+        return [];
+      }
+    }
+
+    // Función auxiliar para calcular días laborales en un rango
+    function calcularDiasLaboralesEnRango(fechaInicio, fechaFin) {
+      let diasLaborales = 0;
+      const fecha = new Date(fechaInicio);
+      
+      while (fecha <= fechaFin) {
+        const diaSemana = fecha.getDay();
+        if (diaSemana >= 1 && diaSemana <= 5) {
+          diasLaborales++;
+        }
+        fecha.setDate(fecha.getDate() + 1);
+      }
+      
+      return diasLaborales;
+    }
+
+    // Función para mostrar resultados
+    function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalPago, periodo, mes) {
+      // Actualizar resumen
+      document.getElementById('totalEmployees').textContent = totalEmpleados;
+      document.getElementById('totalRetards').textContent = totalRetardos;
+      document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
+      document.getElementById('totalPayout').textContent = `$${formatearNumero(totalPago)}`;
+      document.getElementById('summaryCard').style.display = 'block';
+
+      // Mostrar resultados de empleados
       const container = document.getElementById('resultsContainer');
       container.innerHTML = '';
 
       resultados.forEach(resultado => {
-        const card = document.createElement('div');
-        card.className = 'employee-card';
+        const empleadoCard = document.createElement('div');
+        empleadoCard.className = 'employee-card';
         
-        function getTipoNombre(tipo) {
-          switch(tipo) {
-            case 'tiempo_completo': return 'T.Completo';
-            case 'becario': return 'Becario';
-            case 'horario_especial': return 'H.Especial';
-            default: return tipo;
-          }
-        }
+        const tipoNombre = getTipoNombre(resultado.empleado.tipo);
+        const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
         
-        card.innerHTML = `
+        empleadoCard.innerHTML = `
           <div class="employee-header">
             <div class="employee-name">
               <i class="bi bi-person-fill me-2"></i>
               ${resultado.empleado.nombre}
-              <span class="badge bg-secondary ms-2">${getTipoNombre(resultado.empleado.tipo)}</span>
-              <span class="badge bg-success ms-1">Pago x Día</span>
-              ${resultado.empleado.tieneIMSS ? '<span class="badge bg-info ms-1">IMSS</span>' : ''}
-              ${resultado.empleado.tieneCajaAhorro ? '<span class="badge bg-warning text-dark ms-1">Caja</span>' : ''}
+              <span class="badge bg-secondary ms-2">${tipoNombre}</span>
+              ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">Con Ausencias</span>' : ''}
             </div>
-            <div class="status-badge ${resultado.statusClass}">
-              ${resultado.status}
+            <div class="d-flex align-items-center gap-2">
+              <div class="status-badge ${resultado.statusClass}">${resultado.status}</div>
+              <button class="btn btn-outline-primary btn-sm" onclick="abrirEdicionNomina('${resultado.empleado.uid}')"><i class="bi bi-pencil"></i>
+              </button>
             </div>
           </div>
-          
+
           <div class="stats-grid">
             <div class="stat-item">
-              <div class="stat-number text-primary">${resultado.diasTrabajados}/${resultado.diasLaboralesEsperados}</div>
-              <div class="stat-label">Asistencias</div>
+              <span class="stat-number text-primary">${resultado.diasTrabajados}</span>
+              <div class="stat-label">Días Trabajados</div>
             </div>
             <div class="stat-item">
-              <div class="stat-number text-danger">${resultado.diasFaltantes}</div>
-              <div class="stat-label">Faltas</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number text-warning">${resultado.retardos}</div>
+              <span class="stat-number ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
               <div class="stat-label">Retardos</div>
             </div>
             <div class="stat-item">
-              <div class="stat-number text-success">$${formatearNumero(Math.round(resultado.pagoFinal))}</div>
+              <span class="stat-number ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
+              <div class="stat-label">Faltas</div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number text-success">$${formatearNumero(pagoFinalMostrar)}</span>
               <div class="stat-label">Pago Final</div>
             </div>
           </div>
-          
+
           <div class="payment-details">
             <div class="row">
               <div class="col-6">
-                <small>💰 <strong>$${formatearNumero(resultado.pagoPorDia)}/día</strong></small><br>
-                <small>📊 <strong>${resultado.diasEfectivos} días efectivos</strong></small><br>
-                <small>💸 <strong>$${formatearNumero(resultado.pagoTotal)} bruto</strong></small>
+                <small><strong>Salario base:</strong></small><br>
+                <small>$${formatearNumero(resultado.salarioQuincenal)}</small>
               </div>
               <div class="col-6">
-                ${resultado.totalDescuentos > 0 ? `
-                  <small class="text-warning">📉 <strong>Descuentos:</strong></small><br>
-                  ${resultado.descuentoIMSS > 0 ? `<small>🏥 IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
-                  ${resultado.descuentoCaja > 0 ? `<small>🏦 Caja: $${resultado.descuentoCaja}</small><br>` : ''}
-                  <small class="text-success">💰 <strong>Final: $${formatearNumero(Math.round(resultado.pagoFinal))}</strong></small>
-                ` : `
-                  <small>✅ <strong>Sin descuentos</strong></small><br>
-                  <small>💰 <strong>Total: $${formatearNumero(Math.round(resultado.pagoFinal))}</strong></small>
-                `}
+                <small><strong>Pago por día:</strong></small><br>
+                <small>$${formatearNumero(resultado.pagoPorDia)}</small>
               </div>
+              <div class="col-6 mt-2">
+                <small><strong>Días efectivos:</strong></small><br>
+                <small>${resultado.diasEfectivos} días</small>
+              </div>
+              <div class="col-6 mt-2">
+                <small><strong>Subtotal:</strong></small><br>
+                <small>$${formatearNumero(resultado.pagoTotal)}</small>
+              </div>
+              
+              ${resultado.totalDescuentos > 0 ? `
+                <div class="col-12 mt-2">
+                  <hr>
+                  <small><strong>Descuentos:</strong></small><br>
+                  ${resultado.descuentoIMSS > 0 ? `<small>• IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
+                  ${resultado.descuentoCaja > 0 ? `<small>• Caja de ahorro: $${formatearNumero(resultado.descuentoCaja)}</small><br>` : ''}
+                </div>
+              ` : ''}
+              
+              ${resultado.tieneAusenciasAprobadas ? `
+                <div class="col-12 mt-2">
+                  <hr>
+                  <small><strong>Ausencias justificadas:</strong></small><br>
+                  <small class="text-info">${resultado.comentariosAusencias}</small><br>
+                  <small><strong>Pago con justificaciones: $${formatearNumero(resultado.pagoFinalConJustificaciones)}</strong></small>
+                </div>
+              ` : ''}
             </div>
-            
-            ${resultado.diasFaltantesDetalle.length > 0 ? `
-              <div class="mt-2">
-                <small class="text-danger"><strong>Días faltantes:</strong> ${resultado.diasFaltantesDetalle.join(', ')}</small>
-              </div>
-            ` : ''}
-            
-            ${resultado.detalleRetardos.length > 0 ? `
-              <div class="mt-2">
-                <small class="text-warning"><strong>Retardos:</strong> ${resultado.detalleRetardos.map(r => `${r.fecha.split('-')[2]} (${r.hora})`).join(', ')}</small>
-              </div>
-            ` : ''}
           </div>
+
+          ${resultado.detalleRetardos.length > 0 ? `
+            <div class="retard-details">
+              <h6><i class="bi bi-clock-history me-2"></i>Detalle de Retardos</h6>
+              ${resultado.detalleRetardos.map(retardo => `
+                <div class="retard-item">
+                  <span>${retardo.fecha}</span>
+                  <span>${retardo.hora}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
         `;
-        
-        container.appendChild(card);
+
+        container.appendChild(empleadoCard);
       });
 
-      console.log(`✅ Nómina calculada: ${resultados.length} empleados`);
-      console.log(`💰 Total final: $${formatearNumero(Math.round(totalNominaFinal))}`);
+      document.getElementById('exportBtn').style.display = 'inline-block';
     }
 
-    // Función para exportar a Excel (placeholder)
-    window.exportarExcel = function() {
-      mostrarNotificacion('Función de exportar a Excel próximamente', 'info');
+    // Configurar checkboxes de justificaciones
+    function configurarCheckboxesJustificaciones() {
+      const checkboxes = [
+        { check: 'tieneVacaciones', input: 'diasVacaciones' },
+        { check: 'tieneIncapacidad', input: 'diasIncapacidad' },
+        { check: 'tieneViaje', input: 'diasViaje' }
+      ];
+      
+      checkboxes.forEach(({ check, input }) => {
+        document.getElementById(check).addEventListener('change', function() {
+          document.getElementById(input).disabled = !this.checked;
+          if (!this.checked) document.getElementById(input).value = '';
+          calcularPreviaEdicion();
+        });
+      });
+
+      ['editDiasTrabajados', 'editRetardos', 'editDiasExtra', 'editBonoExtra', 
+       'diasVacaciones', 'diasIncapacidad', 'diasViaje'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calcularPreviaEdicion);
+      });
+    }
+
+   // Función para abrir modal de edición
+window.abrirEdicionNomina = function(empleadoId) {
+  // Buscar el resultado en la variable global
+  const resultado = resultadosNomina.find(r => r.empleado.uid === empleadoId);
+  if (!resultado) {
+    mostrarNotificacion('No se encontraron datos del empleado', 'error');
+    return;
+  }
+  
+  document.getElementById('editEmpleadoId').value = empleadoId;
+  document.getElementById('editEmpleadoNombre').textContent = resultado.empleado.nombre;
+  document.getElementById('editEmpleadoTipo').textContent = getTipoNombre(resultado.empleado.tipo);
+  document.getElementById('editSalarioBase').textContent = `$${formatearNumero(resultado.salarioQuincenal)}`;
+  document.getElementById('editPeriodo').textContent = `${quinceActual} - ${mesActual}`;
+  
+  document.getElementById('editDiasTrabajados').value = resultado.diasTrabajados;
+  document.getElementById('editRetardos').value = resultado.retardos;
+  document.getElementById('editDiasExtra').value = 0;
+  document.getElementById('editBonoExtra').value = 0;
+  
+  ['tieneVacaciones', 'tieneIncapacidad', 'tieneViaje'].forEach(id => {
+    document.getElementById(id).checked = false;
+    document.getElementById(id.replace('tiene', 'dias')).disabled = true;
+    document.getElementById(id.replace('tiene', 'dias')).value = '';
+  });
+  
+  document.getElementById('editComentarios').value = '';
+  window.datosOriginales = { ...resultado };
+  
+  calcularPreviaEdicion();
+  new bootstrap.Modal(document.getElementById('modalEditarNomina')).show();
+};
+
+  
+    // Función para calcular vista previa
+    function calcularPreviaEdicion() {
+      if (!window.datosOriginales) return;
+      
+      const original = window.datosOriginales;
+      const diasTrabajados = parseInt(document.getElementById('editDiasTrabajados').value) || 0;
+      const retardos = parseInt(document.getElementById('editRetardos').value) || 0;
+      const diasExtra = parseInt(document.getElementById('editDiasExtra').value) || 0;
+      const bonoExtra = parseFloat(document.getElementById('editBonoExtra').value) || 0;
+      
+      let diasJustificados = 0;
+      if (document.getElementById('tieneVacaciones').checked) {
+        diasJustificados += parseInt(document.getElementById('diasVacaciones').value) || 0;
+      }
+      if (document.getElementById('tieneIncapacidad').checked) {
+        diasJustificados += parseInt(document.getElementById('diasIncapacidad').value) || 0;
+      }
+      if (document.getElementById('tieneViaje').checked) {
+        diasJustificados += parseInt(document.getElementById('diasViaje').value) || 0;
+      }
+
+      const diasDescuentoPorRetardos = Math.floor(retardos / 4);
+      const diasEfectivos = Math.max(0, diasTrabajados - diasDescuentoPorRetardos);
+      const diasTotalesAPagar = diasEfectivos + diasJustificados + diasExtra;
+      
+      const pagoBase = diasTotalesAPagar * original.pagoPorDia;
+      const pagoConBono = pagoBase + bonoExtra;
+      
+      const descuentoIMSS = original.empleado.tieneIMSS ? 300 : 0;
+      const descuentoCaja = original.empleado.tieneCajaAhorro ? (original.empleado.montoCajaAhorro || 0) : 0;
+      const pagoFinal = Math.max(0, pagoConBono - descuentoIMSS - descuentoCaja);
+      
+      document.getElementById('previaCálculo').innerHTML = `
+        <div class="col-md-6">
+          <h6>Cálculo Detallado:</h6>
+          <ul class="list-unstyled">
+            <li>• Días efectivos trabajados: <strong>${diasEfectivos}</strong></li>
+            <li>• Días justificados (pagados): <strong>${diasJustificados}</strong></li>
+            <li>• Días extra (sábados): <strong>${diasExtra}</strong></li>
+            <li>• Pago por día: <strong>$${formatearNumero(original.pagoPorDia)}</strong></li>
+            <li>• Descuento por ${diasDescuentoPorRetardos} día(s): <strong>-$${formatearNumero(diasDescuentoPorRetardos * original.pagoPorDia)}</strong></li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <h6>Totales:</h6>
+          <ul class="list-unstyled">
+            <li>• Subtotal: <strong>$${formatearNumero(Math.round(pagoBase))}</strong></li>
+            ${bonoExtra > 0 ? `<li>• Bono extra: <strong>+$${formatearNumero(bonoExtra)}</strong></li>` : ''}
+            ${descuentoIMSS > 0 ? `<li>• IMSS: <strong>-$${descuentoIMSS}</strong></li>` : ''}
+            ${descuentoCaja > 0 ? `<li>• Caja de ahorro: <strong>-$${formatearNumero(descuentoCaja)}</strong></li>` : ''}
+            <li class="border-top pt-2 mt-2"><strong>PAGO FINAL: $${formatearNumero(Math.round(pagoFinal))}</strong></li>
+          </ul>
+        </div>
+      `;
+    }
+
+    // Función para guardar edición manual
+    window.guardarEdicionManual = async function() {
+      try {
+        const comentarios = document.getElementById('editComentarios').value;
+        
+        mostrarNotificacion(`Cambios guardados para la nómina manual.\nComentario: ${comentarios || 'Sin comentarios'}`, 'success');
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarNomina'));
+        modal.hide();
+        
+      } catch (error) {
+        console.error('Error guardando edición manual:', error);
+        mostrarNotificacion('Error al guardar los cambios', 'error');
+      }
     };
+
+    // Función para exportar a Excel
+    window.exportarExcel = function() {
+      if (!resultadosNomina || resultadosNomina.length === 0) {
+        mostrarNotificacion('No hay datos para exportar', 'warning');
+        return;
+      }
+
+      try {
+        const datosExcel = resultadosNomina.map(resultado => {
+          const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+          return {
+            'Empleado': resultado.empleado.nombre,
+            'Tipo': getTipoNombre(resultado.empleado.tipo),
+            'Salario Base': resultado.salarioQuincenal,
+            'Días Esperados': resultado.diasLaboralesEsperados,
+            'Días Trabajados': resultado.diasTrabajados,
+            'Retardos': resultado.retardos,
+            'Días de Descuento': resultado.diasDescuento,
+            'Días Efectivos': resultado.diasEfectivos,
+            'Pago por Día': resultado.pagoPorDia,
+            'Subtotal': resultado.pagoTotal,
+            'Descuento IMSS': resultado.descuentoIMSS,
+            'Descuento Caja': resultado.descuentoCaja,
+            'Total Descuentos': resultado.totalDescuentos,
+            'Pago Final': pagoFinal,
+            'Estado': resultado.status,
+            'Ausencias Aprobadas': resultado.tieneAusenciasAprobadas ? 'Sí' : 'No',
+            'Comentarios Ausencias': resultado.comentariosAusencias || ''
+          };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(datosExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Nómina");
+
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Nomina_${quinceActual.replace(' ', '_')}_${mesActual.replace('/', '-')}_${fecha}.xlsx`;
+        
+        XLSX.writeFile(wb, nombreArchivo);
+        mostrarNotificacion('Archivo Excel exportado correctamente', 'success');
+      } catch (error) {
+        console.error('Error exportando Excel:', error);
+        mostrarNotificacion('Error al exportar Excel', 'error');
+      }
+    };
+
+    // Configurar event listeners al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+      configurarCheckboxesJustificaciones();
+
+      // ✅ AGREGAR ESTA LÍNEA:
+    document.getElementById('btnGuardarEdicion')?.addEventListener('click', guardarEdicionManual);
+
+    });
+
   </script>
 </body>
 </html>
