@@ -1506,3 +1506,65 @@ body {
     font-size: 0.75rem;
   }
 }
+
+/* ===== BADGE DE DESCUENTO ===== */
+.descuento-badge .alert {
+  border: 1px solid #ffc107;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.descuento-badge .alert small {
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  color: #856404;
+}
+
+/* Columna de descuento en tabla */
+.nomina-table .badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.nomina-table small.text-danger {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* ===== DESCUENTOS EN TABLA ===== */
+.descuentos-detalle {
+  text-align: center;
+}
+
+.descuentos-detalle .badge {
+  font-size: 0.65rem;
+  margin: 0.1rem;
+  padding: 0.25rem 0.4rem;
+}
+
+.descuentos-detalle small {
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+/* Pago detalle mejorado */
+.pago-detalle {
+  text-align: center;
+}
+
+.pago-detalle small {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #6c757d !important;
+}
+
+/* Tooltips mejorados */
+.nomina-table tbody td[title] {
+  cursor: help;
+  position: relative;
+}
+
+.nomina-table tbody td[title]:hover {
+  background: #f0f8ff;
+}

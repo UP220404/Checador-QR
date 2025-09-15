@@ -231,17 +231,18 @@
 <div id="tableContainer" class="table-responsive" style="display: none;">
   <table class="table table-hover nomina-table">
     <thead>
-      <tr>
-        <th>Empleado</th>
-        <th>Tipo</th>
-        <th>Días</th>
-        <th>Retardos</th>
-        <th>Faltas</th>
-        <th>Pago Final</th>
-        <th>Estado</th>
-        <th>Acción</th>
-      </tr>
-    </thead>
+  <tr>
+    <th>Empleado</th>
+    <th>Tipo</th>
+    <th>Días</th>
+    <th>Retardos</th>
+    <th>Faltas</th>
+    <th>Descuento</th>
+    <th>Pago Final</th>
+    <th>Estado</th>
+    <th>Acción</th>
+  </tr>
+</thead>
     <tbody id="tableBody">
       <!-- Se llena dinámicamente -->
     </tbody>
@@ -1140,7 +1141,16 @@ function mostrarVistaCompacta(resultados) {
         </div>
       </div>
       
-      <!-- ✅ NUEVA SECCIÓN DE DETALLES -->
+      ${resultado.diasDescuento > 0 ? `
+        <div class="descuento-badge">
+          <div class="alert alert-warning py-2 mb-2">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Descuento: ${resultado.diasDescuento} día${resultado.diasDescuento > 1 ? 's' : ''}</strong>
+            <small class="d-block">Por ${resultado.retardos} retardos (4 retardos = 1 día)</small>
+          </div>
+        </div>
+      ` : ''}
+      
       <div class="compact-details">
         <div class="compact-detail-row">
           <span class="detail-label">Subtotal:</span>
@@ -1161,11 +1171,47 @@ function mostrarVistaCompacta(resultados) {
           </div>
         ` : ''}
         
+        ${resultado.diasDescuento > 0 ? `
+          <div class="compact-detail-row discount">
+            <span class="detail-label">Descuento por retardos:</span>
+            <span class="detail-value text-warning">-${resultado.diasDescuento} día${resultado.diasDescuento > 1 ? 's' : ''}</span>
+          </div>
+          <div class="compact-detail-row discount">
+            <span class="detail-label">Valor del descuento:</span>
+            <span class="detail-value text-danger">-$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}</span>
+          </div>
+        ` : ''}
+
+        // ✅ AGREGAR ESTAS LÍNEAS PARA DESCUENTO POR FALTAS:
+        ${resultado.diasFaltantes > 0 ? `
+          <div class="compact-detail-row discount">
+            <span class="detail-label">Faltas:</span>
+            <span class="detail-value text-warning">-${resultado.diasFaltantes} día${resultado.diasFaltantes > 1 ? 's' : ''}</span>
+          </div>
+          <div class="compact-detail-row discount">
+            <span class="detail-label">Valor de las faltas:</span>
+            <span class="detail-value text-danger">-$${formatearNumero(resultado.diasFaltantes * resultado.pagoPorDia)}</span>
+          </div>
+        ` : ''}
+        
         ${resultado.diasJustificados > 0 ? `
           <div class="compact-detail-row bonus">
             <span class="detail-label">Días justificados:</span>
             <span class="detail-value text-info">+${resultado.diasJustificados}</span>
           </div>
+        ` : ''}
+        
+        ${resultado.editadoManualmente ? `
+          <div class="compact-detail-row bonus">
+            <span class="detail-label">Editado manualmente:</span>
+            <span class="detail-value text-purple">Sí</span>
+          </div>
+          ${resultado.comentariosEdicion ? `
+            <div class="compact-detail-row">
+              <span class="detail-label">Comentarios:</span>
+              <span class="detail-value text-muted">${resultado.comentariosEdicion}</span>
+            </div>
+          ` : ''}
         ` : ''}
         
         <div class="compact-detail-row final">
@@ -1175,8 +1221,13 @@ function mostrarVistaCompacta(resultados) {
       </div>
       
       <div class="compact-status ${resultado.statusClass}">
-        ${resultado.status}
-      </div>
+  ${resultado.diasDescuento > 0 ? 
+    resultado.diasFaltantes > 0 ? 
+      `${resultado.diasFaltantes} falta${resultado.diasFaltantes > 1 ? 's' : ''} • Sin penalizaciones adicionales` :
+      `Sin penalizaciones adicionales` :
+    resultado.status
+  }
+</div>
     `;
 
     container.appendChild(empleadoCard);
@@ -1193,10 +1244,12 @@ function llenarTabla(resultados) {
     const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
     const row = document.createElement('tr');
     
-    // ✅ CREAR TOOLTIP CON DETALLES
+    // Tooltip con detalles
     const detalleDescuentos = [];
     if (resultado.descuentoIMSS > 0) detalleDescuentos.push(`IMSS: -$${resultado.descuentoIMSS}`);
     if (resultado.descuentoCaja > 0) detalleDescuentos.push(`Caja: -$${formatearNumero(resultado.descuentoCaja)}`);
+    if (resultado.diasDescuento > 0) detalleDescuentos.push(`Retardos: -$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}`);
+    if (resultado.diasFaltantes > 0) detalleDescuentos.push(`Faltas: -$${formatearNumero(resultado.diasFaltantes * resultado.pagoPorDia)}`);
     
     const tooltipDescuentos = detalleDescuentos.length > 0 ? 
       `title="Subtotal: $${formatearNumero(resultado.pagoTotal)}\n${detalleDescuentos.join('\n')}\nPago final: $${formatearNumero(pagoFinalMostrar)}"` : 
@@ -1214,11 +1267,25 @@ function llenarTabla(resultados) {
       <td><span class="badge ${resultado.diasTrabajados < resultado.diasLaboralesEsperados ? 'bg-warning' : 'bg-success'}">${resultado.diasTrabajados}</span></td>
       <td><span class="badge ${resultado.retardos > 0 ? 'bg-warning' : 'bg-success'}">${resultado.retardos}</span></td>
       <td><span class="badge ${resultado.diasFaltantes > 0 ? 'bg-danger' : 'bg-success'}">${resultado.diasFaltantes}</span></td>
+      
+      <!-- ✅ UNA SOLA COLUMNA DE DESCUENTO (RETARDOS + FALTAS) -->
+      <td ${resultado.diasDescuento > 0 || resultado.diasFaltantes > 0 ? 
+        `title="Descuentos aplicados:\n${resultado.diasDescuento > 0 ? `Retardos: ${resultado.diasDescuento} día(s) = $${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}\n` : ''}${resultado.diasFaltantes > 0 ? `Faltas: ${resultado.diasFaltantes} día(s) = $${formatearNumero(resultado.diasFaltantes * resultado.pagoPorDia)}` : ''}"` : ''}>
+        ${resultado.diasDescuento > 0 || resultado.diasFaltantes > 0 ? 
+          `<div class="descuentos-detalle">
+            ${resultado.diasDescuento > 0 ? `<span class="badge bg-warning mb-1">Ret: ${resultado.diasDescuento}d</span>` : ''}
+            ${resultado.diasFaltantes > 0 ? `<span class="badge bg-danger mb-1">Fal: ${resultado.diasFaltantes}d</span>` : ''}
+            <small class="d-block text-danger">-$${formatearNumero((resultado.diasDescuento + resultado.diasFaltantes) * resultado.pagoPorDia)}</small>
+           </div>` : 
+          `<span class="badge bg-success">Sin desc.</span>`
+        }
+      </td>
+      
       <td ${tooltipDescuentos}>
         <div class="pago-detalle">
           <strong class="text-success">$${formatearNumero(pagoFinalMostrar)}</strong>
           ${resultado.totalDescuentos > 0 ? 
-            `<small class="d-block text-muted">-$${formatearNumero(resultado.totalDescuentos)} desc.</small>` : 
+            `<small class="d-block text-muted">-$${formatearNumero(resultado.totalDescuentos)} IMSS/Caja</small>` : 
             ''
           }
         </div>
@@ -1234,6 +1301,7 @@ function llenarTabla(resultados) {
     tbody.appendChild(row);
   });
 }
+
 
     // Configurar checkboxes de justificaciones
     function configurarCheckboxesJustificaciones() {
