@@ -209,9 +209,47 @@
       <span class="ms-3">Calculando nómina...</span>
     </div>
 
-    <!-- Resultados en Grid -->
-    <div id="resultsContainer" class="employee-grid"></div>
-    
+   <!-- Controles de Vista -->
+<div id="viewControls" class="view-controls" style="display: none;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Resultados de Nómina</h5>
+    <div class="btn-group" role="group">
+      <button type="button" class="btn btn-outline-primary active" id="btnVistaCompacta" onclick="cambiarVista('compacta')">
+        <i class="bi bi-grid-3x2 me-1"></i>Compacta
+      </button>
+      <button type="button" class="btn btn-outline-primary" id="btnVistaTabla" onclick="cambiarVista('tabla')">
+        <i class="bi bi-table me-1"></i>Tabla
+      </button>
+      <button type="button" class="btn btn-outline-primary" id="btnVistaCompleta" onclick="cambiarVista('completa')">
+        <i class="bi bi-card-list me-1"></i>Completa
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista Compacta (Default) -->
+<div id="resultsContainer" class="employee-grid-compact"></div>
+
+<!-- Vista de Tabla -->
+<div id="tableContainer" class="table-responsive" style="display: none;">
+  <table class="table table-hover nomina-table">
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        <th>Tipo</th>
+        <th>Días</th>
+        <th>Retardos</th>
+        <th>Faltas</th>
+        <th>Pago Final</th>
+        <th>Estado</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <!-- Se llena dinámicamente -->
+    </tbody>
+  </table>
+</div>
     <!-- Modal para Editar Nómina Manual -->
     <div class="modal fade" id="modalEditarNomina" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg">
@@ -1017,117 +1055,247 @@
     }
 
     // Función para mostrar resultados
-    function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalPago, periodo, mes) {
-      // Actualizar resumen
-      document.getElementById('totalEmployees').textContent = totalEmpleados;
-      document.getElementById('totalRetards').textContent = totalRetardos;
-      document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
-      document.getElementById('totalPayout').textContent = `$${formatearNumero(totalPago)}`;
-      document.getElementById('summaryCard').style.display = 'block';
+function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalPago, periodo, mes) {
+  // Actualizar resumen
+  document.getElementById('totalEmployees').textContent = totalEmpleados;
+  document.getElementById('totalRetards').textContent = totalRetardos;
+  document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
+  document.getElementById('totalPayout').textContent = `$${formatearNumero(totalPago)}`;
+  document.getElementById('summaryCard').style.display = 'block';
+  document.getElementById('viewControls').style.display = 'block';
 
-      // Mostrar resultados de empleados
-      const container = document.getElementById('resultsContainer');
-      container.innerHTML = '';
+  // Limpiar contenedores
+  document.getElementById('resultsContainer').innerHTML = '';
+  document.getElementById('tableBody').innerHTML = '';
 
-      resultados.forEach(resultado => {
-        const empleadoCard = document.createElement('div');
-        empleadoCard.className = 'employee-card';
-        empleadoCard.setAttribute('data-empleado-id', resultado.empleado.uid);
+  // Mostrar vista compacta por defecto
+  mostrarVistaCompacta(resultados);
+  llenarTabla(resultados);
 
-        const tipoNombre = getTipoNombre(resultado.empleado.tipo);
-        const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
-        
-        empleadoCard.innerHTML = `
-          <div class="employee-header">
-            <div class="employee-name">
-              <i class="bi bi-person-fill me-2"></i>
-              ${resultado.empleado.nombre}
-              <span class="badge bg-secondary ms-2">${tipoNombre}</span>
-              ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">Con Ausencias</span>' : ''}
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <div class="status-badge ${resultado.statusClass}">${resultado.status}</div>
-              <button class="btn btn-outline-primary btn-sm" onclick="abrirEdicionNomina('${resultado.empleado.uid}')"><i class="bi bi-pencil"></i>
-              </button>
-            </div>
+  document.getElementById('exportBtn').style.display = 'inline-block';
+}
+
+// Función para cambiar vista
+window.cambiarVista = function(tipo) {
+  const compactaBtn = document.getElementById('btnVistaCompacta');
+  const tablaBtn = document.getElementById('btnVistaTabla');
+  const completaBtn = document.getElementById('btnVistaCompleta');
+  const container = document.getElementById('resultsContainer');
+  const tableContainer = document.getElementById('tableContainer');
+
+  // Remover clase active
+  [compactaBtn, tablaBtn, completaBtn].forEach(btn => btn.classList.remove('active'));
+
+  if (tipo === 'compacta') {
+    compactaBtn.classList.add('active');
+    container.style.display = 'grid';
+    tableContainer.style.display = 'none';
+    container.className = 'employee-grid-compact';
+    mostrarVistaCompacta(resultadosNomina);
+  } else if (tipo === 'tabla') {
+    tablaBtn.classList.add('active');
+    container.style.display = 'none';
+    tableContainer.style.display = 'block';
+  } else if (tipo === 'completa') {
+    completaBtn.classList.add('active');
+    container.style.display = 'grid';
+    tableContainer.style.display = 'none';
+    container.className = 'employee-grid';
+    mostrarVistaCompleta(resultadosNomina);
+  }
+};
+
+// Vista compacta (nueva)
+function mostrarVistaCompacta(resultados) {
+  const container = document.getElementById('resultsContainer');
+  container.innerHTML = '';
+
+  resultados.forEach(resultado => {
+    const empleadoCard = document.createElement('div');
+    empleadoCard.className = 'employee-card-compact';
+    empleadoCard.setAttribute('data-empleado-id', resultado.empleado.uid);
+
+    const tipoNombre = getTipoNombre(resultado.empleado.tipo);
+    const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+    
+    empleadoCard.innerHTML = `
+      <div class="compact-header">
+        <div class="compact-name">
+          <strong>${resultado.empleado.nombre}</strong>
+          <span class="badge bg-secondary ms-2">${tipoNombre}</span>
+          ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
+          ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">A</span>' : ''}
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </div>
+      
+      <div class="compact-stats">
+        <div class="compact-stat">
+          <span class="stat-value ${resultado.diasTrabajados < resultado.diasLaboralesEsperados ? 'text-warning' : 'text-success'}">${resultado.diasTrabajados}</span>
+          <small>Días</small>
+        </div>
+        <div class="compact-stat">
+          <span class="stat-value ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
+          <small>Retardos</small>
+        </div>
+        <div class="compact-stat">
+          <span class="stat-value ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
+          <small>Faltas</small>
+        </div>
+        <div class="compact-stat highlight">
+          <span class="stat-value text-success">$${formatearNumero(pagoFinalMostrar)}</span>
+          <small>Final</small>
+        </div>
+      </div>
+      
+      <div class="compact-status ${resultado.statusClass}">
+        ${resultado.status}
+      </div>
+    `;
+
+    container.appendChild(empleadoCard);
+  });
+}
+
+// Vista completa (original)
+function mostrarVistaCompleta(resultados) {
+  const container = document.getElementById('resultsContainer');
+  container.innerHTML = '';
+
+  resultados.forEach(resultado => {
+    const empleadoCard = document.createElement('div');
+    empleadoCard.className = 'employee-card';
+    empleadoCard.setAttribute('data-empleado-id', resultado.empleado.uid);
+
+    const tipoNombre = getTipoNombre(resultado.empleado.tipo);
+    const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+    
+    empleadoCard.innerHTML = `
+      <div class="employee-header">
+        <div class="employee-name">
+          <i class="bi bi-person-fill me-2"></i>
+          ${resultado.empleado.nombre}
+          <span class="badge bg-secondary ms-2">${tipoNombre}</span>
+          ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">Con Ausencias</span>' : ''}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <div class="status-badge ${resultado.statusClass}">${resultado.status}</div>
+          <button class="btn btn-outline-primary btn-sm" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-number text-primary">${resultado.diasTrabajados}</span>
+          <div class="stat-label">Días Trabajados</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
+          <div class="stat-label">Retardos</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
+          <div class="stat-label">Faltas</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number text-success">$${formatearNumero(pagoFinalMostrar)}</span>
+          <div class="stat-label">Pago Final</div>
+        </div>
+      </div>
+
+      <div class="payment-details">
+        <div class="row">
+          <div class="col-6">
+            <small><strong>Salario base:</strong></small><br>
+            <small>$${formatearNumero(resultado.salarioQuincenal)}</small>
           </div>
-
-          <div class="stats-grid">
-            <div class="stat-item">
-              <span class="stat-number text-primary">${resultado.diasTrabajados}</span>
-              <div class="stat-label">Días Trabajados</div>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
-              <div class="stat-label">Retardos</div>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
-              <div class="stat-label">Faltas</div>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number text-success">$${formatearNumero(pagoFinalMostrar)}</span>
-              <div class="stat-label">Pago Final</div>
-            </div>
+          <div class="col-6">
+            <small><strong>Pago por día:</strong></small><br>
+            <small>$${formatearNumero(resultado.pagoPorDia)}</small>
           </div>
-
-          <div class="payment-details">
-            <div class="row">
-              <div class="col-6">
-                <small><strong>Salario base:</strong></small><br>
-                <small>$${formatearNumero(resultado.salarioQuincenal)}</small>
-              </div>
-              <div class="col-6">
-                <small><strong>Pago por día:</strong></small><br>
-                <small>$${formatearNumero(resultado.pagoPorDia)}</small>
-              </div>
-              <div class="col-6 mt-2">
-                <small><strong>Días efectivos:</strong></small><br>
-                <small>${resultado.diasEfectivos} días</small>
-              </div>
-              <div class="col-6 mt-2">
-                <small><strong>Subtotal:</strong></small><br>
-                <small>$${formatearNumero(resultado.pagoTotal)}</small>
-              </div>
-              
-              ${resultado.totalDescuentos > 0 ? `
-                <div class="col-12 mt-2">
-                  <hr>
-                  <small><strong>Descuentos:</strong></small><br>
-                  ${resultado.descuentoIMSS > 0 ? `<small>• IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
-                  ${resultado.descuentoCaja > 0 ? `<small>• Caja de ahorro: $${formatearNumero(resultado.descuentoCaja)}</small><br>` : ''}
-                </div>
-              ` : ''}
-              
-              ${resultado.tieneAusenciasAprobadas ? `
-                <div class="col-12 mt-2">
-                  <hr>
-                  <small><strong>Ausencias justificadas:</strong></small><br>
-                  <small class="text-info">${resultado.comentariosAusencias}</small><br>
-                  <small><strong>Pago con justificaciones: $${formatearNumero(resultado.pagoFinalConJustificaciones)}</strong></small>
-                </div>
-              ` : ''}
-            </div>
+          <div class="col-6 mt-2">
+            <small><strong>Días efectivos:</strong></small><br>
+            <small>${resultado.diasEfectivos} días</small>
           </div>
-
-          ${resultado.detalleRetardos.length > 0 ? `
-            <div class="retard-details">
-              <h6><i class="bi bi-clock-history me-2"></i>Detalle de Retardos</h6>
-              ${resultado.detalleRetardos.map(retardo => `
-                <div class="retard-item">
-                  <span>${retardo.fecha}</span>
-                  <span>${retardo.hora}</span>
-                </div>
-              `).join('')}
+          <div class="col-6 mt-2">
+            <small><strong>Subtotal:</strong></small><br>
+            <small>$${formatearNumero(resultado.pagoTotal)}</small>
+          </div>
+          
+          ${resultado.totalDescuentos > 0 ? `
+            <div class="col-12 mt-2">
+              <hr>
+              <small><strong>Descuentos:</strong></small><br>
+              ${resultado.descuentoIMSS > 0 ? `<small>• IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
+              ${resultado.descuentoCaja > 0 ? `<small>• Caja de ahorro: $${formatearNumero(resultado.descuentoCaja)}</small><br>` : ''}
             </div>
           ` : ''}
-        `;
+          
+          ${resultado.tieneAusenciasAprobadas ? `
+            <div class="col-12 mt-2">
+              <hr>
+              <small><strong>Ausencias justificadas:</strong></small><br>
+              <small class="text-info">${resultado.comentariosAusencias}</small><br>
+              <small><strong>Pago con justificaciones: $${formatearNumero(resultado.pagoFinalConJustificaciones)}</strong></small>
+            </div>
+          ` : ''}
+        </div>
+      </div>
 
-        container.appendChild(empleadoCard);
-      });
+      ${resultado.detalleRetardos.length > 0 ? `
+        <div class="retard-details">
+          <h6><i class="bi bi-clock-history me-2"></i>Detalle de Retardos</h6>
+          ${resultado.detalleRetardos.map(retardo => `
+            <div class="retard-item">
+              <span>${retardo.fecha}</span>
+              <span>${retardo.hora}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    `;
 
-      document.getElementById('exportBtn').style.display = 'inline-block';
-    }
+    container.appendChild(empleadoCard);
+  });
+}
+
+// Llenar tabla
+function llenarTabla(resultados) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  resultados.forEach(resultado => {
+    const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+    const row = document.createElement('tr');
+    
+    row.innerHTML = `
+      <td>
+        <div class="d-flex align-items-center">
+          <strong>${resultado.empleado.nombre}</strong>
+          ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
+          ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">A</span>' : ''}
+        </div>
+      </td>
+      <td><span class="badge bg-secondary">${getTipoNombre(resultado.empleado.tipo)}</span></td>
+      <td><span class="badge ${resultado.diasTrabajados < resultado.diasLaboralesEsperados ? 'bg-warning' : 'bg-success'}">${resultado.diasTrabajados}</span></td>
+      <td><span class="badge ${resultado.retardos > 0 ? 'bg-warning' : 'bg-success'}">${resultado.retardos}</span></td>
+      <td><span class="badge ${resultado.diasFaltantes > 0 ? 'bg-danger' : 'bg-success'}">${resultado.diasFaltantes}</span></td>
+      <td><strong class="text-success">$${formatearNumero(pagoFinalMostrar)}</strong></td>
+      <td><span class="badge ${resultado.statusClass.replace('status-', 'bg-')}">${resultado.status}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+}
 
     // Configurar checkboxes de justificaciones
     function configurarCheckboxesJustificaciones() {

@@ -1221,3 +1221,198 @@ body {
   border-left: 4px solid #6f42c1;
   box-shadow: 0 4px 20px rgba(111, 66, 193, 0.1);
 }
+
+/* ===== VISTA COMPACTA ===== */
+.view-controls {
+  background: white;
+  border-radius: var(--border-radius);
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-light);
+}
+
+.employee-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.employee-card-compact {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+  border: 1px solid #e9ecef;
+  height: fit-content;
+}
+
+.employee-card-compact:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.compact-name {
+  font-size: 1rem;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.compact-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.compact-stat {
+  text-align: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: var(--transition);
+}
+
+.compact-stat.highlight {
+  background: linear-gradient(135deg, #d1e7dd 0%, #badbcc 100%);
+  border: 1px solid #badbcc;
+}
+
+.compact-stat:hover {
+  transform: translateY(-1px);
+}
+
+.stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.1rem;
+}
+
+.compact-stat small {
+  font-size: 0.7rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.compact-status {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ===== TABLA DE NÓMINA ===== */
+.nomina-table {
+  background: white;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-light);
+}
+
+.nomina-table thead th {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+  font-weight: 600;
+  border: none;
+  padding: 1rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.nomina-table tbody td {
+  padding: 0.75rem;
+  border-top: 1px solid #f1f3f4;
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.nomina-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.table-responsive {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-light);
+  overflow: hidden;
+}
+
+/* Status classes para tabla */
+.bg-status-ok { background-color: #d1e7dd !important; color: #0f5132 !important; }
+.bg-status-warning { background-color: #fff3cd !important; color: #664d03 !important; }
+.bg-status-penalty { background-color: #f8d7da !important; color: #721c24 !important; }
+
+/* ===== RESPONSIVE COMPACTO ===== */
+@media (max-width: 768px) {
+  .employee-grid-compact {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .employee-card-compact {
+    padding: 0.75rem;
+  }
+  
+  .compact-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+  
+  .compact-name {
+    font-size: 0.9rem;
+  }
+  
+  .view-controls .btn-group {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .view-controls .btn {
+    width: 100%;
+  }
+  
+  .view-controls h5 {
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  /* Tabla responsive */
+  .nomina-table {
+    font-size: 0.8rem;
+  }
+  
+  .nomina-table thead th,
+  .nomina-table tbody td {
+    padding: 0.5rem 0.3rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .compact-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .stat-value {
+    font-size: 1rem;
+  }
+  
+  .compact-status {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+}
