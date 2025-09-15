@@ -209,7 +209,7 @@
       <span class="ms-3">Calculando nómina...</span>
     </div>
 
-   <!-- Controles de Vista -->
+<!-- Controles de Vista -->
 <div id="viewControls" class="view-controls" style="display: none;">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Resultados de Nómina</h5>
@@ -219,9 +219,6 @@
       </button>
       <button type="button" class="btn btn-outline-primary" id="btnVistaTabla" onclick="cambiarVista('tabla')">
         <i class="bi bi-table me-1"></i>Tabla
-      </button>
-      <button type="button" class="btn btn-outline-primary" id="btnVistaCompleta" onclick="cambiarVista('completa')">
-        <i class="bi bi-card-list me-1"></i>Completa
       </button>
     </div>
   </div>
@@ -1079,12 +1076,11 @@ function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosC
 window.cambiarVista = function(tipo) {
   const compactaBtn = document.getElementById('btnVistaCompacta');
   const tablaBtn = document.getElementById('btnVistaTabla');
-  const completaBtn = document.getElementById('btnVistaCompleta');
   const container = document.getElementById('resultsContainer');
   const tableContainer = document.getElementById('tableContainer');
 
   // Remover clase active
-  [compactaBtn, tablaBtn, completaBtn].forEach(btn => btn.classList.remove('active'));
+  [compactaBtn, tablaBtn].forEach(btn => btn.classList.remove('active'));
 
   if (tipo === 'compacta') {
     compactaBtn.classList.add('active');
@@ -1096,12 +1092,6 @@ window.cambiarVista = function(tipo) {
     tablaBtn.classList.add('active');
     container.style.display = 'none';
     tableContainer.style.display = 'block';
-  } else if (tipo === 'completa') {
-    completaBtn.classList.add('active');
-    container.style.display = 'grid';
-    tableContainer.style.display = 'none';
-    container.className = 'employee-grid';
-    mostrarVistaCompleta(resultadosNomina);
   }
 };
 
@@ -1150,6 +1140,40 @@ function mostrarVistaCompacta(resultados) {
         </div>
       </div>
       
+      <!-- ✅ NUEVA SECCIÓN DE DETALLES -->
+      <div class="compact-details">
+        <div class="compact-detail-row">
+          <span class="detail-label">Subtotal:</span>
+          <span class="detail-value">$${formatearNumero(resultado.pagoTotal)}</span>
+        </div>
+        
+        ${resultado.descuentoIMSS > 0 ? `
+          <div class="compact-detail-row discount">
+            <span class="detail-label">IMSS:</span>
+            <span class="detail-value text-danger">-$${resultado.descuentoIMSS}</span>
+          </div>
+        ` : ''}
+        
+        ${resultado.descuentoCaja > 0 ? `
+          <div class="compact-detail-row discount">
+            <span class="detail-label">Caja de ahorro:</span>
+            <span class="detail-value text-danger">-$${formatearNumero(resultado.descuentoCaja)}</span>
+          </div>
+        ` : ''}
+        
+        ${resultado.diasJustificados > 0 ? `
+          <div class="compact-detail-row bonus">
+            <span class="detail-label">Días justificados:</span>
+            <span class="detail-value text-info">+${resultado.diasJustificados}</span>
+          </div>
+        ` : ''}
+        
+        <div class="compact-detail-row final">
+          <span class="detail-label"><strong>PAGO FINAL:</strong></span>
+          <span class="detail-value text-success"><strong>$${formatearNumero(pagoFinalMostrar)}</strong></span>
+        </div>
+      </div>
+      
       <div class="compact-status ${resultado.statusClass}">
         ${resultado.status}
       </div>
@@ -1159,109 +1183,6 @@ function mostrarVistaCompacta(resultados) {
   });
 }
 
-// Vista completa (original)
-function mostrarVistaCompleta(resultados) {
-  const container = document.getElementById('resultsContainer');
-  container.innerHTML = '';
-
-  resultados.forEach(resultado => {
-    const empleadoCard = document.createElement('div');
-    empleadoCard.className = 'employee-card';
-    empleadoCard.setAttribute('data-empleado-id', resultado.empleado.uid);
-
-    const tipoNombre = getTipoNombre(resultado.empleado.tipo);
-    const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
-    
-    empleadoCard.innerHTML = `
-      <div class="employee-header">
-        <div class="employee-name">
-          <i class="bi bi-person-fill me-2"></i>
-          ${resultado.empleado.nombre}
-          <span class="badge bg-secondary ms-2">${tipoNombre}</span>
-          ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">Con Ausencias</span>' : ''}
-        </div>
-        <div class="d-flex align-items-center gap-2">
-          <div class="status-badge ${resultado.statusClass}">${resultado.status}</div>
-          <button class="btn btn-outline-primary btn-sm" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
-            <i class="bi bi-pencil"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-item">
-          <span class="stat-number text-primary">${resultado.diasTrabajados}</span>
-          <div class="stat-label">Días Trabajados</div>
-        </div>
-        <div class="stat-item">
-          <span class="stat-number ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
-          <div class="stat-label">Retardos</div>
-        </div>
-        <div class="stat-item">
-          <span class="stat-number ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
-          <div class="stat-label">Faltas</div>
-        </div>
-        <div class="stat-item">
-          <span class="stat-number text-success">$${formatearNumero(pagoFinalMostrar)}</span>
-          <div class="stat-label">Pago Final</div>
-        </div>
-      </div>
-
-      <div class="payment-details">
-        <div class="row">
-          <div class="col-6">
-            <small><strong>Salario base:</strong></small><br>
-            <small>$${formatearNumero(resultado.salarioQuincenal)}</small>
-          </div>
-          <div class="col-6">
-            <small><strong>Pago por día:</strong></small><br>
-            <small>$${formatearNumero(resultado.pagoPorDia)}</small>
-          </div>
-          <div class="col-6 mt-2">
-            <small><strong>Días efectivos:</strong></small><br>
-            <small>${resultado.diasEfectivos} días</small>
-          </div>
-          <div class="col-6 mt-2">
-            <small><strong>Subtotal:</strong></small><br>
-            <small>$${formatearNumero(resultado.pagoTotal)}</small>
-          </div>
-          
-          ${resultado.totalDescuentos > 0 ? `
-            <div class="col-12 mt-2">
-              <hr>
-              <small><strong>Descuentos:</strong></small><br>
-              ${resultado.descuentoIMSS > 0 ? `<small>• IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
-              ${resultado.descuentoCaja > 0 ? `<small>• Caja de ahorro: $${formatearNumero(resultado.descuentoCaja)}</small><br>` : ''}
-            </div>
-          ` : ''}
-          
-          ${resultado.tieneAusenciasAprobadas ? `
-            <div class="col-12 mt-2">
-              <hr>
-              <small><strong>Ausencias justificadas:</strong></small><br>
-              <small class="text-info">${resultado.comentariosAusencias}</small><br>
-              <small><strong>Pago con justificaciones: $${formatearNumero(resultado.pagoFinalConJustificaciones)}</strong></small>
-            </div>
-          ` : ''}
-        </div>
-      </div>
-
-      ${resultado.detalleRetardos.length > 0 ? `
-        <div class="retard-details">
-          <h6><i class="bi bi-clock-history me-2"></i>Detalle de Retardos</h6>
-          ${resultado.detalleRetardos.map(retardo => `
-            <div class="retard-item">
-              <span>${retardo.fecha}</span>
-              <span>${retardo.hora}</span>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-    `;
-
-    container.appendChild(empleadoCard);
-  });
-}
 
 // Llenar tabla
 function llenarTabla(resultados) {
@@ -1271,6 +1192,15 @@ function llenarTabla(resultados) {
   resultados.forEach(resultado => {
     const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
     const row = document.createElement('tr');
+    
+    // ✅ CREAR TOOLTIP CON DETALLES
+    const detalleDescuentos = [];
+    if (resultado.descuentoIMSS > 0) detalleDescuentos.push(`IMSS: -$${resultado.descuentoIMSS}`);
+    if (resultado.descuentoCaja > 0) detalleDescuentos.push(`Caja: -$${formatearNumero(resultado.descuentoCaja)}`);
+    
+    const tooltipDescuentos = detalleDescuentos.length > 0 ? 
+      `title="Subtotal: $${formatearNumero(resultado.pagoTotal)}\n${detalleDescuentos.join('\n')}\nPago final: $${formatearNumero(pagoFinalMostrar)}"` : 
+      `title="Sin descuentos aplicados"`;
     
     row.innerHTML = `
       <td>
@@ -1284,7 +1214,15 @@ function llenarTabla(resultados) {
       <td><span class="badge ${resultado.diasTrabajados < resultado.diasLaboralesEsperados ? 'bg-warning' : 'bg-success'}">${resultado.diasTrabajados}</span></td>
       <td><span class="badge ${resultado.retardos > 0 ? 'bg-warning' : 'bg-success'}">${resultado.retardos}</span></td>
       <td><span class="badge ${resultado.diasFaltantes > 0 ? 'bg-danger' : 'bg-success'}">${resultado.diasFaltantes}</span></td>
-      <td><strong class="text-success">$${formatearNumero(pagoFinalMostrar)}</strong></td>
+      <td ${tooltipDescuentos}>
+        <div class="pago-detalle">
+          <strong class="text-success">$${formatearNumero(pagoFinalMostrar)}</strong>
+          ${resultado.totalDescuentos > 0 ? 
+            `<small class="d-block text-muted">-$${formatearNumero(resultado.totalDescuentos)} desc.</small>` : 
+            ''
+          }
+        </div>
+      </td>
       <td><span class="badge ${resultado.statusClass.replace('status-', 'bg-')}">${resultado.status}</span></td>
       <td>
         <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
@@ -1534,105 +1472,14 @@ function actualizarTarjetaEmpleado(empleadoId) {
 
 // Función para regenerar tarjeta específica
 function regenerarTarjetaEmpleado(empleadoId, resultado) {
-  const container = document.getElementById('resultsContainer');
-  const tarjetaExistente = container.querySelector(`[data-empleado-id="${empleadoId}"]`);
+  // Simplemente regenerar la vista actual
+  const vistaActual = document.getElementById('btnVistaCompacta').classList.contains('active') ? 'compacta' : 'tabla';
   
-  if (tarjetaExistente) {
-    tarjetaExistente.remove();
+  if (vistaActual === 'compacta') {
+    mostrarVistaCompacta(resultadosNomina);
+  } else {
+    llenarTabla(resultadosNomina);
   }
-  
-  const empleadoCard = document.createElement('div');
-  empleadoCard.className = 'employee-card';
-  empleadoCard.setAttribute('data-empleado-id', empleadoId);
-  
-  const tipoNombre = getTipoNombre(resultado.empleado.tipo);
-  const pagoFinalMostrar = resultado.pagoFinal;
-  
-  empleadoCard.innerHTML = `
-    <div class="employee-header">
-      <div class="employee-name">
-        <i class="bi bi-person-fill me-2"></i>
-        ${resultado.empleado.nombre}
-        <span class="badge bg-secondary ms-2">${tipoNombre}</span>
-        ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">Editado</span>' : ''}
-        ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">Con Ausencias</span>' : ''}
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <div class="status-badge ${resultado.statusClass}">${resultado.status}</div>
-        <button class="btn btn-outline-primary btn-sm" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
-          <i class="bi bi-pencil"></i>
-        </button>
-      </div>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-item">
-        <span class="stat-number text-primary">${resultado.diasTrabajados}</span>
-        <div class="stat-label">Días Trabajados</div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
-        <div class="stat-label">Retardos</div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
-        <div class="stat-label">Faltas</div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number text-success">$${formatearNumero(pagoFinalMostrar)}</span>
-        <div class="stat-label">Pago Final</div>
-      </div>
-    </div>
-
-    <div class="payment-details">
-      <div class="row">
-        <div class="col-6">
-          <small><strong>Salario base:</strong></small><br>
-          <small>$${formatearNumero(resultado.salarioQuincenal)}</small>
-        </div>
-        <div class="col-6">
-          <small><strong>Pago por día:</strong></small><br>
-          <small>$${formatearNumero(resultado.pagoPorDia)}</small>
-        </div>
-        <div class="col-6 mt-2">
-          <small><strong>Días efectivos:</strong></small><br>
-          <small>${resultado.diasEfectivos} días</small>
-        </div>
-        <div class="col-6 mt-2">
-          <small><strong>Subtotal:</strong></small><br>
-          <small>$${formatearNumero(resultado.pagoTotal)}</small>
-        </div>
-        
-        ${resultado.totalDescuentos > 0 ? `
-          <div class="col-12 mt-2">
-            <hr>
-            <small><strong>Descuentos:</strong></small><br>
-            ${resultado.descuentoIMSS > 0 ? `<small>• IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
-            ${resultado.descuentoCaja > 0 ? `<small>• Caja de ahorro: $${formatearNumero(resultado.descuentoCaja)}</small><br>` : ''}
-          </div>
-        ` : ''}
-        
-        ${resultado.editadoManualmente ? `
-          <div class="col-12 mt-2">
-            <hr>
-            <small><strong>🔧 Edición Manual:</strong></small><br>
-            ${resultado.diasExtra > 0 ? `<small>• Días extra: +${resultado.diasExtra}</small><br>` : ''}
-            ${resultado.bonoExtra > 0 ? `<small>• Bono extra: +$${formatearNumero(resultado.bonoExtra)}</small><br>` : ''}
-            ${resultado.justificacionesDetalle.length > 0 ? `<small>• ${resultado.justificacionesDetalle.join(', ')}</small><br>` : ''}
-            ${resultado.comentariosEdicion ? `<small class="text-info">💬 ${resultado.comentariosEdicion}</small>` : ''}
-          </div>
-        ` : ''}
-      </div>
-    </div>
-  `;
-  
-  container.appendChild(empleadoCard);
-  
-  // Animate la nueva tarjeta
-  setTimeout(() => {
-    empleadoCard.style.opacity = '1';
-    empleadoCard.style.transform = 'translateY(0)';
-  }, 100);
 }
 
 // Función para recalcular resumen general

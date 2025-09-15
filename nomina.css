@@ -1416,3 +1416,93 @@ body {
     padding: 0.3rem 0.6rem;
   }
 }
+
+/* ===== DETALLES COMPACTOS ===== */
+.compact-details {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  border: 1px solid #e9ecef;
+}
+
+.compact-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.compact-detail-row.discount {
+  color: #dc3545;
+}
+
+.compact-detail-row.bonus {
+  color: #0dcaf0;
+}
+
+.compact-detail-row.final {
+  border-top: 2px solid #dee2e6;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  font-weight: 600;
+}
+
+.detail-label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-weight: 600;
+}
+
+/* ===== TABLA CON DETALLES ===== */
+.pago-detalle {
+  text-align: center;
+}
+
+.pago-detalle small {
+  font-size: 0.7rem;
+  color: #dc3545 !important;
+  font-weight: 500;
+}
+
+/* Tooltips para tabla */
+.nomina-table tbody td[title] {
+  cursor: help;
+  position: relative;
+}
+
+.nomina-table tbody td[title]:hover {
+  background: #f0f8ff;
+}
+
+/* ===== RESPONSIVE PARA DETALLES ===== */
+@media (max-width: 768px) {
+  .compact-details {
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+  }
+  
+  .compact-detail-row {
+    font-size: 0.8rem;
+    padding: 0.2rem 0;
+  }
+  
+  .detail-label {
+    flex: 1;
+  }
+  
+  .detail-value {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+}
+
+@media (max-width: 576px) {
+  .compact-detail-row {
+    font-size: 0.75rem;
+  }
+}
