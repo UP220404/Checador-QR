@@ -369,6 +369,9 @@
     let empleadosGlobales = [];
     let resultadosNomina = [];
 
+    let cambiosManuales = {}; // Para guardar ediciones manuales
+    let historialCambios = [];
+
     // Configurar fecha actual por defecto
     const hoy = new Date();
     document.getElementById('monthSelect').value = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
@@ -1029,7 +1032,8 @@
       resultados.forEach(resultado => {
         const empleadoCard = document.createElement('div');
         empleadoCard.className = 'employee-card';
-        
+        empleadoCard.setAttribute('data-empleado-id', resultado.empleado.uid);
+
         const tipoNombre = getTipoNombre(resultado.empleado.tipo);
         const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
         
@@ -1238,20 +1242,244 @@ window.abrirEdicionNomina = function(empleadoId) {
     }
 
     // Función para guardar edición manual
-    window.guardarEdicionManual = async function() {
-      try {
-        const comentarios = document.getElementById('editComentarios').value;
-        
-        mostrarNotificacion(`Cambios guardados para la nómina manual.\nComentario: ${comentarios || 'Sin comentarios'}`, 'success');
-        
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarNomina'));
-        modal.hide();
-        
-      } catch (error) {
-        console.error('Error guardando edición manual:', error);
-        mostrarNotificacion('Error al guardar los cambios', 'error');
-      }
+window.guardarEdicionManual = async function() {
+  try {
+    const empleadoId = document.getElementById('editEmpleadoId').value;
+    const diasTrabajados = parseInt(document.getElementById('editDiasTrabajados').value) || 0;
+    const retardos = parseInt(document.getElementById('editRetardos').value) || 0;
+    const diasExtra = parseInt(document.getElementById('editDiasExtra').value) || 0;
+    const bonoExtra = parseFloat(document.getElementById('editBonoExtra').value) || 0;
+    
+    // Obtener justificaciones
+    let diasJustificados = 0;
+    let justificacionesDetalle = [];
+    
+    if (document.getElementById('tieneVacaciones').checked) {
+      const dias = parseInt(document.getElementById('diasVacaciones').value) || 0;
+      diasJustificados += dias;
+      justificacionesDetalle.push(`Vacaciones: ${dias} días`);
+    }
+    if (document.getElementById('tieneIncapacidad').checked) {
+      const dias = parseInt(document.getElementById('diasIncapacidad').value) || 0;
+      diasJustificados += dias;
+      justificacionesDetalle.push(`Incapacidad: ${dias} días`);
+    }
+    if (document.getElementById('tieneViaje').checked) {
+      const dias = parseInt(document.getElementById('diasViaje').value) || 0;
+      diasJustificados += dias;
+      justificacionesDetalle.push(`Viaje de negocios: ${dias} días`);
+    }
+    
+    const comentarios = document.getElementById('editComentarios').value;
+    
+    // Guardar cambios manuales
+    cambiosManuales[empleadoId] = {
+      diasTrabajados,
+      retardos,
+      diasExtra,
+      bonoExtra,
+      diasJustificados,
+      justificacionesDetalle,
+      comentarios,
+      editadoManualmente: true,
+      fechaEdicion: new Date().toISOString()
     };
+    
+    // Agregar al historial
+    historialCambios.push({
+      empleadoId,
+      tipo: 'edicion_manual',
+      cambios: cambiosManuales[empleadoId],
+      timestamp: new Date().toISOString()
+    });
+    
+    // Recalcular y actualizar la tarjeta específica
+    actualizarTarjetaEmpleado(empleadoId);
+    
+    mostrarNotificacion(`✅ Cambios guardados para ${window.datosOriginales.empleado.nombre}\n${comentarios ? 'Comentario: ' + comentarios : 'Sin comentarios'}`, 'success');
+    
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarNomina'));
+    modal.hide();
+    
+    // Actualizar resumen general
+    recalcularResumenGeneral();
+    
+  } catch (error) {
+    console.error('Error guardando edición manual:', error);
+    mostrarNotificacion('Error al guardar los cambios', 'error');
+  }
+};
+
+// Función para actualizar una tarjeta específica
+function actualizarTarjetaEmpleado(empleadoId) {
+  const resultadoIndex = resultadosNomina.findIndex(r => r.empleado.uid === empleadoId);
+  if (resultadoIndex === -1) return;
+  
+  let resultado = { ...resultadosNomina[resultadoIndex] };
+  const cambiosManual = cambiosManuales[empleadoId];
+  
+  if (cambiosManual) {
+    // Aplicar cambios manuales
+    const original = window.datosOriginales;
+    const diasDescuentoPorRetardos = Math.floor(cambiosManual.retardos / 4);
+    const diasEfectivos = Math.max(0, cambiosManual.diasTrabajados - diasDescuentoPorRetardos);
+    const diasTotalesAPagar = diasEfectivos + cambiosManual.diasJustificados + cambiosManual.diasExtra;
+    
+    const pagoBase = diasTotalesAPagar * resultado.pagoPorDia;
+    const pagoConBono = pagoBase + cambiosManual.bonoExtra;
+    const pagoFinal = Math.max(0, pagoConBono - resultado.totalDescuentos);
+    
+    // Actualizar resultado
+    resultado.diasTrabajados = cambiosManual.diasTrabajados;
+    resultado.retardos = cambiosManual.retardos;
+    resultado.diasDescuento = diasDescuentoPorRetardos;
+    resultado.diasEfectivos = diasEfectivos;
+    resultado.diasExtra = cambiosManual.diasExtra;
+    resultado.bonoExtra = cambiosManual.bonoExtra;
+    resultado.diasJustificados = cambiosManual.diasJustificados;
+    resultado.pagoTotal = Math.round(pagoBase);
+    resultado.pagoFinal = Math.round(pagoFinal);
+    resultado.editadoManualmente = true;
+    resultado.comentariosEdicion = cambiosManual.comentarios;
+    resultado.justificacionesDetalle = cambiosManual.justificacionesDetalle;
+    
+    // Actualizar status
+    if (resultado.diasFaltantes > 0 || diasDescuentoPorRetardos > 0) {
+      resultado.status = `${resultado.diasFaltantes} falta${resultado.diasFaltantes > 1 ? 's' : ''} • ${resultado.retardos} retardo${resultado.retardos !== 1 ? 's' : ''}`;
+      resultado.statusClass = 'status-penalty';
+    } else if (resultado.retardos >= 3) {
+      resultado.status = 'En límite de retardos';
+      resultado.statusClass = 'status-warning';
+    } else {
+      resultado.status = 'Sin penalizaciones';
+      resultado.statusClass = 'status-ok';
+    }
+    
+    // Actualizar array principal
+    resultadosNomina[resultadoIndex] = resultado;
+  }
+  
+  // Regenerar solo esta tarjeta
+  regenerarTarjetaEmpleado(empleadoId, resultado);
+}
+
+// Función para regenerar tarjeta específica
+function regenerarTarjetaEmpleado(empleadoId, resultado) {
+  const container = document.getElementById('resultsContainer');
+  const tarjetaExistente = container.querySelector(`[data-empleado-id="${empleadoId}"]`);
+  
+  if (tarjetaExistente) {
+    tarjetaExistente.remove();
+  }
+  
+  const empleadoCard = document.createElement('div');
+  empleadoCard.className = 'employee-card';
+  empleadoCard.setAttribute('data-empleado-id', empleadoId);
+  
+  const tipoNombre = getTipoNombre(resultado.empleado.tipo);
+  const pagoFinalMostrar = resultado.pagoFinal;
+  
+  empleadoCard.innerHTML = `
+    <div class="employee-header">
+      <div class="employee-name">
+        <i class="bi bi-person-fill me-2"></i>
+        ${resultado.empleado.nombre}
+        <span class="badge bg-secondary ms-2">${tipoNombre}</span>
+        ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">Editado</span>' : ''}
+        ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">Con Ausencias</span>' : ''}
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="status-badge ${resultado.statusClass}">${resultado.status}</div>
+        <button class="btn btn-outline-primary btn-sm" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span class="stat-number text-primary">${resultado.diasTrabajados}</span>
+        <div class="stat-label">Días Trabajados</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number ${resultado.retardos > 0 ? 'text-warning' : 'text-success'}">${resultado.retardos}</span>
+        <div class="stat-label">Retardos</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
+        <div class="stat-label">Faltas</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number text-success">$${formatearNumero(pagoFinalMostrar)}</span>
+        <div class="stat-label">Pago Final</div>
+      </div>
+    </div>
+
+    <div class="payment-details">
+      <div class="row">
+        <div class="col-6">
+          <small><strong>Salario base:</strong></small><br>
+          <small>$${formatearNumero(resultado.salarioQuincenal)}</small>
+        </div>
+        <div class="col-6">
+          <small><strong>Pago por día:</strong></small><br>
+          <small>$${formatearNumero(resultado.pagoPorDia)}</small>
+        </div>
+        <div class="col-6 mt-2">
+          <small><strong>Días efectivos:</strong></small><br>
+          <small>${resultado.diasEfectivos} días</small>
+        </div>
+        <div class="col-6 mt-2">
+          <small><strong>Subtotal:</strong></small><br>
+          <small>$${formatearNumero(resultado.pagoTotal)}</small>
+        </div>
+        
+        ${resultado.totalDescuentos > 0 ? `
+          <div class="col-12 mt-2">
+            <hr>
+            <small><strong>Descuentos:</strong></small><br>
+            ${resultado.descuentoIMSS > 0 ? `<small>• IMSS: $${resultado.descuentoIMSS}</small><br>` : ''}
+            ${resultado.descuentoCaja > 0 ? `<small>• Caja de ahorro: $${formatearNumero(resultado.descuentoCaja)}</small><br>` : ''}
+          </div>
+        ` : ''}
+        
+        ${resultado.editadoManualmente ? `
+          <div class="col-12 mt-2">
+            <hr>
+            <small><strong>🔧 Edición Manual:</strong></small><br>
+            ${resultado.diasExtra > 0 ? `<small>• Días extra: +${resultado.diasExtra}</small><br>` : ''}
+            ${resultado.bonoExtra > 0 ? `<small>• Bono extra: +$${formatearNumero(resultado.bonoExtra)}</small><br>` : ''}
+            ${resultado.justificacionesDetalle.length > 0 ? `<small>• ${resultado.justificacionesDetalle.join(', ')}</small><br>` : ''}
+            ${resultado.comentariosEdicion ? `<small class="text-info">💬 ${resultado.comentariosEdicion}</small>` : ''}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+  
+  container.appendChild(empleadoCard);
+  
+  // Animate la nueva tarjeta
+  setTimeout(() => {
+    empleadoCard.style.opacity = '1';
+    empleadoCard.style.transform = 'translateY(0)';
+  }, 100);
+}
+
+// Función para recalcular resumen general
+function recalcularResumenGeneral() {
+  const totalEmpleados = resultadosNomina.length;
+  const totalRetardos = resultadosNomina.reduce((sum, r) => sum + r.retardos, 0);
+  const empleadosConDescuento = resultadosNomina.filter(r => r.diasDescuento > 0 || r.totalDescuentos > 0).length;
+  const totalPago = resultadosNomina.reduce((sum, r) => sum + r.pagoFinal, 0);
+  
+  document.getElementById('totalEmployees').textContent = totalEmpleados;
+  document.getElementById('totalRetards').textContent = totalRetardos;
+  document.getElementById('employeesWithPenalty').textContent = empleadosConDescuento;
+  document.getElementById('totalPayout').textContent = `$${formatearNumero(totalPago)}`;
+}
+
 
     // Función para exportar a Excel
     window.exportarExcel = function() {
