@@ -168,16 +168,18 @@
           </select>
         </div>
         <div class="col-md-6">
-                    <button onclick="calcularNomina()" class="btn btn-primary btn-lg">
-            <i class="bi bi-calculator me-2"></i>Calcular Nómina
-          </button>
-          <button onclick="guardarNominaCompleta()" class="btn btn-info ms-2" id="saveBtn" style="display: none;">
-            <i class="bi bi-save me-2"></i>Guardar Nómina
-          </button>
-          <button onclick="exportarExcel()" class="btn btn-success ms-2" id="exportBtn" style="display: none;">
-            <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
-          </button>
-        </div>
+  <div class="d-flex flex-column flex-md-row gap-2">
+    <button onclick="calcularNomina()" class="btn btn-primary btn-lg flex-fill">
+      <i class="bi bi-calculator me-2"></i>Calcular Nómina
+    </button>
+    <button onclick="guardarNominaCompleta()" class="btn btn-info flex-fill" id="saveBtn" style="display: none;">
+      <i class="bi bi-save me-2"></i>Guardar Nómina
+    </button>
+    <button onclick="exportarExcel()" class="btn btn-success flex-fill" id="exportBtn" style="display: none;">
+      <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+    </button>
+  </div>
+</div>
       </div>
     </div>
 
@@ -951,108 +953,104 @@
       }
     };
 
-    // Función para aplicar ausencias automáticamente
-    async function aplicarAusenciasAutomaticas(empleadoId, resultado) {
-      try {
-        const ausencias = await obtenerAusenciasAprobadas(empleadoId, mesActualNum, añoActualNum, quinceActual);
-        
-        if (ausencias.length === 0) return resultado;
-        
-        let diasVacaciones = 0;
-        let diasIncapacidad = 0;
-        let diasViaje = 0;
-        let comentarios = [];
-        
-        ausencias.forEach(ausencia => {
-          switch (ausencia.tipo) {
-            case 'vacaciones':
-              diasVacaciones += ausencia.dias;
-              comentarios.push(`Vacaciones: ${ausencia.dias} días`);
-              break;
-            case 'incapacidad':
-              diasIncapacidad += ausencia.dias;
-              comentarios.push(`Incapacidad: ${ausencia.dias} días`);
-              break;
-            case 'permiso':
-              if (ausencia.motivo.toLowerCase().includes('viaje') || ausencia.motivo.toLowerCase().includes('negocios')) {
-                diasViaje += ausencia.dias;
-                comentarios.push(`Viaje de negocios: ${ausencia.dias} días`);
-              }
-              break;
-          }
-        });
-        
-        const diasJustificados = diasVacaciones + diasIncapacidad + diasViaje;
-        const diasEfectivosOriginales = resultado.diasEfectivos;
-        const diasTotalesAPagar = diasEfectivosOriginales + diasJustificados;
-        
-        const pagoConJustificaciones = diasTotalesAPagar * resultado.pagoPorDia;
-        const pagoFinalConJustificaciones = Math.max(0, pagoConJustificaciones - resultado.totalDescuentos);
-        
-        resultado.diasJustificados = diasJustificados;
-        resultado.diasVacaciones = diasVacaciones;
-        resultado.diasIncapacidad = diasIncapacidad;
-        resultado.diasViaje = diasViaje;
-        resultado.pagoTotalConJustificaciones = Math.round(pagoConJustificaciones);
-        resultado.pagoFinalConJustificaciones = Math.round(pagoFinalConJustificaciones);
-        resultado.tieneAusenciasAprobadas = true;
-        resultado.comentariosAusencias = comentarios.join(', ');
-        
-        console.log(`✅ Ausencias aplicadas para ${resultado.empleado.nombre}:`, {
-          diasJustificados,
-          pagoFinal: pagoFinalConJustificaciones
-        });
-        
-        return resultado;
-      } catch (error) {
-        console.error('Error aplicando ausencias:', error);
-        return resultado;
+   // Función para aplicar ausencias automáticamente (SIMPLIFICADA)
+async function aplicarAusenciasAutomaticas(empleadoId, resultado) {
+  try {
+    // ✅ APLICAR AUSENCIAS SOLO SI NO HAY ERRORES
+    const ausencias = await obtenerAusenciasAprobadas(empleadoId, mesActualNum, añoActualNum, quinceActual);
+    
+    if (ausencias.length === 0) return resultado;
+    
+    let diasJustificados = 0;
+    let comentarios = [];
+    
+    ausencias.forEach(ausencia => {
+      switch (ausencia.tipo) {
+        case 'vacaciones':
+          diasJustificados += ausencia.dias;
+          comentarios.push(`Vacaciones: ${ausencia.dias} días`);
+          break;
+        case 'incapacidad':
+          diasJustificados += ausencia.dias;
+          comentarios.push(`Incapacidad: ${ausencia.dias} días`);
+          break;
+        case 'permiso':
+          diasJustificados += ausencia.dias;
+          comentarios.push(`Permiso: ${ausencia.dias} días`);
+          break;
       }
-    }
-
-    // Función para obtener ausencias aprobadas
-    async function obtenerAusenciasAprobadas(empleadoId, mesNum, añoNum, periodo) {
-      try {
-        console.log(`🔍 Buscando ausencias aprobadas para empleado ${empleadoId} en ${mesNum}/${añoNum}`);
-        
-        const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, periodo);
-        const fechaInicio = new Date(añoNum, mesNum - 1, Math.min(...diasLaborales));
-        const fechaFin = new Date(añoNum, mesNum - 1, Math.max(...diasLaborales));
-        
-        const ausenciasQuery = query(
-          collection(db, "ausencias"),
-          where("uidUsuario", "==", empleadoId),
-          where("estado", "==", "aprobada"),
-          where("fechaInicio", ">=", fechaInicio),
-          where("fechaInicio", "<=", fechaFin)
-        );
-        
-        const ausenciasSnapshot = await getDocs(ausenciasQuery);
-        const ausencias = [];
-        
-        ausenciasSnapshot.forEach(doc => {
-          const ausencia = doc.data();
-          ausencias.push({
-            tipo: ausencia.tipo,
-            fechaInicio: ausencia.fechaInicio.toDate(),
-            fechaFin: ausencia.fechaFin?.toDate() || ausencia.fechaInicio.toDate(),
-            motivo: ausencia.motivo,
-            dias: calcularDiasLaboralesEnRango(ausencia.fechaInicio.toDate(), ausencia.fechaFin?.toDate() || ausencia.fechaInicio.toDate())
-          });
-        });
-        
-        return ausencias;
-      } catch (error) {
-        console.error('Error obteniendo ausencias:', error);
-        return [];
-      }
-    }
-
-    // Función auxiliar para calcular días laborales en un rango
-    function calcularDiasLaboralesEnRango(fechaInicio, fechaFin) {
-      let diasLaborales = 0;
-      const fecha = new Date(fechaInicio);
+    });
+    
+    if (diasJustificados > 0) {
+      const pagoConJustificaciones = (resultado.diasEfectivos + diasJustificados) * resultado.pagoPorDia;
+      const pagoFinalConJustificaciones = Math.max(0, pagoConJustificaciones - resultado.totalDescuentos);
       
+      resultado.diasJustificados = diasJustificados;
+      resultado.pagoTotalConJustificaciones = Math.round(pagoConJustificaciones);
+      resultado.pagoFinalConJustificaciones = Math.round(pagoFinalConJustificaciones);
+      resultado.tieneAusenciasAprobadas = true;
+      resultado.comentariosAusencias = comentarios.join(', ');
+    }
+    
+    return resultado;
+    
+  } catch (error) {
+    console.error('Error aplicando ausencias (se continuará sin ausencias):', error);
+    return resultado; // ✅ CONTINÚA SIN AUSENCIAS
+  }
+}
+
+
+
+    // Función para obtener ausencias aprobadas (SIMPLIFICADA)
+async function obtenerAusenciasAprobadas(empleadoId, mesNum, añoNum, periodo) {
+  try {
+    console.log(`🔍 Buscando ausencias para empleado ${empleadoId}`);
+    
+    // ✅ CONSULTA SIMPLE - Sin índices complejos
+    const ausenciasQuery = query(
+      collection(db, "ausencias"),
+      where("uidUsuario", "==", empleadoId),
+      where("estado", "==", "aprobada")
+    );
+    
+    const ausenciasSnapshot = await getDocs(ausenciasQuery);
+    const ausencias = [];
+    
+    // ✅ FILTRAR EN MEMORIA por fechas
+    const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, periodo === 'Período 1' ? 'primera' : 'segunda');
+    const fechaInicio = new Date(añoNum, mesNum - 1, Math.min(...diasLaborales));
+    const fechaFin = new Date(añoNum, mesNum - 1, Math.max(...diasLaborales));
+    
+    ausenciasSnapshot.forEach(doc => {
+      const ausencia = doc.data();
+      const fechaAusencia = ausencia.fechaInicio?.toDate();
+      
+      // Filtrar por rango de fechas en memoria
+      if (fechaAusencia && fechaAusencia >= fechaInicio && fechaAusencia <= fechaFin) {
+        ausencias.push({
+          tipo: ausencia.tipo,
+          fechaInicio: fechaAusencia,
+          fechaFin: ausencia.fechaFin?.toDate() || fechaAusencia,
+          motivo: ausencia.motivo || '',
+          dias: calcularDiasLaboralesEnRango(fechaAusencia, ausencia.fechaFin?.toDate() || fechaAusencia)
+        });
+      }
+    });
+    
+    return ausencias;
+    
+  } catch (error) {
+    console.error('Error obteniendo ausencias (se continuará sin ausencias):', error);
+    return []; // ✅ CONTINÚA SIN AUSENCIAS en caso de error
+  }
+}
+
+// Función auxiliar para calcular días laborales en un rango
+function calcularDiasLaboralesEnRango(fechaInicio, fechaFin) {
+  let diasLaborales = 0;
+  const fecha = new Date(fechaInicio);
+
       while (fecha <= fechaFin) {
         const diaSemana = fecha.getDay();
         if (diaSemana >= 1 && diaSemana <= 5) {
@@ -1631,7 +1629,7 @@ function generarIdNomina(año, mes, periodo) {
 }
 
 // Función para guardar nómina completa
-async function guardarNominaCompleta() {
+window.guardarNominaCompleta = async function() {
   if (!resultadosNomina || resultadosNomina.length === 0) {
     mostrarNotificacion('No hay datos de nómina para guardar', 'warning');
     return;
