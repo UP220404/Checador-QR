@@ -816,12 +816,12 @@ window.calcularNomina = async function() {
     const fechaInicio = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.min(...diasLaborales)).padStart(2, '0')}`;
     const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
     
-    const registrosQuery = query(
-      collection(db, "registros"),
-      where("tipoEvento", "==", "entrada"),
-      where("fecha", ">=", fechaInicio),
-      where("fecha", "<=", fechaFin)
-    );
+    
+    // ✅ CONSULTA SIN ÍNDICE - SOLO FILTRA POR TIPO
+  const registrosQuery = query(
+  collection(db, "registros"),
+  where("tipoEvento", "==", "entrada")
+  );
 
     const registrosSnapshot = await getDocs(registrosQuery);
     console.log(`📊 Registros obtenidos (filtrados): ${registrosSnapshot.size}`);
@@ -831,23 +831,24 @@ window.calcularNomina = async function() {
     let registrosProcesados = 0;
     
     registrosSnapshot.forEach(doc => {
-      const registro = doc.data();
-      const uid = registro.uid;
-      
-      const fechaRegistro = registro.fecha;
-      if (!fechaRegistro) return;
-      
-      const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
-      
-      // Solo procesar registros de días laborales específicos
-      if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
-        if (!registrosPorEmpleado[uid]) {
-          registrosPorEmpleado[uid] = [];
-        }
-        registrosPorEmpleado[uid].push(registro);
-        registrosProcesados++;
-      }
-    });
+  const registro = doc.data();
+  const uid = registro.uid;
+  
+  const fechaRegistro = registro.fecha;
+  if (!fechaRegistro) return;
+  
+  const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
+  
+  // ✅ FILTRO RESTRICTIVO EN MEMORIA (MÁS EFICIENTE)
+  if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
+    if (!registrosPorEmpleado[uid]) {
+      registrosPorEmpleado[uid] = [];
+    }
+    registrosPorEmpleado[uid].push(registro);
+    registrosProcesados++;
+  }
+});
+  
 
     console.log(`📊 Registros procesados para el período: ${registrosProcesados}`);
 
@@ -1150,72 +1151,6 @@ function mostrarVistaCompacta(resultados) {
   });
 }
 
-
-// Llenar tabla
-function llenarTabla(resultados) {
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
-
-  resultados.forEach(resultado => {
-    const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
-    const row = document.createElement('tr');
-    
-    // Tooltip con detalles
-    const detalleDescuentos = [];
-    if (resultado.descuentoIMSS > 0) detalleDescuentos.push(`IMSS: -$${resultado.descuentoIMSS}`);
-    if (resultado.descuentoCaja > 0) detalleDescuentos.push(`Caja: -$${formatearNumero(resultado.descuentoCaja)}`);
-    if (resultado.diasDescuento > 0) detalleDescuentos.push(`Retardos: -$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}`);
-    if (resultado.diasFaltantes > 0) detalleDescuentos.push(`Faltas: -$${formatearNumero(resultado.diasFaltantes * resultado.pagoPorDia)}`);
-    
-    const tooltipDescuentos = detalleDescuentos.length > 0 ? 
-      `title="Subtotal: $${formatearNumero(resultado.pagoTotal)}\n${detalleDescuentos.join('\n')}\nPago final: $${formatearNumero(pagoFinalMostrar)}"` : 
-      `title="Sin descuentos aplicados"`;
-    
-    row.innerHTML = `
-      <td>
-        <div class="d-flex align-items-center">
-          <strong>${resultado.empleado.nombre}</strong>
-          ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
-        </div>
-      </td>
-      <td><span class="badge bg-secondary">${getTipoNombre(resultado.empleado.tipo)}</span></td>
-      <td><span class="badge ${resultado.diasTrabajados < resultado.diasLaboralesEsperados ? 'bg-warning' : 'bg-success'}">${resultado.diasTrabajados}</span></td>
-      <td><span class="badge ${resultado.retardos > 0 ? 'bg-warning' : 'bg-success'}">${resultado.retardos}</span></td>
-      <td><span class="badge ${resultado.diasFaltantes > 0 ? 'bg-danger' : 'bg-success'}">${resultado.diasFaltantes}</span></td>
-      
-      <!-- ✅ UNA SOLA COLUMNA DE DESCUENTO (RETARDOS + FALTAS) -->
-      <td ${resultado.diasDescuento > 0 || resultado.diasFaltantes > 0 ? 
-        `title="Descuentos aplicados:\n${resultado.diasDescuento > 0 ? `Retardos: ${resultado.diasDescuento} día(s) = $${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}\n` : ''}${resultado.diasFaltantes > 0 ? `Faltas: ${resultado.diasFaltantes} día(s) = $${formatearNumero(resultado.diasFaltantes * resultado.pagoPorDia)}` : ''}"` : ''}>
-        ${resultado.diasDescuento > 0 || resultado.diasFaltantes > 0 ? 
-          `<div class="descuentos-detalle">
-            ${resultado.diasDescuento > 0 ? `<span class="badge bg-warning mb-1">Ret: ${resultado.diasDescuento}d</span>` : ''}
-            ${resultado.diasFaltantes > 0 ? `<span class="badge bg-danger mb-1">Fal: ${resultado.diasFaltantes}d</span>` : ''}
-            <small class="d-block text-danger">-$${formatearNumero((resultado.diasDescuento + resultado.diasFaltantes) * resultado.pagoPorDia)}</small>
-           </div>` : 
-          `<span class="badge bg-success">Sin desc.</span>`
-        }
-      </td>
-      
-      <td ${tooltipDescuentos}>
-        <div class="pago-detalle">
-          <strong class="text-success">$${formatearNumero(pagoFinalMostrar)}</strong>
-          ${resultado.totalDescuentos > 0 ? 
-            `<small class="d-block text-muted">-$${formatearNumero(resultado.totalDescuentos)} IMSS/Caja</small>` : 
-            ''
-          }
-        </div>
-      </td>
-      <td><span class="badge ${resultado.statusClass.replace('status-', 'bg-')}">${resultado.status}</span></td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
-          <i class="bi bi-pencil"></i>
-        </button>
-      </td>
-    `;
-    
-    tbody.appendChild(row);
-  });
-}
 
 
     // Configurar checkboxes de justificaciones
