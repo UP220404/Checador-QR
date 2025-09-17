@@ -168,8 +168,11 @@
           </select>
         </div>
         <div class="col-md-6">
-          <button onclick="calcularNomina()" class="btn btn-primary btn-lg">
+                    <button onclick="calcularNomina()" class="btn btn-primary btn-lg">
             <i class="bi bi-calculator me-2"></i>Calcular Nómina
+          </button>
+          <button onclick="guardarNominaCompleta()" class="btn btn-info ms-2" id="saveBtn" style="display: none;">
+            <i class="bi bi-save me-2"></i>Guardar Nómina
           </button>
           <button onclick="exportarExcel()" class="btn btn-success ms-2" id="exportBtn" style="display: none;">
             <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
@@ -386,7 +389,7 @@
   <!-- Firebase Scripts -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -743,6 +746,15 @@
         return;
       }
 
+
+      // ✅ AGREGAR VERIFICACIÓN DE NÓMINA EXISTENTE
+      mesActualNum = parseInt(monthSelect.split('-')[1]);
+      añoActualNum = parseInt(monthSelect.split('-')[0]);
+      quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
+      
+      const existeNomina = await verificarNominaExistente();
+      if (existeNomina) return; // Si se cargó una nómina existente, salir
+      
       document.getElementById('loadingSpinner').style.display = 'block';
       document.getElementById('summaryCard').style.display = 'none';
       document.getElementById('resultsContainer').innerHTML = '';
@@ -1061,6 +1073,8 @@ function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosC
   document.getElementById('totalPayout').textContent = `$${formatearNumero(totalPago)}`;
   document.getElementById('summaryCard').style.display = 'block';
   document.getElementById('viewControls').style.display = 'block';
+  document.getElementById('saveBtn').style.display = 'inline-block';
+  document.getElementById('exportBtn').style.display = 'inline-block';
 
   // Limpiar contenedores
   document.getElementById('resultsContainer').innerHTML = '';
@@ -1608,6 +1622,269 @@ function recalcularResumenGeneral() {
         mostrarNotificacion('Error al exportar Excel', 'error');
       }
     };
+
+    // ✅ FUNCIONES PARA MANEJO DE COLECCIÓN "nominas"
+
+// Función para crear ID único de nómina
+function generarIdNomina(año, mes, periodo) {
+  return `${año}-${String(mes).padStart(2, '0')}-${periodo}`;
+}
+
+// Función para guardar nómina completa
+async function guardarNominaCompleta() {
+  if (!resultadosNomina || resultadosNomina.length === 0) {
+    mostrarNotificacion('No hay datos de nómina para guardar', 'warning');
+    return;
+  }
+
+  try {
+    const nominaId = generarIdNomina(añoActualNum, mesActualNum, quinceActual.includes('1') ? 'primera' : 'segunda');
+    
+    // Calcular resumen
+    const resumen = {
+      totalEmpleados: resultadosNomina.length,
+      totalRetardos: resultadosNomina.reduce((sum, r) => sum + r.retardos, 0),
+      empleadosConDescuento: resultadosNomina.filter(r => r.diasDescuento > 0 || r.totalDescuentos > 0).length,
+      totalBruto: resultadosNomina.reduce((sum, r) => sum + (r.pagoTotalConJustificaciones || r.pagoTotal), 0),
+      totalDescuentos: resultadosNomina.reduce((sum, r) => sum + r.totalDescuentos, 0),
+      totalNeto: resultadosNomina.reduce((sum, r) => sum + (r.pagoFinalConJustificaciones || r.pagoFinal), 0)
+    };
+    
+    // Preparar datos de empleados
+    const empleados = {};
+    resultadosNomina.forEach(resultado => {
+      const cambiosManual = cambiosManuales[resultado.empleado.uid];
+      
+      empleados[resultado.empleado.uid] = {
+        // Datos del empleado
+        nombre: resultado.empleado.nombre,
+        email: resultado.empleado.email,
+        tipo: resultado.empleado.tipo,
+        
+        // Configuración salarial
+        salarioQuincenal: resultado.salarioQuincenal,
+        pagoPorDia: resultado.pagoPorDia,
+        tieneIMSS: resultado.empleado.tieneIMSS || false,
+        tieneCajaAhorro: resultado.empleado.tieneCajaAhorro || false,
+        montoCajaAhorro: resultado.empleado.montoCajaAhorro || 0,
+        
+        // Asistencia automática
+        diasLaboralesEsperados: resultado.diasLaboralesEsperados,
+        diasTrabajados: resultado.diasTrabajados,
+        retardos: resultado.retardos,
+        diasFaltantes: resultado.diasFaltantes,
+        diasEfectivos: resultado.diasEfectivos,
+        diasAsistidos: resultado.diasAsistidos,
+        detalleRetardos: resultado.detalleRetardos,
+        
+        // Descuentos automáticos
+        descuentoIMSS: resultado.descuentoIMSS,
+        descuentoCaja: resultado.descuentoCaja,
+        diasDescuentoPorRetardos: resultado.diasDescuento,
+        
+        // Ausencias automáticas
+        tieneAusenciasAprobadas: resultado.tieneAusenciasAprobadas || false,
+        diasJustificadosAuto: resultado.diasJustificados || 0,
+        comentariosAusencias: resultado.comentariosAusencias || '',
+        
+        // Ediciones manuales
+        editadoManualmente: !!cambiosManual,
+        diasExtra: cambiosManual?.diasExtra || 0,
+        bonoExtra: cambiosManual?.bonoExtra || 0,
+        diasJustificadosManual: cambiosManual?.diasJustificados || 0,
+        comentariosEdicion: cambiosManual?.comentarios || '',
+        justificacionesDetalle: cambiosManual?.justificacionesDetalle || [],
+        fechaEdicion: cambiosManual?.fechaEdicion || null,
+        
+        // Cálculos finales
+        pagoBase: resultado.pagoTotal,
+        pagoConJustificaciones: resultado.pagoTotalConJustificaciones || resultado.pagoTotal,
+        totalDescuentos: resultado.totalDescuentos,
+        pagoFinal: resultado.pagoFinalConJustificaciones || resultado.pagoFinal,
+        
+        // Status
+        status: resultado.status,
+        statusClass: resultado.statusClass
+      };
+    });
+    
+    // Documento completo para guardar
+    const nominaDocument = {
+      id: nominaId,
+      año: añoActualNum,
+      mes: mesActualNum,
+      periodo: quinceActual.includes('1') ? 'primera' : 'segunda',
+      fechaCreacion: new Date(),
+      fechaModificacion: new Date(),
+      estado: "draft",
+      
+      // Configuración del período
+      diasLaborales: calcularDiasLaboralesPeriodo(añoActualNum, mesActualNum, quinceActual.includes('1') ? 'primera' : 'segunda'),
+      
+      // Resumen y empleados
+      resumen,
+      empleados,
+      
+      // Metadatos
+      calculadoPor: auth.currentUser?.email || 'sistema',
+      version: 1
+    };
+    
+    // Guardar en Firestore
+    const nominaRef = doc(db, 'nominas', nominaId);
+    await setDoc(nominaRef, nominaDocument);
+    
+    console.log('✅ Nómina guardada:', nominaId);
+    mostrarNotificacion(`✅ Nómina guardada exitosamente\nID: ${nominaId}`, 'success');
+    
+    return nominaId;
+    
+  } catch (error) {
+    console.error('Error guardando nómina:', error);
+    mostrarNotificacion('Error al guardar la nómina en la base de datos', 'error');
+    return null;
+  }
+}
+
+// Función para cargar nómina existente
+async function cargarNominaExistente(año, mes, periodo) {
+  try {
+    const nominaId = generarIdNomina(año, mes, periodo);
+    const nominaRef = doc(db, 'nominas', nominaId);
+    const nominaDoc = await getDoc(nominaRef);
+    
+    if (nominaDoc.exists()) {
+      const nominaData = nominaDoc.data();
+      console.log('📋 Nómina encontrada:', nominaData);
+      return nominaData;
+    } else {
+      console.log('📋 No se encontró nómina guardada para:', nominaId);
+      return null;
+    }
+    
+  } catch (error) {
+    console.error('Error cargando nómina:', error);
+    return null;
+  }
+}
+
+// Función para verificar si existe nómina
+async function verificarNominaExistente() {
+  if (!mesActualNum || !añoActualNum || !quinceActual) return;
+  
+  const nominaExistente = await cargarNominaExistente(
+    añoActualNum, 
+    mesActualNum, 
+    quinceActual.includes('1') ? 'primera' : 'segunda'
+  );
+  
+  if (nominaExistente) {
+    const confirmar = confirm(
+      `¿Se encontró una nómina guardada para ${quinceActual} de ${mesActualNum}/${añoActualNum}.\n\n` +
+      `¿Desea cargar la nómina existente o recalcular desde cero?\n\n` +
+      `- Aceptar: Cargar nómina guardada\n` +
+      `- Cancelar: Recalcular desde cero`
+    );
+    
+    if (confirmar) {
+      cargarNominaDesdeDocumento(nominaExistente);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Función para cargar nómina desde documento guardado
+function cargarNominaDesdeDocumento(nominaData) {
+  try {
+    console.log('📋 Cargando nómina desde documento guardado...');
+    
+    // Reconstruir resultadosNomina
+    resultadosNomina = [];
+    cambiosManuales = {};
+    
+    Object.entries(nominaData.empleados).forEach(([uid, empleadoData]) => {
+      // Reconstruir resultado
+      const resultado = {
+        empleado: {
+          uid: uid,
+          nombre: empleadoData.nombre,
+          email: empleadoData.email,
+          tipo: empleadoData.tipo,
+          tieneIMSS: empleadoData.tieneIMSS,
+          tieneCajaAhorro: empleadoData.tieneCajaAhorro,
+          montoCajaAhorro: empleadoData.montoCajaAhorro
+        },
+        salarioQuincenal: empleadoData.salarioQuincenal,
+        pagoPorDia: empleadoData.pagoPorDia,
+        diasLaboralesEsperados: empleadoData.diasLaboralesEsperados,
+        diasTrabajados: empleadoData.diasTrabajados,
+        retardos: empleadoData.retardos,
+        diasFaltantes: empleadoData.diasFaltantes,
+        diasEfectivos: empleadoData.diasEfectivos,
+        diasAsistidos: empleadoData.diasAsistidos,
+        detalleRetardos: empleadoData.detalleRetardos,
+        diasDescuento: empleadoData.diasDescuentoPorRetardos,
+        descuentoIMSS: empleadoData.descuentoIMSS,
+        descuentoCaja: empleadoData.descuentoCaja,
+        totalDescuentos: empleadoData.totalDescuentos,
+        pagoTotal: empleadoData.pagoBase,
+        pagoTotalConJustificaciones: empleadoData.pagoConJustificaciones,
+        pagoFinal: empleadoData.pagoFinal,
+        pagoFinalConJustificaciones: empleadoData.pagoFinal,
+        tieneAusenciasAprobadas: empleadoData.tieneAusenciasAprobadas,
+        diasJustificados: empleadoData.diasJustificadosAuto + empleadoData.diasJustificadosManual,
+        comentariosAusencias: empleadoData.comentariosAusencias,
+        editadoManualmente: empleadoData.editadoManualmente,
+        comentariosEdicion: empleadoData.comentariosEdicion,
+        status: empleadoData.status,
+        statusClass: empleadoData.statusClass,
+        diasFaltantesDetalle: nominaData.diasLaborales.filter(dia => !empleadoData.diasAsistidos.includes(dia))
+      };
+      
+      resultadosNomina.push(resultado);
+      
+      // Reconstruir cambios manuales si existen
+      if (empleadoData.editadoManualmente) {
+        cambiosManuales[uid] = {
+          diasTrabajados: empleadoData.diasTrabajados,
+          retardos: empleadoData.retardos,
+          diasExtra: empleadoData.diasExtra,
+          bonoExtra: empleadoData.bonoExtra,
+          diasJustificados: empleadoData.diasJustificadosManual,
+          justificacionesDetalle: empleadoData.justificacionesDetalle,
+          comentarios: empleadoData.comentariosEdicion,
+          editadoManualmente: true,
+          fechaEdicion: empleadoData.fechaEdicion
+        };
+      }
+    });
+    
+    // Actualizar variables globales
+    quinceActual = nominaData.periodo === 'primera' ? 'Período 1' : 'Período 2';
+    mesActual = `${nominaData.mes}/${nominaData.año}`;
+    mesActualNum = nominaData.mes;
+    añoActualNum = nominaData.año;
+    
+    // Mostrar resultados
+    mostrarResultados(
+      resultadosNomina, 
+      nominaData.resumen.totalEmpleados,
+      nominaData.resumen.totalRetardos,
+      nominaData.resumen.empleadosConDescuento,
+      nominaData.resumen.totalNeto,
+      nominaData.periodo,
+      `${nominaData.año}-${String(nominaData.mes).padStart(2, '0')}`
+    );
+    
+    mostrarNotificacion(`📋 Nómina cargada: ${quinceActual} de ${mesActual}\n💾 Estado: ${nominaData.estado}`, 'success');
+    
+  } catch (error) {
+    console.error('Error cargando nómina desde documento:', error);
+    mostrarNotificacion('Error al cargar la nómina guardada', 'error');
+  }
+}
 
     // Configurar event listeners al cargar la página
     document.addEventListener('DOMContentLoaded', function() {
