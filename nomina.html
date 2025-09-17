@@ -1155,6 +1155,109 @@ function mostrarVistaCompacta(resultados) {
   });
 }
 
+// ✅ FUNCIÓN PARA LLENAR LA VISTA DE TABLA
+function llenarTabla(resultados) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  resultados.forEach(resultado => {
+    const row = document.createElement('tr');
+    const tipoNombre = getTipoNombre(resultado.empleado.tipo);
+    const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+
+    // Crear tooltip para descuentos
+    let descuentosTooltip = [];
+    if (resultado.descuentoIMSS > 0) descuentosTooltip.push(`IMSS: $${formatearNumero(resultado.descuentoIMSS)}`);
+    if (resultado.descuentoCaja > 0) descuentosTooltip.push(`Caja: $${formatearNumero(resultado.descuentoCaja)}`);
+    if (resultado.diasDescuento > 0) descuentosTooltip.push(`${resultado.diasDescuento} día(s) por retardos`);
+
+    const descuentosTexto = descuentosTooltip.length > 0 ? descuentosTooltip.join(' • ') : 'Sin descuentos';
+
+    row.innerHTML = `
+      <td>
+        <div class="fw-bold">${resultado.empleado.nombre}</div>
+        <small class="text-muted">${resultado.empleado.email || ''}</small>
+        ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">Editado</span>' : ''}
+      </td>
+      <td>
+        <span class="badge ${resultado.empleado.tipo === 'becario' ? 'bg-info' : 'bg-secondary'}">
+          ${tipoNombre}
+        </span>
+      </td>
+      <td class="text-center">
+        <div class="pago-detalle">
+          <strong>${resultado.diasTrabajados}/${resultado.diasLaboralesEsperados}</strong>
+          ${resultado.diasTrabajados < resultado.diasLaboralesEsperados ? 
+            `<small class="text-danger d-block">-${resultado.diasLaboralesEsperados - resultado.diasTrabajados} día(s)</small>` : 
+            '<small class="text-success d-block">Completo</small>'
+          }
+        </div>
+      </td>
+      <td class="text-center">
+        <span class="badge ${resultado.retardos > 0 ? 'bg-warning text-dark' : 'bg-success'}">
+          ${resultado.retardos}
+        </span>
+        ${resultado.retardos > 0 && resultado.detalleRetardos && resultado.detalleRetardos.length > 0 ? 
+          `<small class="d-block text-muted">${resultado.detalleRetardos.length} registro(s)</small>` : ''
+        }
+      </td>
+      <td class="text-center">
+        <span class="badge ${resultado.diasFaltantes > 0 ? 'bg-danger' : 'bg-success'}">
+          ${resultado.diasFaltantes}
+        </span>
+        ${resultado.diasFaltantes > 0 ? 
+          `<small class="text-danger d-block">-$${formatearNumero(resultado.diasFaltantes * resultado.pagoPorDia)}</small>` : 
+          '<small class="text-success d-block">Sin faltas</small>'
+        }
+      </td>
+      <td class="descuentos-detalle" title="${descuentosTexto}">
+        ${resultado.totalDescuentos > 0 ? `
+          <div>
+            <span class="badge bg-warning text-dark">$${formatearNumero(resultado.totalDescuentos)}</span>
+            ${resultado.descuentoIMSS > 0 ? '<span class="badge bg-info ms-1">IMSS</span>' : ''}
+            ${resultado.descuentoCaja > 0 ? '<span class="badge bg-success ms-1">Caja</span>' : ''}
+            ${resultado.diasDescuento > 0 ? `<span class="badge bg-warning ms-1">${resultado.diasDescuento}d</span>` : ''}
+          </div>
+        ` : `
+          <span class="text-success">Sin descuentos</span>
+        `}
+      </td>
+      <td class="text-end">
+        <div class="pago-detalle">
+          <strong class="text-success">$${formatearNumero(pagoFinalMostrar)}</strong>
+          <small class="text-muted d-block">Base: $${formatearNumero(resultado.pagoTotal)}</small>
+        </div>
+      </td>
+      <td class="text-center">
+        <span class="badge bg-${resultado.statusClass === 'status-ok' ? 'success' : 
+                                 resultado.statusClass === 'status-warning' ? 'warning text-dark' : 'danger'}">
+          ${resultado.statusClass === 'status-ok' ? 'OK' : 
+            resultado.statusClass === 'status-warning' ? 'Alerta' : 'Penalización'}
+        </span>
+        <small class="d-block text-muted mt-1" style="font-size: 0.7rem;">
+          ${resultado.status}
+        </small>
+      </td>
+      <td class="text-center">
+        <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')" title="Editar nómina">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </td>
+    `;
+
+    // Añadir clase de estado para la fila completa
+    if (resultado.statusClass === 'status-penalty') {
+      row.classList.add('bg-status-penalty');
+    } else if (resultado.statusClass === 'status-warning') {
+      row.classList.add('bg-status-warning');
+    } else {
+      row.classList.add('bg-status-ok');
+    }
+
+    tbody.appendChild(row);
+  });
+}
+
 
 
     // Configurar checkboxes de justificaciones

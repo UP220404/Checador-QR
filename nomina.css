@@ -1720,3 +1720,45 @@ body {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ===== MEJORAS PARA LA TABLA ===== */
+.bg-status-ok {
+  background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.bg-status-warning {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.bg-status-penalty {
+  background-color: rgba(220, 53, 69, 0.05) !important;
+}
+
+.badge.bg-purple {
+  background-color: #6f42c1 !important;
+  color: white !important;
+}
+
+.pago-detalle {
+  text-align: center;
+}
+
+.pago-detalle small {
+  font-size: 0.7rem;
+  color: #6c757d !important;
+}
+
+.descuentos-detalle {
+  text-align: center;
+}
+
+.descuentos-detalle .badge {
+  font-size: 0.65rem;
+  margin: 0.1rem;
+}
+
+/* Hover effects para filas */
+.nomina-table tbody tr:hover {
+  background-color: #f8f9fa !important;
+  transition: background-color 0.2s ease;
+}
