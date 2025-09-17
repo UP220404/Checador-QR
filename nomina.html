@@ -738,337 +738,240 @@
       }
     }
 
-    // Función principal para calcular nómina
-    window.calcularNomina = async function() {
-      const monthSelect = document.getElementById('monthSelect').value;
-      const quinceSelect = document.getElementById('quinceSelect').value;
+    // Función principal para calcular nómina OPTIMIZADA
+window.calcularNomina = async function() {
+  const monthSelect = document.getElementById('monthSelect').value;
+  const quinceSelect = document.getElementById('quinceSelect').value;
+  
+  if (!monthSelect) {
+    mostrarNotificacion('Selecciona un mes', 'warning');
+    return;
+  }
+
+  mesActualNum = parseInt(monthSelect.split('-')[1]);
+  añoActualNum = parseInt(monthSelect.split('-')[0]);
+  quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
+  
+  const existeNomina = await verificarNominaExistente();
+  if (existeNomina) return;
+  
+  document.getElementById('loadingSpinner').style.display = 'block';
+  document.getElementById('summaryCard').style.display = 'none';
+  document.getElementById('resultsContainer').innerHTML = '';
+  document.getElementById('exportBtn').style.display = 'none';
+
+  try {
+    const [año, mes] = monthSelect.split('-');
+    const mesNum = parseInt(mes);
+    const añoNum = parseInt(año);
+
+    console.log(`📅 Calculando período: ${quinceSelect} de ${mesNum}/${añoNum}`);
+
+    const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, quinceSelect);
+    
+    console.log(`📊 Días laborales del período:`, diasLaborales);
+    console.log(`📊 Total días laborales esperados: ${diasLaborales.length}`);
+
+    // ✅ CONSULTA OPTIMIZADA DE EMPLEADOS
+    const usuariosQuery = query(collection(db, "usuarios"));
+    const usuariosSnapshot = await getDocs(usuariosQuery);
+    
+    const empleados = [];
+    usuariosSnapshot.forEach(doc => {
+      const userData = doc.data();
       
-      if (!monthSelect) {
-        mostrarNotificacion('Selecciona un mes', 'warning');
+      if (!userData || !userData.nombre) {
+        console.warn('⚠️ Usuario sin datos válidos:', doc.id);
         return;
       }
-
-
-      // ✅ AGREGAR VERIFICACIÓN DE NÓMINA EXISTENTE
-      mesActualNum = parseInt(monthSelect.split('-')[1]);
-      añoActualNum = parseInt(monthSelect.split('-')[0]);
-      quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
       
-      const existeNomina = await verificarNominaExistente();
-      if (existeNomina) return; // Si se cargó una nómina existente, salir
-      
-      document.getElementById('loadingSpinner').style.display = 'block';
-      document.getElementById('summaryCard').style.display = 'none';
-      document.getElementById('resultsContainer').innerHTML = '';
-      document.getElementById('exportBtn').style.display = 'none';
-
-      try {
-        const [año, mes] = monthSelect.split('-');
-        const mesNum = parseInt(mes);
-        const añoNum = parseInt(año);
-
-        console.log(`📅 Calculando período: ${quinceSelect} de ${mesNum}/${añoNum}`);
-
-        const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, quinceSelect);
-        
-        console.log(`📊 Días laborales del período:`, diasLaborales);
-        console.log(`📊 Total días laborales esperados: ${diasLaborales.length}`);
-
-        // Obtener empleados con configuración
-        const usuariosQuery = query(collection(db, "usuarios"));
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        
-        const empleados = [];
-usuariosSnapshot.forEach(doc => {
-  const userData = doc.data();
-  
-  // ✅ VALIDAR DATOS ANTES DE PROCESAR
-  if (!userData || !userData.nombre) {
-    console.warn('⚠️ Usuario sin datos válidos:', doc.id);
-    return; // Saltar este usuario
-  }
-  
-  if (userData.salarioQuincenal && userData.horasQuincenal) {
-    empleados.push({
-      uid: doc.id,
-      nombre: userData.nombre,
-      email: userData.email || 'sin-email@cielitohome.com',
-      tipo: userData.tipo || 'tiempo_completo',
-      salarioQuincenal: userData.salarioQuincenal,
-      horasQuincenal: userData.horasQuincenal,
-      pagoPorDia: userData.salarioQuincenal / 10,
-      tieneIMSS: userData.tieneIMSS || false,
-      tieneCajaAhorro: userData.tieneCajaAhorro || false,
-      montoCajaAhorro: userData.montoCajaAhorro || 0,
-      esIndividual: true
-    });
-  } else {
-    console.warn('⚠️ Usuario sin configuración salarial:', userData.nombre);
-  }
-});
-
-        if (empleados.length === 0) {
-          mostrarNotificacion('❌ No hay empleados con salarios configurados.\n\nUse "Gestionar Salarios" para configurar los salarios de cada empleado.', 'error', 6000);
-          document.getElementById('loadingSpinner').style.display = 'none';
-          return;
-        }
-
-        console.log('🔍 Consultando registros de entrada...');
-        
-        const registrosQuery = query(
-          collection(db, "registros"),
-          where("tipoEvento", "==", "entrada")
-        );
-
-        const registrosSnapshot = await getDocs(registrosQuery);
-        console.log(`📊 Registros obtenidos de Firestore: ${registrosSnapshot.size}`);
-        
-        // Filtrar en memoria por fecha y días laborales del período
-        const registrosPorEmpleado = {};
-        let registrosProcesados = 0;
-        
-        registrosSnapshot.forEach(doc => {
-          const registro = doc.data();
-          const uid = registro.uid;
-          
-          const fechaRegistro = registro.fecha;
-          if (!fechaRegistro) return;
-          
-          const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
-          
-          if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
-            if (!registrosPorEmpleado[uid]) {
-              registrosPorEmpleado[uid] = [];
-            }
-            registrosPorEmpleado[uid].push(registro);
-            registrosProcesados++;
-          }
+      if (userData.salarioQuincenal && userData.horasQuincenal) {
+        empleados.push({
+          uid: doc.id,
+          nombre: userData.nombre,
+          email: userData.email || 'sin-email@cielitohome.com',
+          tipo: userData.tipo || 'tiempo_completo',
+          salarioQuincenal: userData.salarioQuincenal,
+          horasQuincenal: userData.horasQuincenal,
+          pagoPorDia: userData.salarioQuincenal / 10,
+          tieneIMSS: userData.tieneIMSS || false,
+          tieneCajaAhorro: userData.tieneCajaAhorro || false,
+          montoCajaAhorro: userData.montoCajaAhorro || 0,
+          esIndividual: true
         });
-
-        console.log(`📊 Registros filtrados por período: ${registrosProcesados}`);
-
-        // Calcular estadísticas con descuentos
-        const resultados = [];
-        let totalRetardos = 0;
-        let empleadosConDescuento = 0;
-        let totalNominaFinal = 0;
-
-        for (const empleado of empleados) {
-          const registros = registrosPorEmpleado[empleado.uid] || [];
-          
-          const salarioQuincenal = empleado.salarioQuincenal;
-          const pagoPorDia = empleado.pagoPorDia;
-
-          let retardos = 0;
-          let diasTrabajados = registros.length;
-          const detalleRetardos = [];
-          const diasAsistidos = [];
-
-          registros.forEach(registro => {
-            const [regAño, regMes, regDia] = registro.fecha.split('-').map(Number);
-            diasAsistidos.push(regDia);
-            
-            if (registro.estado === 'retardo') {
-              retardos++;
-              detalleRetardos.push({
-                fecha: registro.fecha,
-                hora: registro.hora
-              });
-            }
-          });
-
-          const diasFaltantes = diasLaborales.filter(dia => !diasAsistidos.includes(dia));
-          const diasDescuento = Math.floor(retardos / 4);
-          const diasEfectivos = diasTrabajados - diasDescuento;
-          const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
-
-          // Aplicar descuentos
-          let descuentoIMSS = 0;
-          let descuentoCaja = 0;
-          
-          if (empleado.tieneIMSS) {
-            descuentoIMSS = 300;
-          }
-          
-          if (empleado.tieneCajaAhorro && empleado.montoCajaAhorro) {
-            descuentoCaja = empleado.montoCajaAhorro;
-          }
-          
-          const pagoConDescuentos = pagoTotal - descuentoIMSS - descuentoCaja;
-          const pagoFinal = Math.max(0, pagoConDescuentos);
-          
-          if (diasDescuento > 0 || descuentoIMSS > 0 || descuentoCaja > 0) empleadosConDescuento++;
-          totalRetardos += retardos;
-
-          let status, statusClass;
-          if (diasFaltantes.length > 0) {
-            status = `${diasFaltantes.length} falta${diasFaltantes.length > 1 ? 's' : ''} • ${retardos} retardo${retardos !== 1 ? 's' : ''}`;
-            statusClass = 'status-penalty';
-          } else if (diasDescuento > 0) {
-            status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
-            statusClass = 'status-penalty';
-          } else if (retardos >= 3) {
-            status = 'En límite de retardos';
-            statusClass = 'status-warning';
-          } else {
-            status = 'Sin penalizaciones';
-            statusClass = 'status-ok';
-          }
-
-          let resultadoBase = {
-            empleado,
-            salarioQuincenal,
-            diasLaboralesEsperados: diasLaborales.length,
-            diasTrabajados,
-            diasFaltantes: diasFaltantes.length,
-            retardos,
-            diasDescuento,
-            diasEfectivos,
-            pagoPorDia: Math.round(pagoPorDia),
-            pagoTotal: Math.round(pagoTotal),
-            descuentoIMSS,
-            descuentoCaja,
-            totalDescuentos: descuentoIMSS + descuentoCaja,
-            pagoFinal: Math.round(pagoFinal),
-            status,
-            statusClass,
-            detalleRetardos,
-            diasAsistidos,
-            diasFaltantesDetalle: diasFaltantes
-          };
-          
-          const resultadoConAusencias = await aplicarAusenciasAutomaticas(empleado.uid, resultadoBase);
-          resultados.push(resultadoConAusencias);
-          
-          totalNominaFinal += Math.round(resultadoConAusencias.pagoFinalConJustificaciones || resultadoConAusencias.pagoFinal);
-        }
-
-        // Guardar variables para edición
-        quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
-        mesActual = `${mesNum}/${añoNum}`;
-        mesActualNum = mesNum;
-        añoActualNum = añoNum;
-
-        resultadosNomina = resultados;
-
-        mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaFinal, quinceSelect, monthSelect);
-
-      } catch (error) {
-        console.error('Error calculando nómina:', error);
-        mostrarNotificacion('Error al calcular la nómina: ' + error.message, 'error');
-      } finally {
-        document.getElementById('loadingSpinner').style.display = 'none';
-      }
-    };
-
-   // Función para aplicar ausencias automáticamente (SIMPLIFICADA)
-async function aplicarAusenciasAutomaticas(empleadoId, resultado) {
-  try {
-    // ✅ APLICAR AUSENCIAS SOLO SI NO HAY ERRORES
-    const ausencias = await obtenerAusenciasAprobadas(empleadoId, mesActualNum, añoActualNum, quinceActual);
-    
-    if (ausencias.length === 0) return resultado;
-    
-    let diasJustificados = 0;
-    let comentarios = [];
-    
-    ausencias.forEach(ausencia => {
-      switch (ausencia.tipo) {
-        case 'vacaciones':
-          diasJustificados += ausencia.dias;
-          comentarios.push(`Vacaciones: ${ausencia.dias} días`);
-          break;
-        case 'incapacidad':
-          diasJustificados += ausencia.dias;
-          comentarios.push(`Incapacidad: ${ausencia.dias} días`);
-          break;
-        case 'permiso':
-          diasJustificados += ausencia.dias;
-          comentarios.push(`Permiso: ${ausencia.dias} días`);
-          break;
+      } else {
+        console.warn('⚠️ Usuario sin configuración salarial:', userData.nombre);
       }
     });
-    
-    if (diasJustificados > 0) {
-      const pagoConJustificaciones = (resultado.diasEfectivos + diasJustificados) * resultado.pagoPorDia;
-      const pagoFinalConJustificaciones = Math.max(0, pagoConJustificaciones - resultado.totalDescuentos);
-      
-      resultado.diasJustificados = diasJustificados;
-      resultado.pagoTotalConJustificaciones = Math.round(pagoConJustificaciones);
-      resultado.pagoFinalConJustificaciones = Math.round(pagoFinalConJustificaciones);
-      resultado.tieneAusenciasAprobadas = true;
-      resultado.comentariosAusencias = comentarios.join(', ');
+
+    if (empleados.length === 0) {
+      mostrarNotificacion('❌ No hay empleados con salarios configurados.\n\nUse "Gestionar Salarios" para configurar los salarios de cada empleado.', 'error', 6000);
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
     }
-    
-    return resultado;
-    
-  } catch (error) {
-    console.error('Error aplicando ausencias (se continuará sin ausencias):', error);
-    return resultado; // ✅ CONTINÚA SIN AUSENCIAS
-  }
-}
 
-
-
-    // Función para obtener ausencias aprobadas (SIMPLIFICADA)
-async function obtenerAusenciasAprobadas(empleadoId, mesNum, añoNum, periodo) {
-  try {
-    console.log(`🔍 Buscando ausencias para empleado ${empleadoId}`);
+    console.log('🔍 Consultando registros FILTRADOS POR FECHA...');
     
-    // ✅ CONSULTA SIMPLE - Sin índices complejos
-    const ausenciasQuery = query(
-      collection(db, "ausencias"),
-      where("uidUsuario", "==", empleadoId),
-      where("estado", "==", "aprobada")
+    // ✅ CONSULTA ULTRA OPTIMIZADA: FILTRAR POR FECHAS EN FIRESTORE
+    const fechaInicio = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.min(...diasLaborales)).padStart(2, '0')}`;
+    const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
+    
+    const registrosQuery = query(
+      collection(db, "registros"),
+      where("tipoEvento", "==", "entrada"),
+      where("fecha", ">=", fechaInicio),
+      where("fecha", "<=", fechaFin)
     );
+
+    const registrosSnapshot = await getDocs(registrosQuery);
+    console.log(`📊 Registros obtenidos (filtrados): ${registrosSnapshot.size}`);
     
-    const ausenciasSnapshot = await getDocs(ausenciasQuery);
-    const ausencias = [];
+    // ✅ FILTRADO FINAL EN MEMORIA SOLO POR DÍAS LABORALES
+    const registrosPorEmpleado = {};
+    let registrosProcesados = 0;
     
-    // ✅ FILTRAR EN MEMORIA por fechas
-    const diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, periodo === 'Período 1' ? 'primera' : 'segunda');
-    const fechaInicio = new Date(añoNum, mesNum - 1, Math.min(...diasLaborales));
-    const fechaFin = new Date(añoNum, mesNum - 1, Math.max(...diasLaborales));
-    
-    ausenciasSnapshot.forEach(doc => {
-      const ausencia = doc.data();
-      const fechaAusencia = ausencia.fechaInicio?.toDate();
+    registrosSnapshot.forEach(doc => {
+      const registro = doc.data();
+      const uid = registro.uid;
       
-      // Filtrar por rango de fechas en memoria
-      if (fechaAusencia && fechaAusencia >= fechaInicio && fechaAusencia <= fechaFin) {
-        ausencias.push({
-          tipo: ausencia.tipo,
-          fechaInicio: fechaAusencia,
-          fechaFin: ausencia.fechaFin?.toDate() || fechaAusencia,
-          motivo: ausencia.motivo || '',
-          dias: calcularDiasLaboralesEnRango(fechaAusencia, ausencia.fechaFin?.toDate() || fechaAusencia)
-        });
+      const fechaRegistro = registro.fecha;
+      if (!fechaRegistro) return;
+      
+      const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
+      
+      // Solo procesar registros de días laborales específicos
+      if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
+        if (!registrosPorEmpleado[uid]) {
+          registrosPorEmpleado[uid] = [];
+        }
+        registrosPorEmpleado[uid].push(registro);
+        registrosProcesados++;
       }
     });
-    
-    return ausencias;
-    
-  } catch (error) {
-    console.error('Error obteniendo ausencias (se continuará sin ausencias):', error);
-    return []; // ✅ CONTINÚA SIN AUSENCIAS en caso de error
-  }
-}
 
-// Función auxiliar para calcular días laborales en un rango
-function calcularDiasLaboralesEnRango(fechaInicio, fechaFin) {
-  let diasLaborales = 0;
-  const fecha = new Date(fechaInicio);
+    console.log(`📊 Registros procesados para el período: ${registrosProcesados}`);
 
-      while (fecha <= fechaFin) {
-        const diaSemana = fecha.getDay();
-        if (diaSemana >= 1 && diaSemana <= 5) {
-          diasLaborales++;
+    // ✅ CÁLCULO DE NÓMINA SIN AUSENCIAS
+    const resultados = [];
+    let totalRetardos = 0;
+    let empleadosConDescuento = 0;
+    let totalNominaFinal = 0;
+
+    for (const empleado of empleados) {
+      try {
+        const registros = registrosPorEmpleado[empleado.uid] || [];
+        
+        const salarioQuincenal = empleado.salarioQuincenal;
+        const pagoPorDia = empleado.pagoPorDia;
+
+        let retardos = 0;
+        let diasTrabajados = registros.length;
+        const detalleRetardos = [];
+        const diasAsistidos = [];
+
+        registros.forEach(registro => {
+          const [regAño, regMes, regDia] = registro.fecha.split('-').map(Number);
+          diasAsistidos.push(regDia);
+          
+          if (registro.estado === 'retardo') {
+            retardos++;
+            detalleRetardos.push({
+              fecha: registro.fecha,
+              hora: registro.hora
+            });
+          }
+        });
+
+        const diasFaltantes = diasLaborales.filter(dia => !diasAsistidos.includes(dia));
+        const diasDescuento = Math.floor(retardos / 4);
+        const diasEfectivos = diasTrabajados - diasDescuento;
+        const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
+
+        // Aplicar descuentos IMSS y Caja
+        let descuentoIMSS = 0;
+        let descuentoCaja = 0;
+        
+        if (empleado.tieneIMSS) {
+          descuentoIMSS = 300;
         }
-        fecha.setDate(fecha.getDate() + 1);
+        
+        if (empleado.tieneCajaAhorro && empleado.montoCajaAhorro) {
+          descuentoCaja = empleado.montoCajaAhorro;
+        }
+        
+        const totalDescuentos = descuentoIMSS + descuentoCaja;
+        const pagoFinal = Math.max(0, pagoTotal - totalDescuentos);
+        
+        if (diasDescuento > 0 || totalDescuentos > 0) empleadosConDescuento++;
+        totalRetardos += retardos;
+
+        // Determinar estado
+        let status, statusClass;
+        if (diasFaltantes.length > 0) {
+          status = `${diasFaltantes.length} falta${diasFaltantes.length > 1 ? 's' : ''} • ${retardos} retardo${retardos !== 1 ? 's' : ''}`;
+          statusClass = 'status-penalty';
+        } else if (diasDescuento > 0) {
+          status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
+          statusClass = 'status-penalty';
+        } else if (retardos >= 3) {
+          status = 'En límite de retardos';
+          statusClass = 'status-warning';
+        } else {
+          status = 'Sin penalizaciones';
+          statusClass = 'status-ok';
+        }
+
+        // ✅ RESULTADO FINAL LIMPIO (SIN AUSENCIAS)
+        const resultado = {
+          empleado,
+          salarioQuincenal,
+          diasLaboralesEsperados: diasLaborales.length,
+          diasTrabajados,
+          diasFaltantes: diasFaltantes.length,
+          retardos,
+          diasDescuento,
+          diasEfectivos,
+          pagoPorDia: Math.round(pagoPorDia),
+          pagoTotal: Math.round(pagoTotal),
+          descuentoIMSS,
+          descuentoCaja,
+          totalDescuentos,
+          pagoFinal: Math.round(pagoFinal),
+          status,
+          statusClass,
+          detalleRetardos,
+          diasAsistidos,
+          diasFaltantesDetalle: diasFaltantes
+        };
+        
+        resultados.push(resultado);
+        totalNominaFinal += Math.round(resultado.pagoFinal);
+        
+      } catch (error) {
+        console.error(`❌ Error procesando empleado ${empleado.nombre}:`, error);
+        mostrarNotificacion(`Error procesando ${empleado.nombre}, se omitirá`, 'warning');
       }
-      
-      return diasLaborales;
     }
+
+    // Actualizar variables globales
+    quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
+    mesActual = `${mesNum}/${añoNum}`;
+    mesActualNum = mesNum;
+    añoActualNum = añoNum;
+
+    resultadosNomina = resultados;
+
+    mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaFinal, quinceSelect, monthSelect);
+
+  } catch (error) {
+    console.error('Error calculando nómina:', error);
+    mostrarNotificacion('Error al calcular la nómina: ' + error.message, 'error');
+  } finally {
+    document.getElementById('loadingSpinner').style.display = 'none';
+  }
+};
+
+
 
     // Función para mostrar resultados
 function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalPago, periodo, mes) {
@@ -1135,7 +1038,6 @@ function mostrarVistaCompacta(resultados) {
           <strong>${resultado.empleado.nombre}</strong>
           <span class="badge bg-secondary ms-2">${tipoNombre}</span>
           ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
-          ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">A</span>' : ''}
         </div>
         <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
           <i class="bi bi-pencil"></i>
@@ -1213,12 +1115,7 @@ function mostrarVistaCompacta(resultados) {
           </div>
         ` : ''}
         
-        ${resultado.diasJustificados > 0 ? `
-          <div class="compact-detail-row bonus">
-            <span class="detail-label">Días justificados:</span>
-            <span class="detail-value text-info">+${resultado.diasJustificados}</span>
-          </div>
-        ` : ''}
+      
         
         ${resultado.editadoManualmente ? `
           <div class="compact-detail-row bonus">
@@ -1279,7 +1176,6 @@ function llenarTabla(resultados) {
         <div class="d-flex align-items-center">
           <strong>${resultado.empleado.nombre}</strong>
           ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
-          ${resultado.tieneAusenciasAprobadas ? '<span class="badge bg-info ms-1">A</span>' : ''}
         </div>
       </td>
       <td><span class="badge bg-secondary">${getTipoNombre(resultado.empleado.tipo)}</span></td>
