@@ -817,11 +817,14 @@ window.calcularNomina = async function() {
     const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
     
     
-    // ✅ CONSULTA SIN ÍNDICE - SOLO FILTRA POR TIPO
-  const registrosQuery = query(
+ 
+    // ✅ CONSULTA ULTRA OPTIMIZADA CON ÍNDICE
+const registrosQuery = query(
   collection(db, "registros"),
-  where("tipoEvento", "==", "entrada")
-  );
+  where("tipoEvento", "==", "entrada"),
+  where("fecha", ">=", fechaInicio),
+  where("fecha", "<=", fechaFin)
+);
 
     const registrosSnapshot = await getDocs(registrosQuery);
     console.log(`📊 Registros obtenidos (filtrados): ${registrosSnapshot.size}`);
