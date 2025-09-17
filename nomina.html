@@ -819,9 +819,10 @@ window.calcularNomina = async function() {
     
  
     // ✅ CONSULTA ULTRA OPTIMIZADA CON ÍNDICE
+// ✅ CONSULTA CORREGIDA (usa tipo_evento)
 const registrosQuery = query(
   collection(db, "registros"),
-  where("tipoEvento", "==", "entrada"),
+  where("tipo_evento", "==", "entrada"),
   where("fecha", ">=", fechaInicio),
   where("fecha", "<=", fechaFin)
 );
