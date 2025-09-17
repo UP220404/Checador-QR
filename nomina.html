@@ -391,7 +391,7 @@
   <!-- Firebase Scripts -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -779,25 +779,33 @@
         const usuariosSnapshot = await getDocs(usuariosQuery);
         
         const empleados = [];
-        usuariosSnapshot.forEach(doc => {
-          const userData = doc.data();
-          
-          if (userData.salarioQuincenal && userData.horasQuincenal) {
-            empleados.push({
-              uid: doc.id,
-              nombre: userData.nombre,
-              email: userData.email,
-              tipo: userData.tipo,
-              salarioQuincenal: userData.salarioQuincenal,
-              horasQuincenal: userData.horasQuincenal,
-              pagoPorDia: userData.salarioQuincenal / 10,
-              tieneIMSS: userData.tieneIMSS || false,
-              tieneCajaAhorro: userData.tieneCajaAhorro || false,
-              montoCajaAhorro: userData.montoCajaAhorro || 0,
-              esIndividual: true
-            });
-          }
-        });
+usuariosSnapshot.forEach(doc => {
+  const userData = doc.data();
+  
+  // ✅ VALIDAR DATOS ANTES DE PROCESAR
+  if (!userData || !userData.nombre) {
+    console.warn('⚠️ Usuario sin datos válidos:', doc.id);
+    return; // Saltar este usuario
+  }
+  
+  if (userData.salarioQuincenal && userData.horasQuincenal) {
+    empleados.push({
+      uid: doc.id,
+      nombre: userData.nombre,
+      email: userData.email || 'sin-email@cielitohome.com',
+      tipo: userData.tipo || 'tiempo_completo',
+      salarioQuincenal: userData.salarioQuincenal,
+      horasQuincenal: userData.horasQuincenal,
+      pagoPorDia: userData.salarioQuincenal / 10,
+      tieneIMSS: userData.tieneIMSS || false,
+      tieneCajaAhorro: userData.tieneCajaAhorro || false,
+      montoCajaAhorro: userData.montoCajaAhorro || 0,
+      esIndividual: true
+    });
+  } else {
+    console.warn('⚠️ Usuario sin configuración salarial:', userData.nombre);
+  }
+});
 
         if (empleados.length === 0) {
           mostrarNotificacion('❌ No hay empleados con salarios configurados.\n\nUse "Gestionar Salarios" para configurar los salarios de cada empleado.', 'error', 6000);
