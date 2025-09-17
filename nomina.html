@@ -1638,96 +1638,101 @@ window.guardarNominaCompleta = async function() {
   try {
     const nominaId = generarIdNomina(añoActualNum, mesActualNum, quinceActual.includes('1') ? 'primera' : 'segunda');
     
-    // Calcular resumen
-    const resumen = {
-      totalEmpleados: resultadosNomina.length,
-      totalRetardos: resultadosNomina.reduce((sum, r) => sum + r.retardos, 0),
-      empleadosConDescuento: resultadosNomina.filter(r => r.diasDescuento > 0 || r.totalDescuentos > 0).length,
-      totalBruto: resultadosNomina.reduce((sum, r) => sum + (r.pagoTotalConJustificaciones || r.pagoTotal), 0),
-      totalDescuentos: resultadosNomina.reduce((sum, r) => sum + r.totalDescuentos, 0),
-      totalNeto: resultadosNomina.reduce((sum, r) => sum + (r.pagoFinalConJustificaciones || r.pagoFinal), 0)
-    };
-    
+
+    // ✅ CALCULAR RESUMEN CON VALIDACIONES
+const resumen = {
+  totalEmpleados: Number(resultadosNomina.length) || 0,
+  totalRetardos: Number(resultadosNomina.reduce((sum, r) => sum + (Number(r.retardos) || 0), 0)) || 0,
+  empleadosConDescuento: Number(resultadosNomina.filter(r => (Number(r.diasDescuento) || 0) > 0 || (Number(r.totalDescuentos) || 0) > 0).length) || 0,
+  totalBruto: Number(resultadosNomina.reduce((sum, r) => sum + (Number(r.pagoTotalConJustificaciones || r.pagoTotal) || 0), 0)) || 0,
+  totalDescuentos: Number(resultadosNomina.reduce((sum, r) => sum + (Number(r.totalDescuentos) || 0), 0)) || 0,
+  totalNeto: Number(resultadosNomina.reduce((sum, r) => sum + (Number(r.pagoFinalConJustificaciones || r.pagoFinal) || 0), 0)) || 0
+};
     // Preparar datos de empleados
-    const empleados = {};
-    resultadosNomina.forEach(resultado => {
-      const cambiosManual = cambiosManuales[resultado.empleado.uid];
-      
-      empleados[resultado.empleado.uid] = {
-        // Datos del empleado
-        nombre: resultado.empleado.nombre,
-        email: resultado.empleado.email,
-        tipo: resultado.empleado.tipo,
-        
-        // Configuración salarial
-        salarioQuincenal: resultado.salarioQuincenal,
-        pagoPorDia: resultado.pagoPorDia,
-        tieneIMSS: resultado.empleado.tieneIMSS || false,
-        tieneCajaAhorro: resultado.empleado.tieneCajaAhorro || false,
-        montoCajaAhorro: resultado.empleado.montoCajaAhorro || 0,
-        
-        // Asistencia automática
-        diasLaboralesEsperados: resultado.diasLaboralesEsperados,
-        diasTrabajados: resultado.diasTrabajados,
-        retardos: resultado.retardos,
-        diasFaltantes: resultado.diasFaltantes,
-        diasEfectivos: resultado.diasEfectivos,
-        diasAsistidos: resultado.diasAsistidos,
-        detalleRetardos: resultado.detalleRetardos,
-        
-        // Descuentos automáticos
-        descuentoIMSS: resultado.descuentoIMSS,
-        descuentoCaja: resultado.descuentoCaja,
-        diasDescuentoPorRetardos: resultado.diasDescuento,
-        
-        // Ausencias automáticas
-        tieneAusenciasAprobadas: resultado.tieneAusenciasAprobadas || false,
-        diasJustificadosAuto: resultado.diasJustificados || 0,
-        comentariosAusencias: resultado.comentariosAusencias || '',
-        
-        // Ediciones manuales
-        editadoManualmente: !!cambiosManual,
-        diasExtra: cambiosManual?.diasExtra || 0,
-        bonoExtra: cambiosManual?.bonoExtra || 0,
-        diasJustificadosManual: cambiosManual?.diasJustificados || 0,
-        comentariosEdicion: cambiosManual?.comentarios || '',
-        justificacionesDetalle: cambiosManual?.justificacionesDetalle || [],
-        fechaEdicion: cambiosManual?.fechaEdicion || null,
-        
-        // Cálculos finales
-        pagoBase: resultado.pagoTotal,
-        pagoConJustificaciones: resultado.pagoTotalConJustificaciones || resultado.pagoTotal,
-        totalDescuentos: resultado.totalDescuentos,
-        pagoFinal: resultado.pagoFinalConJustificaciones || resultado.pagoFinal,
-        
-        // Status
-        status: resultado.status,
-        statusClass: resultado.statusClass
-      };
-    });
+  const empleados = {};
+  resultadosNomina.forEach(resultado => {
+  const cambiosManual = cambiosManuales[resultado.empleado.uid];
+  
+  // ✅ VALIDAR DATOS DEL EMPLEADO ANTES DE GUARDAR
+  const empleadoLimpio = {
+    // Datos del empleado (con validaciones)
+    nombre: resultado.empleado.nombre || 'Sin nombre',
+    email: resultado.empleado.email || 'sin-email@cielitohome.com',
+    tipo: resultado.empleado.tipo || 'tiempo_completo',
     
-    // Documento completo para guardar
-    const nominaDocument = {
-      id: nominaId,
-      año: añoActualNum,
-      mes: mesActualNum,
-      periodo: quinceActual.includes('1') ? 'primera' : 'segunda',
-      fechaCreacion: new Date(),
-      fechaModificacion: new Date(),
-      estado: "draft",
-      
-      // Configuración del período
-      diasLaborales: calcularDiasLaboralesPeriodo(añoActualNum, mesActualNum, quinceActual.includes('1') ? 'primera' : 'segunda'),
-      
-      // Resumen y empleados
-      resumen,
-      empleados,
-      
-      // Metadatos
-      calculadoPor: auth.currentUser?.email || 'sistema',
-      version: 1
-    };
+    // Configuración salarial
+    salarioQuincenal: resultado.salarioQuincenal || 0,
+    pagoPorDia: resultado.pagoPorDia || 0,
+    tieneIMSS: Boolean(resultado.empleado.tieneIMSS),
+    tieneCajaAhorro: Boolean(resultado.empleado.tieneCajaAhorro),
+    montoCajaAhorro: Number(resultado.empleado.montoCajaAhorro) || 0,
     
+    // Asistencia automática
+    diasLaboralesEsperados: Number(resultado.diasLaboralesEsperados) || 0,
+    diasTrabajados: Number(resultado.diasTrabajados) || 0,
+    retardos: Number(resultado.retardos) || 0,
+    diasFaltantes: Number(resultado.diasFaltantes) || 0,
+    diasEfectivos: Number(resultado.diasEfectivos) || 0,
+    diasAsistidos: Array.isArray(resultado.diasAsistidos) ? resultado.diasAsistidos : [],
+    detalleRetardos: Array.isArray(resultado.detalleRetardos) ? resultado.detalleRetardos : [],
+    
+    // Descuentos automáticos
+    descuentoIMSS: Number(resultado.descuentoIMSS) || 0,
+    descuentoCaja: Number(resultado.descuentoCaja) || 0,
+    diasDescuentoPorRetardos: Number(resultado.diasDescuento) || 0,
+    
+    // Ausencias automáticas
+    tieneAusenciasAprobadas: Boolean(resultado.tieneAusenciasAprobadas),
+    diasJustificadosAuto: Number(resultado.diasJustificados) || 0,
+    comentariosAusencias: String(resultado.comentariosAusencias || ''),
+    
+    // Ediciones manuales
+    editadoManualmente: Boolean(cambiosManual),
+    diasExtra: Number(cambiosManual?.diasExtra) || 0,
+    bonoExtra: Number(cambiosManual?.bonoExtra) || 0,
+    diasJustificadosManual: Number(cambiosManual?.diasJustificados) || 0,
+    comentariosEdicion: String(cambiosManual?.comentarios || ''),
+    justificacionesDetalle: Array.isArray(cambiosManual?.justificacionesDetalle) ? cambiosManual.justificacionesDetalle : [],
+    fechaEdicion: cambiosManual?.fechaEdicion || null,
+    
+    // Cálculos finales
+    pagoBase: Number(resultado.pagoTotal) || 0,
+    pagoConJustificaciones: Number(resultado.pagoTotalConJustificaciones || resultado.pagoTotal) || 0,
+    totalDescuentos: Number(resultado.totalDescuentos) || 0,
+    pagoFinal: Number(resultado.pagoFinalConJustificaciones || resultado.pagoFinal) || 0,
+    
+    // Status
+    status: String(resultado.status || 'Sin estado'),
+    statusClass: String(resultado.statusClass || 'status-ok')
+  };
+  
+  empleados[resultado.empleado.uid] = empleadoLimpio;
+  });
+    
+
+  // ✅ DOCUMENTO COMPLETO PARA GUARDAR CON VALIDACIONES
+const nominaDocument = {
+  id: String(nominaId),
+  año: Number(añoActualNum) || new Date().getFullYear(),
+  mes: Number(mesActualNum) || new Date().getMonth() + 1,
+  periodo: String(quinceActual.includes('1') ? 'primera' : 'segunda'),
+  fechaCreacion: new Date(),
+  fechaModificacion: new Date(),
+  estado: "draft",
+  
+  // Configuración del período
+  diasLaborales: Array.isArray(calcularDiasLaboralesPeriodo(añoActualNum, mesActualNum, quinceActual.includes('1') ? 'primera' : 'segunda')) ? 
+                 calcularDiasLaboralesPeriodo(añoActualNum, mesActualNum, quinceActual.includes('1') ? 'primera' : 'segunda') : [],
+  
+  // Resumen y empleados
+  resumen,
+  empleados,
+  
+  // Metadatos
+  calculadoPor: String(auth.currentUser?.email || 'sistema'),
+  version: Number(1)
+};
+
     // Guardar en Firestore
     const nominaRef = doc(db, 'nominas', nominaId);
     await setDoc(nominaRef, nominaDocument);
