@@ -816,13 +816,10 @@ window.calcularNomina = async function() {
     const fechaInicio = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.min(...diasLaborales)).padStart(2, '0')}`;
     const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
     
-    
- 
-    // ✅ CONSULTA ULTRA OPTIMIZADA CON ÍNDICE
-// ✅ CONSULTA CORREGIDA (usa tipo_evento)
+
 const registrosQuery = query(
   collection(db, "registros"),
-  where("tipo_evento", "==", "entrada"),
+  where("tipoEvento", "==", "entrada"),   // ✅ Campo correcto
   where("fecha", ">=", fechaInicio),
   where("fecha", "<=", fechaFin)
 );
