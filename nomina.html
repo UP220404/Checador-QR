@@ -241,22 +241,32 @@
             <option value="segunda">Período 2 (Siguientes 10 días laborales)</option>
           </select>
         </div>
+
         <div class="col-md-6">
-  <div class="d-flex flex-column flex-md-row gap-2">
-    <button onclick="calcularNomina()" class="btn btn-primary btn-lg flex-fill">
-      <i class="bi bi-calculator me-2"></i>Calcular Nómina
+  <div class="btn-container">
+    <button onclick="calcularNomina()" class="btn btn-primary btn-principal">
+      <i class="bi bi-calculator me-2"></i>
+      <span class="btn-text">Calcular Nómina</span>
     </button>
-    <button onclick="guardarNominaCompleta()" class="btn btn-info flex-fill" id="saveBtn" style="display: none;">
-      <i class="bi bi-save me-2"></i>Guardar Nómina
-    </button>
-    <button onclick="exportarExcel()" class="btn btn-success flex-fill" id="exportBtn" style="display: none;">
-      <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
-    </button>
-    <button onclick="generarTodosLosPDFs()" class="btn btn-warning flex-fill" id="pdfMasivoBtn" style="display: none;">
-  <i class="bi bi-file-earmark-pdf me-2"></i>PDFs Masivos
-</button>
+    
+    <div class="btn-group-actions" id="actionButtons" style="display: none;">
+      <button onclick="guardarNominaCompleta()" class="btn btn-info btn-action" id="saveBtn">
+        <i class="bi bi-save me-2"></i>
+        <span class="btn-text">Guardar</span>
+      </button>
+      <button onclick="exportarExcel()" class="btn btn-success btn-action" id="exportBtn">
+        <i class="bi bi-file-earmark-excel me-2"></i>
+        <span class="btn-text">Excel</span>
+      </button>
+      <button onclick="generarTodosLosPDFs()" class="btn btn-warning btn-action" id="pdfMasivoBtn">
+        <i class="bi bi-file-earmark-pdf me-2"></i>
+        <span class="btn-text">PDFs</span>
+      </button>
+    </div>
   </div>
 </div>
+
+
       </div>
     </div>
 
@@ -1269,7 +1279,6 @@ function llenarTabla(resultados) {
     row.innerHTML = `
       <td>
         <div class="fw-bold">${resultado.empleado.nombre}</div>
-        <small class="text-muted">${resultado.empleado.email || ''}</small>
         ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">Editado</span>' : ''}
       </td>
       <td>
@@ -1942,9 +1951,7 @@ function cargarNominaDesdeDocumento(nominaData) {
     mostrarNotificacion('Error al cargar la nómina guardada', 'error');
   }
 
-  document.getElementById('saveBtn').style.display = 'inline-block';
-document.getElementById('exportBtn').style.display = 'inline-block';
-document.getElementById('pdfMasivoBtn').style.display = 'inline-block'; // ✅ AGREGAR ESTA LÍNEA
+  document.getElementById('actionButtons').style.display = 'block';
 
 }
 
@@ -2003,6 +2010,28 @@ window.generarTicketPDF = async function(empleadoId) {
     mostrarNotificacion('Error al generar el ticket PDF', 'error');
   }
 };
+
+// Función para generar período detallado
+function generarPeriodoDetallado() {
+  const mesActualNumber = mesActualNum;
+  const añoActual = añoActualNum;
+  const periodo = quinceActual.includes('1') ? 'primera' : 'segunda';
+  
+  const meses = [
+    '', 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+    'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
+  ];
+  
+  const mesAbrev = meses[mesActualNumber];
+  
+  if (periodo === 'primera') {
+    return `1-15 ${mesAbrev} ${añoActual}`;
+  } else {
+    // Calcular último día del mes
+    const ultimoDia = new Date(añoActual, mesActualNumber, 0).getDate();
+    return `16-${ultimoDia} ${mesAbrev} ${añoActual}`;
+  }
+}
 
 // Función para crear el HTML del ticket PROFESIONAL
 function crearTicketHTML(resultado) {
@@ -2081,7 +2110,7 @@ function crearTicketHTML(resultado) {
                 font-size: 12px;
                 opacity: 0.9;
                 font-weight: 300;
-              ">SERVICIOS DE LIMPIEZA PROFESIONAL</p>
+              ">EXPERIENCIAS A LA CARTA</p>
             </div>
           </div>
           
@@ -2093,14 +2122,10 @@ function crearTicketHTML(resultado) {
               border-radius: 8px;
               margin-bottom: 8px;
             ">
-              <p style="margin: 0; font-size: 10px; opacity: 0.8;">FECHA DE PAGO</p>
-              <p style="margin: 0; font-size: 14px; font-weight: bold;">
-                ${fecha.toLocaleDateString('es-MX', { 
-                  day: '2-digit', 
-                  month: 'short', 
-                  year: 'numeric' 
-                })}
-              </p>
+            <p style="margin: 0; font-size: 12px; font-weight: bold;">
+              ${generarPeriodoDetallado()}
+            </p>
+             
             </div>
             <div style="
               background: rgba(255,255,255,0.2);
@@ -2188,8 +2213,13 @@ function crearTicketHTML(resultado) {
 
             <div style="margin-bottom: 10px;">
               <span style="font-weight: bold; color: #666; font-size: 12px;">PERÍODO:</span>
-              <div style="font-size: 14px; color: #333; margin-top: 2px; font-weight: 500;">
-                ${quinceActual} • ${mesActual}
+              <div style="
+                font-size: 11px;
+                opacity: 0.8;
+                margin-top: 8px;
+                font-style: italic;
+              ">
+                ${generarPeriodoDetallado()}
               </div>
             </div>
           </div>
@@ -2518,7 +2548,7 @@ function crearTicketHTML(resultado) {
         ">
           <div style="opacity: 0.7;">
             <strong>CIELITO HOME</strong><br>
-            Servicios de limpieza profesional
+            Experiencias a la Carta
           </div>
           <div style="opacity: 0.7;">
             Generado: ${fecha.toLocaleDateString('es-MX')}<br>
