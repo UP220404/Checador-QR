@@ -221,6 +221,9 @@
     <button onclick="exportarExcel()" class="btn btn-success flex-fill" id="exportBtn" style="display: none;">
       <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
     </button>
+    <button onclick="generarTodosLosPDFs()" class="btn btn-warning flex-fill" id="pdfMasivoBtn" style="display: none;">
+  <i class="bi bi-file-earmark-pdf me-2"></i>PDFs Masivos
+</button>
   </div>
 </div>
       </div>
@@ -430,6 +433,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   
   <!-- Firebase Scripts -->
   <script type="module">
@@ -1357,6 +1362,23 @@ window.abrirEdicionNomina = function(empleadoId) {
   
   calcularPreviaEdicion();
   new bootstrap.Modal(document.getElementById('modalEditarNomina')).show();
+
+  <div class="compact-header">
+  <div class="compact-name">
+    <strong>${resultado.empleado.nombre}</strong>
+    <span class="badge bg-secondary ms-2">${tipoNombre}</span>
+    ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')" title="Editar nómina">
+      <i class="bi bi-pencil"></i>
+    </button>
+    <button class="btn btn-sm btn-success" onclick="generarTicketPDF('${resultado.empleado.uid}')" title="Generar Ticket PDF">
+      <i class="bi bi-file-earmark-pdf"></i>
+    </button>
+  </div>
+</div>
+
 };
 
   
@@ -1877,7 +1899,351 @@ function cargarNominaDesdeDocumento(nominaData) {
     console.error('Error cargando nómina desde documento:', error);
     mostrarNotificacion('Error al cargar la nómina guardada', 'error');
   }
+
+  document.getElementById('saveBtn').style.display = 'inline-block';
+document.getElementById('exportBtn').style.display = 'inline-block';
+document.getElementById('pdfMasivoBtn').style.display = 'inline-block'; // ✅ AGREGAR ESTA LÍNEA
+
 }
+
+// ===== GENERADOR DE TICKETS PDF PROFESIONALES =====
+window.generarTicketPDF = async function(empleadoId) {
+  const resultado = resultadosNomina.find(r => r.empleado.uid === empleadoId);
+  if (!resultado) {
+    mostrarNotificacion('No se encontraron datos del empleado', 'error');
+    return;
+  }
+
+  try {
+    mostrarNotificacion('Generando ticket PDF...', 'info', 2000);
+
+    // Crear el contenido HTML del ticket
+    const ticketHTML = crearTicketHTML(resultado);
+    
+    // Crear elemento temporal
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = ticketHTML;
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '0';
+    document.body.appendChild(tempDiv);
+    
+    // Configurar opciones para html2canvas
+    const canvas = await html2canvas(tempDiv.firstElementChild, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: 800,
+      height: 1100
+    });
+    
+    // Crear PDF
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('portrait', 'mm', 'a4');
+    
+    // Agregar la imagen del canvas al PDF
+    const imgData = canvas.toDataURL('image/png');
+    pdf.addImage(imgData, 'PNG', 10, 10, 190, 250);
+    
+    // Limpiar elemento temporal
+    document.body.removeChild(tempDiv);
+    
+    // Generar nombre del archivo
+    const nombreArchivo = `Nomina_${resultado.empleado.nombre.replace(/\s+/g, '_')}_${quinceActual.replace(' ', '_')}_${mesActual.replace('/', '-')}.pdf`;
+    
+    // Guardar PDF
+    pdf.save(nombreArchivo);
+    
+    mostrarNotificacion(`✅ Ticket PDF generado: ${resultado.empleado.nombre}`, 'success');
+    
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+    mostrarNotificacion('Error al generar el ticket PDF', 'error');
+  }
+};
+
+// Función para crear el HTML del ticket
+function crearTicketHTML(resultado) {
+  const fecha = new Date();
+  const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+  
+  return `
+    <div class="ticket-pdf" style="
+      width: 800px;
+      height: 1100px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px;
+      font-family: 'Inter', sans-serif;
+      color: #333;
+      position: relative;
+    ">
+      <!-- Header con Logo -->
+      <div style="
+        background: white;
+        border-radius: 20px 20px 0 0;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      ">
+        <div style="
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #4CAF50, #2196F3);
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 15px;
+          color: white;
+          font-size: 32px;
+          font-weight: bold;
+        ">CH</div>
+        <h1 style="
+          margin: 0 0 10px 0;
+          color: #2c3e50;
+          font-size: 28px;
+          font-weight: 800;
+        ">CIELITO HOME</h1>
+        <p style="
+          margin: 0;
+          color: #7f8c8d;
+          font-size: 16px;
+          font-weight: 500;
+        ">COMPROBANTE DE NÓMINA</p>
+      </div>
+
+      <!-- Información del Período -->
+      <div style="
+        background: #f8f9fa;
+        padding: 25px 30px;
+        border-left: 5px solid #4CAF50;
+        margin-bottom: 0;
+      ">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0 0 5px 0; color: #2c3e50; font-size: 18px;">
+              ${quinceActual} • ${mesActual}
+            </h3>
+            <p style="margin: 0; color: #7f8c8d; font-size: 14px;">
+              Días laborales del período: ${resultado.diasLaboralesEsperados}
+            </p>
+          </div>
+          <div style="text-align: right;">
+            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">
+              Generado: ${fecha.toLocaleDateString('es-MX')}
+            </p>
+            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">
+              ${fecha.toLocaleTimeString('es-MX')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información del Empleado -->
+      <div style="
+        background: white;
+        padding: 30px;
+        margin-bottom: 0;
+      ">
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 25px;
+        ">
+          <div>
+            <h2 style="
+              margin: 0 0 10px 0;
+              color: #2c3e50;
+              font-size: 24px;
+              font-weight: 700;
+            ">${resultado.empleado.nombre}</h2>
+            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 14px;">
+              ${resultado.empleado.email}
+            </p>
+            <div style="
+              display: inline-block;
+              background: ${resultado.empleado.tipo === 'becario' ? '#3498db' : '#95a5a6'};
+              color: white;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 500;
+              text-transform: uppercase;
+            ">
+              ${getTipoNombre(resultado.empleado.tipo)}
+            </div>
+          </div>
+          <div style="
+            text-align: right;
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 10px;
+          ">
+            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 12px;">SALARIO BASE</p>
+            <p style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 700;">
+              $${formatearNumero(resultado.salarioQuincenal)}
+            </p>
+          </div>
+        </div>
+
+        <!-- Estadísticas de Asistencia -->
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 15px;
+          margin-bottom: 25px;
+        ">
+          <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 10px;">
+            <div style="font-size: 24px; font-weight: 700; color: #27ae60; margin-bottom: 5px;">
+              ${resultado.diasTrabajados}
+            </div>
+            <div style="font-size: 12px; color: #7f8c8d;">Días Trabajados</div>
+          </div>
+          <div style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 10px;">
+            <div style="font-size: 24px; font-weight: 700; color: #f39c12; margin-bottom: 5px;">
+              ${resultado.retardos}
+            </div>
+            <div style="font-size: 12px; color: #7f8c8d;">Retardos</div>
+          </div>
+          <div style="text-align: center; padding: 15px; background: #f8d7da; border-radius: 10px;">
+            <div style="font-size: 24px; font-weight: 700; color: #e74c3c; margin-bottom: 5px;">
+              ${resultado.diasFaltantes}
+            </div>
+            <div style="font-size: 12px; color: #7f8c8d;">Faltas</div>
+          </div>
+          <div style="text-align: center; padding: 15px; background: #d4edda; border-radius: 10px;">
+            <div style="font-size: 24px; font-weight: 700; color: #28a745; margin-bottom: 5px;">
+              ${resultado.diasEfectivos}
+            </div>
+            <div style="font-size: 12px; color: #7f8c8d;">Días Efectivos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desglose de Pagos -->
+      <div style="
+        background: white;
+        padding: 30px;
+        margin-bottom: 0;
+        border-top: 1px solid #ecf0f1;
+      ">
+        <h3 style="
+          margin: 0 0 20px 0;
+          color: #2c3e50;
+          font-size: 18px;
+          font-weight: 600;
+          border-bottom: 2px solid #4CAF50;
+          padding-bottom: 10px;
+        ">DESGLOSE DE PAGOS</h3>
+
+        <div style="margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
+            <span style="color: #7f8c8d; font-size: 14px;">Pago por día:</span>
+            <span style="color: #2c3e50; font-weight: 600;">$${formatearNumero(resultado.pagoPorDia)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
+            <span style="color: #7f8c8d; font-size: 14px;">Días efectivos (${resultado.diasEfectivos}):</span>
+            <span style="color: #2c3e50; font-weight: 600;">$${formatearNumero(resultado.pagoTotal)}</span>
+          </div>
+          
+          ${resultado.diasDescuento > 0 ? `
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
+              <span style="color: #e74c3c; font-size: 14px;">Descuento por retardos (${resultado.diasDescuento} días):</span>
+              <span style="color: #e74c3c; font-weight: 600;">-$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}</span>
+            </div>
+          ` : ''}
+          
+          ${resultado.descuentoIMSS > 0 ? `
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
+              <span style="color: #3498db; font-size: 14px;">Descuento IMSS:</span>
+              <span style="color: #e74c3c; font-weight: 600;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
+            </div>
+          ` : ''}
+          
+          ${resultado.descuentoCaja > 0 ? `
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
+              <span style="color: #27ae60; font-size: 14px;">Caja de Ahorro:</span>
+              <span style="color: #e74c3c; font-weight: 600;">-$${formatearNumero(resultado.descuentoCaja)}</span>
+            </div>
+          ` : ''}
+          
+          ${resultado.editadoManualmente && resultado.comentariosEdicion ? `
+            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #6f42c1; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0 0 5px 0; color: #6f42c1; font-size: 12px; font-weight: 600;">AJUSTE MANUAL:</p>
+              <p style="margin: 0; color: #495057; font-size: 13px;">${resultado.comentariosEdicion}</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Total Final -->
+        <div style="
+          background: linear-gradient(135deg, #4CAF50, #45a049);
+          color: white;
+          padding: 20px;
+          border-radius: 10px;
+          text-align: center;
+          margin-top: 20px;
+        ">
+          <p style="margin: 0 0 5px 0; font-size: 14px; opacity: 0.9;">PAGO TOTAL</p>
+          <p style="margin: 0; font-size: 32px; font-weight: 800;">
+            $${formatearNumero(pagoFinal)}
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="
+        background: #2c3e50;
+        color: white;
+        padding: 20px 30px;
+        border-radius: 0 0 20px 20px;
+        text-align: center;
+      ">
+        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.8;">
+          Documento generado automáticamente por el Sistema de Nómina
+        </p>
+        <p style="margin: 0; font-size: 11px; opacity: 0.6;">
+          CIELITO HOME • ${fecha.getFullYear()} • Todos los derechos reservados
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+// Generar todos los PDFs de una vez
+window.generarTodosLosPDFs = async function() {
+  if (!resultadosNomina || resultadosNomina.length === 0) {
+    mostrarNotificacion('No hay datos para generar PDFs', 'warning');
+    return;
+  }
+
+  const confirmar = confirm(`¿Generar ${resultadosNomina.length} tickets PDF individuales?\n\nEsto puede tomar varios minutos.`);
+  if (!confirmar) return;
+
+  try {
+    mostrarNotificacion(`Generando ${resultadosNomina.length} PDFs... Por favor espere.`, 'info', 10000);
+    
+    for (let i = 0; i < resultadosNomina.length; i++) {
+      const resultado = resultadosNomina[i];
+      
+      // Mostrar progreso
+      mostrarNotificacion(`Generando PDF ${i + 1}/${resultadosNomina.length}: ${resultado.empleado.nombre}`, 'info', 2000);
+      
+      await generarTicketPDF(resultado.empleado.uid);
+      
+      // Pausa pequeña para no saturar el navegador
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    mostrarNotificacion(`✅ ${resultadosNomina.length} tickets PDF generados exitosamente`, 'success');
+    
+  } catch (error) {
+    console.error('Error generando PDFs masivos:', error);
+    mostrarNotificacion('Error al generar los PDFs masivos', 'error');
+  }
+};
 
     // Configurar event listeners al cargar la página
     document.addEventListener('DOMContentLoaded', function() {
