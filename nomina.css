@@ -1762,3 +1762,64 @@ body {
   background-color: #f8f9fa !important;
   transition: background-color 0.2s ease;
 }
+
+/* ===== SISTEMA DE VALIDACIÓN DE ACCESO ===== */
+.overlay-bloqueo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  color: white;
+}
+
+.contenido-bloqueado {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.modal-content.border-warning {
+  border: 3px solid #ffc107 !important;
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
+}
+
+.acceso-denegado {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+/* Indicador de seguridad */
+.security-indicator {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.security-indicator.active::before {
+  content: "🔓 ";
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
