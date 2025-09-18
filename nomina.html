@@ -126,6 +126,37 @@
             </div>
           </div>
         </div>
+
+        <!-- ✅ NUEVO CAMPO: CUENTA BANCARIA -->
+<div class="row mt-3">
+  <div class="col-md-12">
+    <div class="card p-3">
+      <h6 class="card-title mb-3">🏦 Información Bancaria</h6>
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Número de Cuenta</label>
+          <input type="text" id="cuentaBancaria" class="form-control" placeholder="1234567890123456" maxlength="20">
+          <small class="text-muted">Para exportación en Excel</small>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Banco</label>
+          <select class="form-select" id="nombreBanco">
+            <option value="">Seleccionar banco...</option>
+            <option value="BBVA">BBVA</option>
+            <option value="Banamex">Banamex</option>
+            <option value="Santander">Santander</option>
+            <option value="Banorte">Banorte</option>
+            <option value="HSBC">HSBC</option>
+            <option value="Scotiabank">Scotiabank</option>
+            <option value="Inbursa">Inbursa</option>
+            <option value="Azteca">Azteca</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
         
         <!-- Nuevas opciones: IMSS y Caja de Ahorro -->
         <div class="row mt-3">
@@ -599,6 +630,8 @@
       document.getElementById('tieneIMSS').checked = empleado.tieneIMSS || false;
       document.getElementById('tieneCajaAhorro').checked = empleado.tieneCajaAhorro || false;
       document.getElementById('montoCajaAhorro').value = empleado.montoCajaAhorro || '';
+      document.getElementById('cuentaBancaria').value = empleado.cuentaBancaria || '';
+      document.getElementById('nombreBanco').value = empleado.nombreBanco || '';
       
       toggleCajaAhorro();
       calcularPagoPorDia();
@@ -621,6 +654,8 @@
       const tieneIMSS = document.getElementById('tieneIMSS').checked;
       const tieneCajaAhorro = document.getElementById('tieneCajaAhorro').checked;
       const montoCajaAhorro = parseFloat(document.getElementById('montoCajaAhorro').value) || 0;
+      const cuentaBancaria = document.getElementById('cuentaBancaria').value.trim();
+      const nombreBanco = document.getElementById('nombreBanco').value;
 
       if (!employeeId || !salary || !hours) {
         mostrarNotificacion('Complete todos los campos obligatorios', 'warning');
@@ -637,11 +672,13 @@
         await updateDoc(empleadoRef, {
           salarioQuincenal: salary,
           horasQuincenal: hours,
-          pagoPorHora: salary / hours,
-          pagoPorDia: salary / 10,
+          pagoPorHora: parseFloat((salary / (hours || 1)).toFixed(2)),
+          pagoPorDia: parseFloat((salary / 10).toFixed(2)),
           tieneIMSS: tieneIMSS,
           tieneCajaAhorro: tieneCajaAhorro,
-          montoCajaAhorro: tieneCajaAhorro ? montoCajaAhorro : 0
+          montoCajaAhorro: tieneCajaAhorro ? montoCajaAhorro : 0,
+          cuentaBancaria: cuentaBancaria || null,
+          nombreBanco: nombreBanco || null
         });
 
         mostrarNotificacion('Configuración guardada correctamente', 'success');
@@ -670,8 +707,11 @@
           pagoPorDia: null,
           tieneIMSS: false,
           tieneCajaAhorro: false,
-          montoCajaAhorro: 0
+          montoCajaAhorro: 0,
+          cuentaBancaria: '',
+          nombreBanco:''
         });
+
 
         mostrarNotificacion('Configuración eliminada correctamente', 'success');
         await cargarEmpleados();
@@ -849,6 +889,9 @@ window.calcularNomina = async function() {
           tieneIMSS: userData.tieneIMSS || false,
           tieneCajaAhorro: userData.tieneCajaAhorro || false,
           montoCajaAhorro: userData.montoCajaAhorro || 0,
+          // ✅ INCLUIR DATOS BANCARIOS
+          cuentaBancaria: userData.cuentaBancaria || '',
+          nombreBanco: userData.nombreBanco || '',
           esIndividual: true
         });
       } else {
@@ -1587,11 +1630,16 @@ function recalcularResumenGeneral() {
       }
 
       try {
+       
         const datosExcel = resultadosNomina.map(resultado => {
           const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
           return {
             'Empleado': resultado.empleado.nombre,
+            'Email': resultado.empleado.email,
             'Tipo': getTipoNombre(resultado.empleado.tipo),
+            // ✅ AGREGAR DATOS BANCARIOS AL EXCEL
+            'Banco': resultado.empleado.nombreBanco || 'No especificado',
+            'Cuenta Bancaria': resultado.empleado.cuentaBancaria || 'No especificada',
             'Salario Base': resultado.salarioQuincenal,
             'Días Esperados': resultado.diasLaboralesEsperados,
             'Días Trabajados': resultado.diasTrabajados,
@@ -1605,10 +1653,10 @@ function recalcularResumenGeneral() {
             'Total Descuentos': resultado.totalDescuentos,
             'Pago Final': pagoFinal,
             'Estado': resultado.status,
-            'Ausencias Aprobadas': resultado.tieneAusenciasAprobadas ? 'Sí' : 'No',
-            'Comentarios Ausencias': resultado.comentariosAusencias || ''
+            'Comentarios': resultado.comentariosEdicion || ''
           };
         });
+
 
         const ws = XLSX.utils.json_to_sheet(datosExcel);
         const wb = XLSX.utils.book_new();
@@ -1670,6 +1718,8 @@ const resumen = {
     tieneIMSS: Boolean(resultado.empleado.tieneIMSS),
     tieneCajaAhorro: Boolean(resultado.empleado.tieneCajaAhorro),
     montoCajaAhorro: Number(resultado.empleado.montoCajaAhorro) || 0,
+    cuentaBancaria: String(resultado.empleado.cuentaBancaria || 'No especificada'),
+    nombreBanco: String(resultado.empleado.nombreBanco || 'No especificado'),
     
     // Asistencia automática
     diasLaboralesEsperados: Number(resultado.diasLaboralesEsperados) || 0,
@@ -1954,251 +2004,534 @@ window.generarTicketPDF = async function(empleadoId) {
   }
 };
 
-// Función para crear el HTML del ticket
+// Función para crear el HTML del ticket PROFESIONAL
 function crearTicketHTML(resultado) {
   const fecha = new Date();
   const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
   
+  // Obtener email desde Firebase si está disponible, si no, no mostrar
+  const emailEmpleado = resultado.empleado.email && resultado.empleado.email !== 'sin-email@cielitohome.com' 
+    ? resultado.empleado.email 
+    : '';
+  
   return `
     <div class="ticket-pdf" style="
       width: 800px;
-      height: 1100px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 40px;
-      font-family: 'Inter', sans-serif;
+      min-height: 1100px;
+      background: white;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
       color: #333;
-      position: relative;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
     ">
-      <!-- Header con Logo -->
+      <!-- HEADER PROFESIONAL -->
       <div style="
-        background: white;
-        border-radius: 20px 20px 0 0;
-        padding: 30px;
-        text-align: center;
-        margin-bottom: 0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      ">
-        <div style="
-          width: 80px;
-          height: 80px;
-          background: linear-gradient(135deg, #4CAF50, #2196F3);
-          border-radius: 50%;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 15px;
-          color: white;
-          font-size: 32px;
-          font-weight: bold;
-        ">CH</div>
-        <h1 style="
-          margin: 0 0 10px 0;
-          color: #2c3e50;
-          font-size: 28px;
-          font-weight: 800;
-        ">CIELITO HOME</h1>
-        <p style="
-          margin: 0;
-          color: #7f8c8d;
-          font-size: 16px;
-          font-weight: 500;
-        ">COMPROBANTE DE NÓMINA</p>
-      </div>
-
-      <!-- Información del Período -->
-      <div style="
-        background: #f8f9fa;
-        padding: 25px 30px;
-        border-left: 5px solid #4CAF50;
-        margin-bottom: 0;
-      ">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h3 style="margin: 0 0 5px 0; color: #2c3e50; font-size: 18px;">
-              ${quinceActual} • ${mesActual}
-            </h3>
-            <p style="margin: 0; color: #7f8c8d; font-size: 14px;">
-              Días laborales del período: ${resultado.diasLaboralesEsperados}
-            </p>
-          </div>
-          <div style="text-align: right;">
-            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">
-              Generado: ${fecha.toLocaleDateString('es-MX')}
-            </p>
-            <p style="margin: 0; color: #7f8c8d; font-size: 12px;">
-              ${fecha.toLocaleTimeString('es-MX')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Información del Empleado -->
-      <div style="
-        background: white;
-        padding: 30px;
-        margin-bottom: 0;
+        background: linear-gradient(135deg, #155d27 0%, #2d7a3e 100%);
+        padding: 20px 40px;
+        color: white;
+        position: relative;
+        overflow: hidden;
       ">
         <div style="
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 25px;
+          align-items: center;
         ">
-          <div>
-            <h2 style="
-              margin: 0 0 10px 0;
-              color: #2c3e50;
-              font-size: 24px;
-              font-weight: 700;
-            ">${resultado.empleado.nombre}</h2>
-            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 14px;">
-              ${resultado.empleado.email}
-            </p>
+          <!-- Logo y Empresa -->
+          <div style="display: flex; align-items: center;">
             <div style="
-              display: inline-block;
-              background: ${resultado.empleado.tipo === 'becario' ? '#3498db' : '#95a5a6'};
-              color: white;
-              padding: 4px 12px;
-              border-radius: 20px;
-              font-size: 12px;
-              font-weight: 500;
-              text-transform: uppercase;
+              width: 60px;
+              height: 60px;
+              background: white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin-right: 20px;
+              box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             ">
-              ${getTipoNombre(resultado.empleado.tipo)}
+              <img src="img/cielitohome.png" alt="Logo" style="
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                object-fit: cover;
+              " onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div style="
+                display: none;
+                width: 45px;
+                height: 45px;
+                background: #155d27;
+                border-radius: 50%;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 18px;
+              ">CH</div>
+            </div>
+            <div>
+              <h1 style="
+                margin: 0;
+                font-size: 24px;
+                font-weight: 800;
+                letter-spacing: 1px;
+              ">CIELITO HOME</h1>
+              <p style="
+                margin: 0;
+                font-size: 12px;
+                opacity: 0.9;
+                font-weight: 300;
+              ">SERVICIOS DE LIMPIEZA PROFESIONAL</p>
             </div>
           </div>
-          <div style="
-            text-align: right;
-            background: #ecf0f1;
-            padding: 15px;
-            border-radius: 10px;
-          ">
-            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 12px;">SALARIO BASE</p>
-            <p style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 700;">
-              $${formatearNumero(resultado.salarioQuincenal)}
-            </p>
+          
+          <!-- Fecha y Folio -->
+          <div style="text-align: right;">
+            <div style="
+              background: rgba(255,255,255,0.2);
+              padding: 8px 12px;
+              border-radius: 8px;
+              margin-bottom: 8px;
+            ">
+              <p style="margin: 0; font-size: 10px; opacity: 0.8;">FECHA DE PAGO</p>
+              <p style="margin: 0; font-size: 14px; font-weight: bold;">
+                ${fecha.toLocaleDateString('es-MX', { 
+                  day: '2-digit', 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div style="
+              background: rgba(255,255,255,0.2);
+              padding: 8px 12px;
+              border-radius: 8px;
+            ">
+              <p style="margin: 0; font-size: 10px; opacity: 0.8;">PERÍODO DE PAGO</p>
+              <p style="margin: 0; font-size: 12px; font-weight: bold;">
+                ${fecha.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }).toUpperCase()}
+              </p>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Estadísticas de Asistencia -->
+      <!-- TÍTULO DEL RECIBO -->
+      <div style="
+        background: #f8f9fa;
+        padding: 15px 40px;
+        border-bottom: 3px solid #155d27;
+        text-align: center;
+      ">
+        <h2 style="
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+          color: #155d27;
+          letter-spacing: 0.5px;
+        ">RECIBO DE PAGO</h2>
+      </div>
+
+      <!-- INFORMACIÓN DEL EMPLEADO -->
+      <div style="
+        padding: 25px 40px;
+        border-bottom: 1px solid #e9ecef;
+      ">
+        <div style="
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 30px;
+          align-items: start;
+        ">
+          <!-- Datos del Empleado -->
+          <div>
+            <h3 style="
+              margin: 0 0 15px 0;
+              font-size: 16px;
+              color: #155d27;
+              border-bottom: 2px solid #155d27;
+              padding-bottom: 5px;
+              display: inline-block;
+            ">DATOS DEL EMPLEADO</h3>
+            
+            <div style="margin-bottom: 10px;">
+              <span style="font-weight: bold; color: #666; font-size: 12px;">NOMBRE:</span>
+              <div style="font-size: 16px; font-weight: 600; color: #333; margin-top: 2px;">
+                ${resultado.empleado.nombre}
+              </div>
+            </div>
+            
+            ${emailEmpleado ? `
+              <div style="margin-bottom: 10px;">
+                <span style="font-weight: bold; color: #666; font-size: 12px;">EMAIL:</span>
+                <div style="font-size: 14px; color: #666; margin-top: 2px;">
+                  ${emailEmpleado}
+                </div>
+              </div>
+            ` : ''}
+            
+            <div style="margin-bottom: 10px;">
+              <span style="font-weight: bold; color: #666; font-size: 12px;">TIPO DE EMPLEADO:</span>
+              <div style="
+                display: inline-block;
+                background: ${resultado.empleado.tipo === 'becario' ? '#17a2b8' : '#6c757d'};
+                color: white;
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 500;
+                margin-top: 5px;
+              ">
+                ${getTipoNombre(resultado.empleado.tipo)}
+              </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+              <span style="font-weight: bold; color: #666; font-size: 12px;">PERÍODO:</span>
+              <div style="font-size: 14px; color: #333; margin-top: 2px; font-weight: 500;">
+                ${quinceActual} • ${mesActual}
+              </div>
+            </div>
+          </div>
+
+          <!-- Información del Salario -->
+          <div style="
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #155d27;
+          ">
+            <h4 style="
+              margin: 0 0 15px 0;
+              font-size: 14px;
+              color: #155d27;
+              text-align: center;
+            ">SALARIO BASE</h4>
+            <div style="text-align: center;">
+              <div style="
+                font-size: 24px;
+                font-weight: 800;
+                color: #155d27;
+                margin-bottom: 5px;
+              ">$${formatearNumero(resultado.salarioQuincenal)}</div>
+              <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
+                QUINCENAL
+              </div>
+              <div style="
+                background: white;
+                padding: 8px;
+                border-radius: 6px;
+                font-size: 11px;
+                color: #666;
+              ">
+                <strong>Días laborales:</strong> ${resultado.diasLaboralesEsperados}<br>
+                <strong>Pago por día:</strong> $${formatearNumero(resultado.pagoPorDia)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DESGLOSE DE ASISTENCIA -->
+      <div style="
+        padding: 25px 40px;
+        border-bottom: 1px solid #e9ecef;
+      ">
+        <h3 style="
+          margin: 0 0 20px 0;
+          font-size: 16px;
+          color: #155d27;
+          border-bottom: 2px solid #155d27;
+          padding-bottom: 5px;
+          display: inline-block;
+        ">REGISTRO DE ASISTENCIA</h3>
+        
         <div style="
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 15px;
-          margin-bottom: 25px;
         ">
-          <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 10px;">
-            <div style="font-size: 24px; font-weight: 700; color: #27ae60; margin-bottom: 5px;">
+          <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: #155d27;">
               ${resultado.diasTrabajados}
             </div>
-            <div style="font-size: 12px; color: #7f8c8d;">Días Trabajados</div>
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">
+              DÍAS TRABAJADOS
+            </div>
           </div>
-          <div style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 10px;">
-            <div style="font-size: 24px; font-weight: 700; color: #f39c12; margin-bottom: 5px;">
+          
+          <div style="text-align: center; padding: 15px; background: ${resultado.retardos > 0 ? '#fff3cd' : '#e8f5e8'}; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: ${resultado.retardos > 0 ? '#856404' : '#155d27'};">
               ${resultado.retardos}
             </div>
-            <div style="font-size: 12px; color: #7f8c8d;">Retardos</div>
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">
+              RETARDOS
+            </div>
           </div>
-          <div style="text-align: center; padding: 15px; background: #f8d7da; border-radius: 10px;">
-            <div style="font-size: 24px; font-weight: 700; color: #e74c3c; margin-bottom: 5px;">
+          
+          <div style="text-align: center; padding: 15px; background: ${resultado.diasFaltantes > 0 ? '#f8d7da' : '#e8f5e8'}; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: ${resultado.diasFaltantes > 0 ? '#721c24' : '#155d27'};">
               ${resultado.diasFaltantes}
             </div>
-            <div style="font-size: 12px; color: #7f8c8d;">Faltas</div>
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">
+              FALTAS
+            </div>
           </div>
-          <div style="text-align: center; padding: 15px; background: #d4edda; border-radius: 10px;">
-            <div style="font-size: 24px; font-weight: 700; color: #28a745; margin-bottom: 5px;">
+          
+          <div style="text-align: center; padding: 15px; background: #e7f3ff; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: #0066cc;">
               ${resultado.diasEfectivos}
             </div>
-            <div style="font-size: 12px; color: #7f8c8d;">Días Efectivos</div>
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">
+              DÍAS EFECTIVOS
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Desglose de Pagos -->
+      <!-- DESGLOSE FINANCIERO -->
       <div style="
-        background: white;
-        padding: 30px;
-        margin-bottom: 0;
-        border-top: 1px solid #ecf0f1;
+        padding: 25px 40px;
       ">
         <h3 style="
           margin: 0 0 20px 0;
-          color: #2c3e50;
-          font-size: 18px;
-          font-weight: 600;
-          border-bottom: 2px solid #4CAF50;
-          padding-bottom: 10px;
-        ">DESGLOSE DE PAGOS</h3>
+          font-size: 16px;
+          color: #155d27;
+          border-bottom: 2px solid #155d27;
+          padding-bottom: 5px;
+          display: inline-block;
+        ">DESGLOSE DE PAGO</h3>
+        
+        <div style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 30px;
+        ">
+          <!-- Columna Izquierda: Conceptos -->
+          <div>
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid #eee;
+              font-size: 14px;
+            ">
+              <span>Salario base</span>
+              <span style="font-weight: bold;">$${formatearNumero(resultado.salarioQuincenal)}</span>
+            </div>
+            
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid #eee;
+              font-size: 14px;
+            ">
+              <span>Días efectivos (${resultado.diasEfectivos})</span>
+              <span style="font-weight: bold;">$${formatearNumero(resultado.pagoTotal)}</span>
+            </div>
 
-        <div style="margin-bottom: 15px;">
-          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
-            <span style="color: #7f8c8d; font-size: 14px;">Pago por día:</span>
-            <span style="color: #2c3e50; font-weight: 600;">$${formatearNumero(resultado.pagoPorDia)}</span>
+            ${resultado.diasDescuento > 0 ? `
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                color: #dc3545;
+              ">
+                <span>Descuento por retardos (${resultado.diasDescuento} días)</span>
+                <span style="font-weight: bold;">-$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}</span>
+              </div>
+            ` : ''}
+
+            ${resultado.editadoManualmente && resultado.diasExtra > 0 ? `
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                color: #28a745;
+              ">
+                <span>Días extra (${resultado.diasExtra})</span>
+                <span style="font-weight: bold;">+$${formatearNumero(resultado.diasExtra * resultado.pagoPorDia)}</span>
+              </div>
+            ` : ''}
+
+            ${resultado.editadoManualmente && resultado.bonoExtra > 0 ? `
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                color: #28a745;
+              ">
+                <span>Bono especial</span>
+                <span style="font-weight: bold;">+$${formatearNumero(resultado.bonoExtra)}</span>
+              </div>
+            ` : ''}
           </div>
-          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
-            <span style="color: #7f8c8d; font-size: 14px;">Días efectivos (${resultado.diasEfectivos}):</span>
-            <span style="color: #2c3e50; font-weight: 600;">$${formatearNumero(resultado.pagoTotal)}</span>
+
+          <!-- Columna Derecha: Descuentos -->
+          <div>
+            <h4 style="
+              margin: 0 0 15px 0;
+              font-size: 14px;
+              color: #666;
+              text-transform: uppercase;
+            ">Descuentos</h4>
+            
+            ${resultado.descuentoIMSS > 0 ? `
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                color: #dc3545;
+              ">
+                <span>IMSS</span>
+                <span style="font-weight: bold;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
+              </div>
+            ` : ''}
+
+            ${resultado.descuentoCaja > 0 ? `
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                color: #dc3545;
+              ">
+                <span>Caja de ahorro</span>
+                <span style="font-weight: bold;">-$${formatearNumero(resultado.descuentoCaja)}</span>
+              </div>
+            ` : ''}
+
+            ${resultado.totalDescuentos === 0 ? `
+              <div style="
+                padding: 20px;
+                text-align: center;
+                background: #e8f5e8;
+                border-radius: 8px;
+                color: #155d27;
+                font-weight: 500;
+              ">
+                Sin descuentos
+              </div>
+            ` : ''}
+
+            <!-- Total de Descuentos -->
+            ${resultado.totalDescuentos > 0 ? `
+              <div style="
+                margin-top: 15px;
+                padding: 12px;
+                background: #fff5f5;
+                border-radius: 6px;
+                border-left: 4px solid #dc3545;
+              ">
+                <div style="
+                  display: flex;
+                  justify-content: space-between;
+                  font-weight: bold;
+                  color: #dc3545;
+                ">
+                  <span>Total descuentos:</span>
+                  <span>-$${formatearNumero(resultado.totalDescuentos)}</span>
+                </div>
+              </div>
+            ` : ''}
           </div>
-          
-          ${resultado.diasDescuento > 0 ? `
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
-              <span style="color: #e74c3c; font-size: 14px;">Descuento por retardos (${resultado.diasDescuento} días):</span>
-              <span style="color: #e74c3c; font-weight: 600;">-$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}</span>
-            </div>
-          ` : ''}
-          
-          ${resultado.descuentoIMSS > 0 ? `
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
-              <span style="color: #3498db; font-size: 14px;">Descuento IMSS:</span>
-              <span style="color: #e74c3c; font-weight: 600;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
-            </div>
-          ` : ''}
-          
-          ${resultado.descuentoCaja > 0 ? `
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ecf0f1;">
-              <span style="color: #27ae60; font-size: 14px;">Caja de Ahorro:</span>
-              <span style="color: #e74c3c; font-weight: 600;">-$${formatearNumero(resultado.descuentoCaja)}</span>
-            </div>
-          ` : ''}
-          
-          ${resultado.editadoManualmente && resultado.comentariosEdicion ? `
-            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #6f42c1; border-radius: 0 8px 8px 0;">
-              <p style="margin: 0 0 5px 0; color: #6f42c1; font-size: 12px; font-weight: 600;">AJUSTE MANUAL:</p>
-              <p style="margin: 0; color: #495057; font-size: 13px;">${resultado.comentariosEdicion}</p>
-            </div>
-          ` : ''}
         </div>
 
-        <!-- Total Final -->
+        ${resultado.editadoManualmente && resultado.comentariosEdicion ? `
+          <div style="
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            border-left: 4px solid #6f42c1;
+          ">
+            <h5 style="
+              margin: 0 0 8px 0;
+              font-size: 12px;
+              color: #6f42c1;
+              font-weight: 600;
+            ">OBSERVACIONES:</h5>
+            <p style="margin: 0; color: #495057; font-size: 13px; line-height: 1.4;">
+              ${resultado.comentariosEdicion}
+            </p>
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- TOTAL FINAL DESTACADO -->
+      <div style="
+        background: linear-gradient(135deg, #155d27 0%, #2d7a3e 100%);
+        color: white;
+        padding: 25px 40px;
+        text-align: center;
+        margin-top: 20px;
+      ">
+        <div style="margin-bottom: 10px;">
+          <span style="
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+            letter-spacing: 1px;
+          ">TOTAL A PAGAR</span>
+        </div>
         <div style="
-          background: linear-gradient(135deg, #4CAF50, #45a049);
-          color: white;
-          padding: 20px;
-          border-radius: 10px;
-          text-align: center;
-          margin-top: 20px;
+          font-size: 36px;
+          font-weight: 800;
+          letter-spacing: 1px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         ">
-          <p style="margin: 0 0 5px 0; font-size: 14px; opacity: 0.9;">PAGO TOTAL</p>
-          <p style="margin: 0; font-size: 32px; font-weight: 800;">
-            $${formatearNumero(pagoFinal)}
-          </p>
+          $${formatearNumero(pagoFinal)}
+        </div>
+        <div style="
+          font-size: 11px;
+          opacity: 0.8;
+          margin-top: 8px;
+          font-style: italic;
+        ">
+          ${quinceActual.toLowerCase()} • ${mesActual}
         </div>
       </div>
 
-      <!-- Footer -->
+      <!-- FOOTER PROFESIONAL -->
       <div style="
         background: #2c3e50;
         color: white;
-        padding: 20px 30px;
-        border-radius: 0 0 20px 20px;
+        padding: 20px 40px;
         text-align: center;
+        font-size: 11px;
       ">
-        <p style="margin: 0 0 5px 0; font-size: 12px; opacity: 0.8;">
-          Documento generado automáticamente por el Sistema de Nómina
-        </p>
-        <p style="margin: 0; font-size: 11px; opacity: 0.6;">
-          CIELITO HOME • ${fecha.getFullYear()} • Todos los derechos reservados
-        </p>
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        ">
+          <div style="opacity: 0.7;">
+            <strong>CIELITO HOME</strong><br>
+            Servicios de limpieza profesional
+          </div>
+          <div style="opacity: 0.7;">
+            Generado: ${fecha.toLocaleDateString('es-MX')}<br>
+            ${fecha.toLocaleTimeString('es-MX')}
+          </div>
+        </div>
+        <div style="
+          border-top: 1px solid rgba(255,255,255,0.2);
+          padding-top: 10px;
+          opacity: 0.6;
+        ">
+          Este documento es un comprobante oficial de pago • ${fecha.getFullYear()} Cielito Home 2025 - Todos los derechos reservados
+        </div>
       </div>
     </div>
   `;
