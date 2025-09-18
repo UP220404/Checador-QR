@@ -525,8 +525,12 @@
         return;
       }
 
-      cargarEmpleados();
-    });
+      
+  // ✅ AGREGAR AQUÍ LA INICIALIZACIÓN DE VALIDACIÓN
+  inicializarValidacionAcceso();
+
+  cargarEmpleados();
+});
 
     // Función para manejar caja de ahorro
     window.toggleCajaAhorro = function() {
@@ -1886,23 +1890,27 @@ function cargarNominaDesdeDocumento(nominaData) {
 
     // ===== SISTEMA DE VALIDACIÓN DE ACCESO =====
 let accesoAutorizado = false;
-const PASSWORD_NOMINA = 'CIELITO2024RH'; // Cambiar por password deseado
+const PASSWORD_NOMINA = 'CIELITO2026RH'; // Cambiar por password deseado
 
-// Configurar validación al cargar página
-document.addEventListener('DOMContentLoaded', function() {
-  inicializarValidacionAcceso();
-});
 
 const EMAILS_NOMINA_AUTORIZADOS = [
-  'sistemas16ch@gmail.com',           // Recursos Humanos
-  'direcciongeneral@cielitohome.com',  // Dirección General
-  'sistemas@cielitohome.com'           // Sistemas (para soporte)
+  'sistemas16ch@gmail.com',               // ✅ ESTE YA ESTÁ
+  'sistemas16cielitohome@gmail.com',      // ✅ AGREGAR ESTE
+  'leticia@cielitohome.com',              // ✅ AGREGAR ESTE
+  'sistemas@cielitohome.com',
+  'direcciongeneral@cielitohome.com'
 ];
 
+
 function inicializarValidacionAcceso() {
+  // ✅ VERIFICAR QUE auth.currentUser ESTÉ DISPONIBLE
+  if (!auth.currentUser) {
+    console.warn('⚠️ Usuario aún no autenticado, esperando...');
+    return;
+  }
   
-   // Verificar email autorizado primero
-  if (!EMAILS_NOMINA_AUTORIZADOS.includes(auth.currentUser?.email)) {
+  // Verificar email autorizado primero
+  if (!EMAILS_NOMINA_AUTORIZADOS.includes(auth.currentUser.email)) {
     mostrarNotificacion('❌ Su usuario no tiene permisos para acceder al módulo de nómina', 'error', 8000);
     setTimeout(() => window.location.href = 'admin.html', 3000);
     return;
@@ -1926,6 +1934,7 @@ function inicializarValidacionAcceso() {
     }
   });
 }
+
 
 window.validarAccesoNomina = function() {
   const password = document.getElementById('passwordNomina').value;
