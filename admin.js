@@ -2251,23 +2251,6 @@ async function rechazarAusencia(id) {
   }
 }
 
-/**
- * Elimina una ausencia
- */
-async function eliminarAusencia() {
-  if (!ausenciaEditandoId) return;
-  if (!confirm("¿Estás seguro de eliminar esta ausencia? Esta acción no se puede deshacer.")) return;
-
-  try {
-    await deleteDoc(doc(db, "ausencias", ausenciaEditandoId));
-    mostrarNotificacion("Ausencia eliminada correctamente", "success");
-    bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
-    cargarAusencias();
-  } catch (error) {
-    console.error("Error eliminando ausencia:", error);
-    mostrarNotificacion("Error al eliminar la ausencia", "danger");
-  }
-}
 
 // Event Listeners para ausencias
 document.addEventListener('DOMContentLoaded', function() {
