@@ -1186,7 +1186,7 @@ async function cargarRankingMensualOptimizado(mes, anio) {
 }
 
 
-// ✅ VERSIÓN CORREGIDA (líneas 1125-1140 aproximadamente)
+
 async function calcularRankingMesActual() {
   const ahora = new Date();
   const mesActual = ahora.getMonth();
@@ -1266,7 +1266,6 @@ function calcularPuntajes(entradas) {
   return puntajes;
 }
 
-
 async function renderRankingPuntualidad() {
   const selectorMes = document.getElementById("selectorMesPuntualidad");
   const selectorAnio = document.getElementById("selectorAnioPuntualidad");
@@ -1287,66 +1286,6 @@ async function renderRankingPuntualidad() {
   // ✅ USAR FUNCIÓN OPTIMIZADA
   const puntaje = await cargarRankingMensualOptimizado(mesSeleccionado, anioSeleccionado);
 
-  // Resto de la función igual...
-  let usuarios = Object.entries(puntaje)
-    .filter(([nombre, puntos]) => puntos > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-
-  // Si no hay ranking guardado, calcularlo en tiempo real
-  if (Object.keys(puntaje).length === 0) {
-    console.log("⚠️ No hay ranking guardado, calculando en tiempo real...");
-    
-    // Filtrar entradas del mes seleccionado
-    const entradasMes = registros.filter(r => {
-      if (r.tipoEvento !== "entrada") return false;
-      
-      const fecha = new Date(r.timestamp.seconds * 1000);
-      return fecha.getMonth() === mesSeleccionado && 
-             fecha.getFullYear() === anioSeleccionado;
-    });
-
-    console.log(`📝 Entradas encontradas en el mes: ${entradasMes.length}`);
-
-    // Calcular puntaje manualmente
-    const puntajeCalculado = {};
-    entradasMes.forEach(r => {
-      const fecha = new Date(r.timestamp.seconds * 1000);
-      const hora = fecha.getHours();
-      const minutos = fecha.getMinutes();
-      let puntos = 0;
-
-      if (hora === 7 && minutos <= 45) {
-        puntos = 4; // Entrada entre 7:00 y 7:45
-      } else if (hora < 8) {
-        puntos = 3; // Entrada antes de las 8:00
-      } else if (hora === 8 && minutos <= 5) {
-        puntos = 2; // Entrada entre 8:00 y 8:05
-      } else if (hora === 8 && minutos <= 10) {
-        puntos = 1; // Entrada entre 8:06 y 8:10
-      }
-      
-      if (puntos > 0) {
-        // Usar el nombre del registro directamente
-        const nombreUsuario = r.nombre || r.nombreUsuario || 'Usuario Desconocido';
-        puntajeCalculado[nombreUsuario] = (puntajeCalculado[nombreUsuario] || 0) + puntos;
-        console.log(`➕ ${nombreUsuario}: +${puntos} puntos (Total: ${puntajeCalculado[nombreUsuario]})`);
-      }
-    });
-
-    // Usar el puntaje calculado
-    Object.assign(puntaje, puntajeCalculado);
-  }
-
-  // Crear array de usuarios y ordenar por puntos
-  let usuarios = Object.entries(puntaje)
-    .filter(([nombre, puntos]) => puntos > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5); // Solo top 5
-
-  console.log(`👥 Usuarios en el ranking:`, usuarios);
-
   const rankingList = document.getElementById("ranking-puntualidad");
   if (!rankingList) {
     console.error("❌ Elemento ranking-puntualidad no encontrado");
@@ -1354,16 +1293,24 @@ async function renderRankingPuntualidad() {
   }
 
   // Actualizar título del mes
-  const tituloRanking = document.querySelector('.card:has(#ranking-puntualidad) .card-header h5');
+  const tituloRanking = document.querySelector('.card:has(#ranking-puntualidad) .card-header');
   if (tituloRanking) {
     const nombreMes = new Date(anioSeleccionado, mesSeleccionado).toLocaleDateString("es-MX", { 
       month: 'long', 
       year: 'numeric' 
     });
-    tituloRanking.innerHTML = `<i class="bi bi-trophy-fill"></i> Ranking de Puntualidad - ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)}`;
+    tituloRanking.innerHTML = `🏆 Ranking de Puntualidad - ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)}`;
   }
 
   rankingList.innerHTML = "";
+
+  // Crear array de usuarios y ordenar por puntos
+  const usuarios = Object.entries(puntaje)
+    .filter(([nombre, puntos]) => puntos > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  console.log(`👥 Usuarios en el ranking:`, usuarios);
 
   // Configuración de estilos para cada medalla
   const estilos = [
@@ -1372,14 +1319,6 @@ async function renderRankingPuntualidad() {
     { icon: '<i class="bi bi-award-fill"></i>', color: "#ffc107", bgGradient: "linear-gradient(135deg, #ffc107, #e0a800)", nombre: "Oro", emoji: "🥇" },
     { icon: '<i class="bi bi-award-fill"></i>', color: "#6c757d", bgGradient: "linear-gradient(135deg, #6c757d, #5a6268)", nombre: "Plata", emoji: "🥈" },
     { icon: '<i class="bi bi-award-fill"></i>', color: "#b87333", bgGradient: "linear-gradient(135deg, #b87333, #996633)", nombre: "Bronce", emoji: "🥉" }
-  ];
-
-  const medallaClases = [
-    "ranking-medalla ranking-diamante",
-    "ranking-medalla ranking-rubi", 
-    "ranking-medalla ranking-oro",
-    "ranking-medalla ranking-plata",
-    "ranking-medalla ranking-bronce"
   ];
 
   if (usuarios.length === 0) {
@@ -1410,8 +1349,7 @@ async function renderRankingPuntualidad() {
     // Asegurar que no exceda el array de medallas
     const medallaActual = Math.min(indiceMedalla, estilos.length - 1);
     
-    const { icon, color, bgGradient, nombre: nombreMedalla, emoji } = estilos[medallaActual];
-    const clasesMedalla = medallaClases[medallaActual];
+    const { icon, bgGradient, nombre: nombreMedalla, emoji } = estilos[medallaActual];
     const posicionDisplay = indice + 1;
     
     // Crear elemento con diseño mejorado
@@ -1426,7 +1364,7 @@ async function renderRankingPuntualidad() {
         <div class="ranking-info-nuevo">
           <div class="ranking-name-nuevo">${nombre}</div>
           <div class="ranking-medal-nuevo">
-            ${icon} <span class="${clasesMedalla}">${nombreMedalla}</span>
+            ${icon} <span>${nombreMedalla}</span>
           </div>
         </div>
         <div class="ranking-points-nuevo">
@@ -1443,6 +1381,7 @@ async function renderRankingPuntualidad() {
 
   console.log(`✅ Ranking renderizado con ${usuarios.length} usuarios`);
 }
+
 
 // También asegúrate de que la función calcularYGuardarRankingMensual esté guardando correctamente:
 async function calcularYGuardarRankingMensual() {
