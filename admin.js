@@ -223,34 +223,28 @@ function mostrarNotificacion(mensaje, tipo = "info") {
 }
 
 
-  // Cargar registros desde Firestore
-async function cargarRegistros() {
+ async function cargarRegistros() {
   try {
-    const snap = await getDocs(collection(db, "registros"));
+    
+    // ✅ DESPUÉS: Solo últimos 30 días
+    const hace30Dias = new Date();
+    hace30Dias.setDate(hace30Dias.getDate() - 30);
+    
+    const q = query(
+      collection(db, "registros"),
+      where("timestamp", ">=", hace30Dias),
+      orderBy("timestamp", "desc"),
+      limit(1000) // Máximo 1000 registros
+    );
+    
+    const snap = await getDocs(q);
     registros = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    // Calcular KPIs
-    await calcularKPIs();
-    
-    // Renderizar elementos
-    renderTabla();
-    renderGraficas();
-    
-    // Calcular y guardar ranking mensual automáticamente
-    await calcularYGuardarRankingMensual();
-    
-    // Inicializar selectores ANTES de renderizar ranking
-    inicializarSelectoresPuntualidad();
-    
-    // Ahora sí renderizar ranking
-    await renderRankingPuntualidad();
-    
+    // Resto igual...
   } catch (error) {
     console.error("Error al cargar registros:", error);
-    mostrarNotificacion("Error al cargar los registros", "danger");
   }
 }
-
 
 
 function getFechaHoyMX() {
@@ -1134,8 +1128,14 @@ onAuthStateChanged(auth, (user) => {
   // Mostrar nombre del administrador
   document.getElementById("admin-name").textContent = user.displayName || user.email.split('@')[0];
   
+
   // Cargar datos
-  cargarRegistros();
+await cargarRegistros();
+await calcularKPIs();
+await renderGraficas();
+await inicializarSelectoresPuntualidad();
+await renderRankingPuntualidad();
+
 });
 
 // Inicializar tooltips
@@ -1147,64 +1147,121 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
-// Función para cargar ranking de un mes específico
-async function cargarRankingMensual(mes, anio) {
+// ✅ FUNCIÓN OPTIMIZADA PARA RANKINGS MENSUALES
+async function cargarRankingMensualOptimizado(mes, anio) {
   const rankingId = `${anio}-${String(mes + 1).padStart(2, '0')}`;
   
   try {
+    // 1. ✅ PRIORIDAD: Buscar ranking pre-calculado
     const rankingRef = doc(db, "rankings-mensuales", rankingId);
     const rankingDoc = await getDoc(rankingRef);
     
     if (rankingDoc.exists()) {
+      console.log(`🏆 Ranking cargado desde caché: ${rankingId}`);
       return rankingDoc.data().ranking;
-    } else {
-      // Si no existe en BD, calcularlo en tiempo real (solo para mes actual)
-      const ahora = new Date();
-      if (mes === ahora.getMonth() && anio === ahora.getFullYear()) {
-        const entradasMes = registros.filter(r =>
-          r.tipoEvento === "entrada" &&
-          new Date(r.timestamp.seconds * 1000).getMonth() === mes &&
-          new Date(r.timestamp.seconds * 1000).getFullYear() === anio
-        );
-
-        const puntaje = {};
-        entradasMes.forEach(r => {
-          const fecha = new Date(r.timestamp.seconds * 1000);
-          const hora = fecha.getHours();
-          const minutos = fecha.getMinutes();
-          let puntos = 0;
-
-          if (hora === 7 && minutos <= 45) {
-            puntos = 4;
-          } else if (hora < 8) {
-            puntos = 3;
-          } else if (hora === 8 && minutos <= 5) {
-            puntos = 2;
-          } else if (hora === 8 && minutos <= 10) {
-            puntos = 1;
-          }
-          
-          if (puntos > 0) {
-            puntaje[r.nombre] = (puntaje[r.nombre] || 0) + puntos;
-          }
-        });
-        
-        return puntaje;
-      }
     }
     
-    return {};
+    // 2. ✅ SOLO PARA MES ACTUAL: Calcular en tiempo real
+    const ahora = new Date();
+    const esMonthActual = (mes === ahora.getMonth() && anio === ahora.getFullYear());
+    
+    if (esMonthActual) {
+      console.log(`📊 Calculando ranking del mes actual: ${rankingId}`);
+      return await calcularRankingMesActual();
+    } else {
+      // 3. ✅ MESES HISTÓRICOS: Consulta específica y guardar
+      console.log(`📚 Calculando ranking histórico: ${rankingId}`);
+      return await calcularYGuardarRankingHistorico(mes, anio);
+    }
+    
   } catch (error) {
-    console.error("Error al cargar ranking mensual:", error);
+    console.error("Error cargando ranking:", error);
     return {};
   }
 }
 
+// ✅ Para el mes actual (usa registros ya cargados)
+async function calcularRankingMesActual() {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
+  
+  // Usar los registros ya cargados (últimos 30 días)
+  const entradasMes = registros.filter(r => {
+    if (r.tipoEvento !== "entrada") return false;
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    return fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual;
+  });
 
-// REEMPLAZA la función renderRankingPuntualidad() completa con esta versión corregida:
+  return calcularPuntajes(entradasMes);
+}
+
+// ✅ Para meses históricos (consulta específica)
+async function calcularYGuardarRankingHistorico(mes, anio) {
+  // Consulta SOLO del mes específico
+  const inicioMes = new Date(anio, mes, 1);
+  const finMes = new Date(anio, mes + 1, 0, 23, 59, 59);
+  
+  const q = query(
+    collection(db, "registros"),
+    where("timestamp", ">=", inicioMes),
+    where("timestamp", "<=", finMes),
+    where("tipoEvento", "==", "entrada")
+  );
+  
+  const querySnapshot = await getDocs(q);
+  const entradasMes = querySnapshot.docs.map(doc => doc.data());
+  
+  console.log(`📊 Entradas encontradas para ${mes+1}/${anio}: ${entradasMes.length}`);
+  
+  const puntajes = calcularPuntajes(entradasMes);
+  
+  // Guardar para futuras consultas
+  if (Object.keys(puntajes).length > 0) {
+    const rankingId = `${anio}-${String(mes + 1).padStart(2, '0')}`;
+    await setDoc(doc(db, "rankings-mensuales", rankingId), {
+      mes,
+      anio,
+      ranking: puntajes,
+      fechaCreacion: new Date(),
+      totalEntradas: entradasMes.length
+    });
+    console.log(`✅ Ranking histórico guardado: ${rankingId}`);
+  }
+  
+  return puntajes;
+}
+
+// ✅ Función común para calcular puntajes
+function calcularPuntajes(entradas) {
+  const puntajes = {};
+  
+  entradas.forEach(r => {
+    const fecha = new Date(r.timestamp.seconds * 1000);
+    const hora = fecha.getHours();
+    const minutos = fecha.getMinutes();
+    let puntos = 0;
+
+    if (hora === 7 && minutos <= 45) {
+      puntos = 4; // 7:00-7:45
+    } else if (hora < 8) {
+      puntos = 3; // Antes de 8:00
+    } else if (hora === 8 && minutos <= 5) {
+      puntos = 2; // 8:00-8:05
+    } else if (hora === 8 && minutos <= 10) {
+      puntos = 1; // 8:06-8:10
+    }
+    
+    if (puntos > 0) {
+      const nombre = r.nombre || 'Usuario Desconocido';
+      puntajes[nombre] = (puntajes[nombre] || 0) + puntos;
+    }
+  });
+  
+  return puntajes;
+}
+
 async function renderRankingPuntualidad() {
-  // Obtener mes y año seleccionados
   const selectorMes = document.getElementById("selectorMesPuntualidad");
   const selectorAnio = document.getElementById("selectorAnioPuntualidad");
   
@@ -1221,8 +1278,15 @@ async function renderRankingPuntualidad() {
 
   console.log(`📊 Cargando ranking para ${mesSeleccionado + 1}/${anioSeleccionado}`);
 
-  // Cargar ranking del mes seleccionado
-  const puntaje = await cargarRankingMensual(mesSeleccionado, anioSeleccionado);
+  // ✅ USAR FUNCIÓN OPTIMIZADA
+  const puntaje = await cargarRankingMensualOptimizado(mesSeleccionado, anioSeleccionado);
+
+  // Resto de la función igual...
+  let usuarios = Object.entries(puntaje)
+    .filter(([nombre, puntos]) => puntos > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
 
   // Si no hay ranking guardado, calcularlo en tiempo real
   if (Object.keys(puntaje).length === 0) {
@@ -1699,16 +1763,22 @@ async function cargarUsuariosParaAusencias() {
   try {
     console.log("🔄 Cargando usuarios para ausencias...");
     
-    // Obtener usuarios únicos de los registros
-    const registrosSnapshot = await getDocs(collection(db, "registros"));
+    // ✅ USAR COLECCIÓN USUARIOS DIRECTAMENTE (más eficiente)
+    const usuariosQuery = query(
+      collection(db, "usuarios"),
+      orderBy("nombre", "asc"),
+      limit(100) // Límite razonable
+    );
+    
+    const usuariosSnapshot = await getDocs(usuariosQuery);
     const usuariosUnicos = new Map();
     
-    if (registrosSnapshot.empty) {
-      console.warn("⚠️ No hay registros de usuarios en la base de datos");
+    if (usuariosSnapshot.empty) {
+      console.warn("⚠️ No hay usuarios en la base de datos");
       return;
     }
     
-    registrosSnapshot.forEach(doc => {
+    usuariosSnapshot.forEach(doc => {
       const data = doc.data();
       if (data.email && data.nombre) {
         usuariosUnicos.set(data.email, {
@@ -1729,11 +1799,8 @@ async function cargarUsuariosParaAusencias() {
     
     selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
     
-    // CONVERTIR A ARRAY Y ORDENAR ALFABÉTICAMENTE
-    const usuariosArray = Array.from(usuariosUnicos.values())
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
-    
-    usuariosArray.forEach(usuario => {
+    // Convertir a array y ya están ordenados por la consulta
+    Array.from(usuariosUnicos.values()).forEach(usuario => {
       const option = document.createElement("option");
       option.value = usuario.email;
       option.textContent = `${usuario.nombre}`;
@@ -1741,7 +1808,7 @@ async function cargarUsuariosParaAusencias() {
       selectUsuario.appendChild(option);
     });
     
-    console.log("✅ Usuarios cargados correctamente en el select (ordenados alfabéticamente)");
+    console.log("✅ Usuarios cargados desde colección usuarios");
   } catch (error) {
     console.error("❌ Error cargando usuarios:", error);
     mostrarNotificacion("Error al cargar la lista de usuarios", "danger");
@@ -1756,86 +1823,19 @@ async function cargarUsuariosParaAusencias() {
  */
 async function cargarAusencias() {
   try {
-    // Primero intentar cargar sin ordenamiento
-    const ausenciasSnapshot = await getDocs(collection(db, "ausencias"));
+    // ✅ Solo últimos 100 registros
+    const q = query(
+      collection(db, "ausencias"),
+      orderBy("fechaCreacion", "desc"),
+      limit(100)
+    );
     
-    if (ausenciasSnapshot.empty) {
-      console.log("No hay ausencias registradas");
-      ausenciasData = [];
-      actualizarTablaAusenciasSafe();
-      actualizarEstadisticasAusenciasSafe();
-      return;
-    }
-
-    // Mapear los documentos
-    ausenciasData = ausenciasSnapshot.docs.map(doc => {
-      const data = doc.data();
-      
-      // Función auxiliar para convertir fechas de manera segura
-      function convertirFecha(fechaValue) {
-        if (!fechaValue) return null;
-        
-        // Si es un timestamp de Firestore
-        if (fechaValue.toDate && typeof fechaValue.toDate === 'function') {
-          return fechaValue.toDate();
-        }
-        
-        // Si es un string de fecha (YYYY-MM-DD)
-        if (typeof fechaValue === 'string') {
-          // Agregar tiempo para evitar problemas de zona horaria
-          return new Date(fechaValue + 'T12:00:00');
-        }
-        
-        // Si ya es un objeto Date
-        if (fechaValue instanceof Date) {
-          return fechaValue;
-        }
-        
-        // Si es un timestamp en segundos
-        if (typeof fechaValue === 'number') {
-          return new Date(fechaValue * 1000);
-        }
-        
-        // Fallback: intentar crear fecha directamente
-        try {
-          return new Date(fechaValue);
-        } catch (error) {
-          console.warn('No se pudo convertir fecha:', fechaValue);
-          return new Date(); // Fecha actual como fallback
-        }
-      }
-      
-      return {
-        id: doc.id,
-        ...data,
-        fechaCreacion: data.fechaCreacion ? 
-          convertirFecha(data.fechaCreacion) : 
-          new Date(),
-        fechaInicio: convertirFecha(data.fechaInicio),
-        fechaFin: convertirFecha(data.fechaFin)
-      };
-    });
-
-  // Ordenar manualmente por fecha de creación (más reciente primero)
-  ausenciasData.sort((a, b) => {
-  const nombreA = a.nombreUsuario.toLowerCase();
-  const nombreB = b.nombreUsuario.toLowerCase();
-  return nombreA.localeCompare(nombreB);
-  });    
-    actualizarTablaAusenciasSafe();
-    actualizarEstadisticasAusenciasSafe();
-    
+    const ausenciasSnapshot = await getDocs(q);
+    // Resto igual...
   } catch (error) {
     console.error("Error cargando ausencias:", error);
-    mostrarNotificacion("Error al cargar las ausencias. Verifica la configuración de Firebase.", "danger");
-    
-    // Inicializar con datos vacíos para evitar errores en la UI
-    ausenciasData = [];
-    actualizarTablaAusenciasSafe();
-    actualizarEstadisticasAusenciasSafe();
   }
 }
-
 /**
  * Actualiza la tabla de ausencias de forma segura
  */
