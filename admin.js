@@ -1129,12 +1129,17 @@ onAuthStateChanged(auth, (user) => {
   document.getElementById("admin-name").textContent = user.displayName || user.email.split('@')[0];
   
 
+
   // Cargar datos
-await cargarRegistros();
-await calcularKPIs();
-await renderGraficas();
-await inicializarSelectoresPuntualidad();
-await renderRankingPuntualidad();
+cargarRegistros().then(async () => {
+  await calcularKPIs();
+  await renderGraficas();
+  await inicializarSelectoresPuntualidad();
+  await renderRankingPuntualidad();
+}).catch(error => {
+  console.error("Error cargando datos:", error);
+  mostrarNotificacion("Error al cargar datos del panel", "danger");
+});
 
 });
 
