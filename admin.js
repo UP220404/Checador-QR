@@ -2213,36 +2213,6 @@ async function eliminarAusencia() {
   }
 }
 
-
-async function manejarEditarAusencia(e) {
-  e.preventDefault();
-  
-  if (!ausenciaEditandoId) return;
-
-  const datosActualizados = {
-    tipo: document.getElementById("editarTipo").value,
-    fechaInicio: document.getElementById("editarFechaInicio").value,
-    fechaFin: document.getElementById("editarFechaFin").value || null,
-    motivo: document.getElementById("editarMotivo").value,
-    estado: document.getElementById("editarEstado").value,
-    comentariosAdmin: document.getElementById("editarComentarios").value,
-    fechaModificacion: new Date()
-  };
-
-  try {
-    await updateDoc(doc(db, "ausencias", ausenciaEditandoId), datosActualizados);
-    mostrarNotificacion("Ausencia actualizada correctamente", "success");
-    bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
-    cargarAusencias();
-  } catch (error) {
-    console.error("Error actualizando ausencia:", error);
-    mostrarNotificacion("Error al actualizar la ausencia", "danger");
-  }
-}
-
-/**
- * Aprueba una ausencia
- */
 async function aprobarAusencia(id) {
   if (!confirm("¿Estás seguro de aprobar esta ausencia?")) return;
 
