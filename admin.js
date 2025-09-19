@@ -224,10 +224,10 @@ function mostrarNotificacion(mensaje, tipo = "info") {
 }
 
 
- async function cargarRegistros() {
+async function cargarRegistros() {
   try {
+    console.log("🔄 Cargando registros desde Firestore...");
     
-    // ✅ DESPUÉS: Solo últimos 30 días
     const hace30Dias = new Date();
     hace30Dias.setDate(hace30Dias.getDate() - 30);
     
@@ -235,17 +235,35 @@ function mostrarNotificacion(mensaje, tipo = "info") {
       collection(db, "registros"),
       where("timestamp", ">=", hace30Dias),
       orderBy("timestamp", "desc"),
-      limit(1000) // Máximo 1000 registros
+      limit(1000)
     );
     
     const snap = await getDocs(q);
-    registros = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    // Resto igual...
+    if (snap.empty) {
+      console.warn("⚠️ No se encontraron registros");
+      registros = [];
+      renderTabla();
+      return;
+    }
+    
+    registros = snap.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    }));
+    
+    console.log(`✅ ${registros.length} registros cargados correctamente`);
+    renderTabla();
+    
   } catch (error) {
-    console.error("Error al cargar registros:", error);
+    console.error("❌ Error al cargar registros:", error);
+    mostrarNotificacion("Error al cargar registros", "danger");
+    registros = [];
+    renderTabla();
   }
 }
+
+
 
 
 function getFechaHoyMX() {
@@ -1761,15 +1779,12 @@ async function cargarUsuariosParaAusencias() {
   }
 }
 
-/**
- * Carga todas las ausencias desde Firestore
- */
-/**
- * Carga todas las ausencias desde Firestore
- */
+
+
 async function cargarAusencias() {
   try {
-    // ✅ Solo últimos 100 registros
+    console.log("🔄 Cargando ausencias desde Firestore...");
+    
     const q = query(
       collection(db, "ausencias"),
       orderBy("fechaCreacion", "desc"),
@@ -1777,155 +1792,68 @@ async function cargarAusencias() {
     );
     
     const ausenciasSnapshot = await getDocs(q);
-    // Resto igual...
-  } catch (error) {
-    console.error("Error cargando ausencias:", error);
-  }
-}
-/**
- * Actualiza la tabla de ausencias de forma segura
- */
-function actualizarTablaAusenciasSafe() {
-  try {
-    const tbody = document.querySelector("#tabla-ausencias tbody");
-    if (!tbody) {
-      console.warn("⚠️ Elemento #tabla-ausencias tbody no encontrado");
+    ausenciasData = [];
+    
+    if (ausenciasSnapshot.empty) {
+      console.warn("⚠️ No se encontraron ausencias");
+      actualizarTablaAusenciasSafe();
+      actualizarEstadisticasAusenciasSafe();
       return;
     }
     
-    tbody.innerHTML = "";
-
-    if (ausenciasData.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center py-4 text-muted">
-            <i class="bi bi-inbox me-2"></i>
-            No hay ausencias registradas
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    // Aplicar filtros
-    const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value || "";
-    const filtroTipo = document.getElementById("filtroTipoAusencia")?.value || "";
-    const filtroFecha = document.getElementById("filtroFechaAusencia")?.value || "";
-    const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value.toLowerCase() || "";
-
-    const ausenciasFiltradas = ausenciasData.filter(ausencia => {
-      const estadoMatch = !filtroEstado || ausencia.estado === filtroEstado;
-      const tipoMatch = !filtroTipo || ausencia.tipo === filtroTipo;
+    ausenciasSnapshot.forEach(doc => {
+      const data = doc.data();
       
-      let fechaMatch = true;
-      if (filtroFecha) {
-        const fechaFiltro = new Date(filtroFecha + 'T00:00:00');
-        fechaMatch = (
-          (ausencia.fechaInicio && ausencia.fechaInicio.toDateString() === fechaFiltro.toDateString()) ||
-          (ausencia.fechaFin && ausencia.fechaFin.toDateString() === fechaFiltro.toDateString())
-        );
+      let fechaInicio = data.fechaInicio;
+      let fechaFin = data.fechaFin;
+      
+      if (typeof fechaInicio === 'string') {
+        fechaInicio = new Date(fechaInicio + 'T00:00:00');
+      }
+      if (typeof fechaFin === 'string' && fechaFin) {
+        fechaFin = new Date(fechaFin + 'T00:00:00');
       }
       
-      const busquedaMatch = !filtroBusqueda || 
-        ausencia.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
-        ausencia.emailUsuario.toLowerCase().includes(filtroBusqueda) ||
-        ausencia.motivo.toLowerCase().includes(filtroBusqueda);
-
-      return estadoMatch && tipoMatch && fechaMatch && busquedaMatch;
+      ausenciasData.push({
+        id: doc.id,
+        emailUsuario: data.emailUsuario || '',
+        nombreUsuario: data.nombreUsuario || 'Usuario desconocido',
+        tipo: data.tipo || 'permiso',
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        motivo: data.motivo || '',
+        estado: data.estado || 'pendiente',
+        comentariosAdmin: data.comentariosAdmin || '',
+        fechaCreacion: data.fechaCreacion.toDate ? data.fechaCreacion.toDate() : new Date(data.fechaCreacion),
+        fechaModificacion: data.fechaModificacion ? 
+          (data.fechaModificacion.toDate ? data.fechaModificacion.toDate() : new Date(data.fechaModificacion)) 
+          : null
+      });
     });
-
-    if (ausenciasFiltradas.length === 0) {
+    
+    console.log(`✅ ${ausenciasData.length} ausencias cargadas correctamente`);
+    actualizarTablaAusenciasSafe();
+    actualizarEstadisticasAusenciasSafe();
+    
+  } catch (error) {
+    console.error("❌ Error cargando ausencias:", error);
+    mostrarNotificacion("Error al cargar las ausencias", "danger");
+    
+    const tbody = document.querySelector("#tabla-ausencias tbody");
+    if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-center py-4 text-muted">
-            <i class="bi bi-search me-2"></i>
-            No se encontraron ausencias con los filtros aplicados
+          <td colspan="7" class="text-center py-4 text-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Error al cargar ausencias. Recarga la página.
           </td>
         </tr>
       `;
-      return;
     }
-
-    ausenciasFiltradas.forEach(ausencia => {
-      const tr = document.createElement("tr");
-      
-      // Calcular días
-      const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
-      
-      // Formatear fechas correctamente (sin desplazamiento de zona horaria)
-      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }) : "";
-      const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
-
-      tr.innerHTML = `
-        <td>
-          <div class="fw-bold">${ausencia.nombreUsuario}</div>
-        </td>
-        <td>
-          <span class="badge ${getBadgeClassTipo(ausencia.tipo)}">
-             ${formatearTipo(ausencia.tipo)}
-          </span>
-        </td>
-        <td>${rangoFecha}</td>
-        <td>
-          <span class="badge bg-light text-dark">${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}</span>
-        </td>
-        <td>
-          <span class="badge ${getBadgeClassEstado(ausencia.estado)}">
-            ${formatearEstado(ausencia.estado)}
-          </span>
-        </td>
-        <td>
-          <small class="text-muted">
-            ${ausencia.fechaCreacion.toLocaleDateString("es-MX")}<br>
-            ${ausencia.fechaCreacion.toLocaleTimeString("es-MX", { hour: '2-digit', minute: '2-digit' })}
-          </small>
-        </td>
-        <td class="text-end">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-info" onclick="verDetalleAusencia('${ausencia.id}')" 
-                    title="Ver detalle">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-outline-primary" onclick="editarAusencia('${ausencia.id}')" 
-                    title="Editar">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-outline-success" onclick="aprobarAusencia('${ausencia.id}')" 
-                    title="Aprobar" ${ausencia.estado === 'aprobada' ? 'disabled' : ''}>
-              <i class="bi bi-check-lg"></i>
-            </button>
-            <button class="btn btn-outline-danger" onclick="rechazarAusencia('${ausencia.id}')" 
-                    title="Rechazar" ${ausencia.estado === 'rechazada' ? 'disabled' : ''}>
-              <i class="bi bi-x-lg"></i>
-            </button>
-            <button class="btn btn-outline-dark" onclick="eliminarAusenciaDirecta('${ausencia.id}')" 
-                    title="Eliminar permanentemente">
-              <i class="bi bi-trash text-white"></i>
-            </button>
-          </div>
-        </td>
-      `;
-      
-      tbody.appendChild(tr);
-    });
-    
-  } catch (error) {
-    console.error("Error actualizando tabla de ausencias:", error);
   }
 }
 
-/**
- * Elimina una ausencia directamente desde la tabla
- */
+
 async function eliminarAusenciaDirecta(id) {
   const ausencia = ausenciasData.find(a => a.id === id);
   if (!ausencia) {
@@ -1958,9 +1886,8 @@ async function eliminarAusenciaDirecta(id) {
 }
 
 
-/**
- * Actualiza las estadísticas de ausencias de forma segura
- */
+
+
 function actualizarEstadisticasAusenciasSafe() {
   try {
     const stats = {
@@ -1970,7 +1897,6 @@ function actualizarEstadisticasAusenciasSafe() {
       total: ausenciasData.length
     };
 
-    // Verificar que los elementos existen antes de actualizar
     const pendientesEl = document.getElementById("stat-pendientes");
     const aprobadasEl = document.getElementById("stat-aprobadas");
     const rechazadasEl = document.getElementById("stat-rechazadas");
@@ -1986,18 +1912,13 @@ function actualizarEstadisticasAusenciasSafe() {
     console.error("Error actualizando estadísticas:", error);
   }
 }
-/**
- * Calcula los días de ausencia
- */
+
 function calcularDiasAusencia(fechaInicio, fechaFin) {
   if (!fechaFin) return 1;
   const diffTime = Math.abs(fechaFin - fechaInicio);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-/**
- * Funciones auxiliares para formatear y obtener clases CSS
- */
 function getBadgeClassTipo(tipo) {
   const classes = {
     permiso: "bg-warning text-dark",
@@ -2044,9 +1965,6 @@ function formatearEstado(estado) {
   return nombres[estado] || estado;
 }
 
-/**
- * Maneja el envío del formulario de nueva ausencia
- */
 async function manejarNuevaAusencia(e) {
   e.preventDefault();
 
@@ -2083,19 +2001,142 @@ async function manejarNuevaAusencia(e) {
     mostrarNotificacion("Error al agregar la ausencia", "danger");
   }
 }
-/**
- * Edita una ausencia
- */
+
+
+function actualizarTablaAusenciasSafe() {
+  try {
+    const tbody = document.querySelector("#tabla-ausencias tbody");
+    if (!tbody) {
+      console.warn("⚠️ Elemento #tabla-ausencias tbody no encontrado");
+      return;
+    }
+    
+    tbody.innerHTML = "";
+
+    if (ausenciasData.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-inbox me-2"></i>
+            No hay ausencias registradas
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Obtener filtros
+    const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value || "";
+    const filtroTipo = document.getElementById("filtroTipoAusencia")?.value || "";
+    const filtroFecha = document.getElementById("filtroFechaAusencia")?.value || "";
+    const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value.toLowerCase() || "";
+
+    // Aplicar filtros
+    const ausenciasFiltradas = ausenciasData.filter(ausencia => {
+      const estadoMatch = !filtroEstado || ausencia.estado === filtroEstado;
+      const tipoMatch = !filtroTipo || ausencia.tipo === filtroTipo;
+      
+      let fechaMatch = true;
+      if (filtroFecha) {
+        const fechaFiltro = new Date(filtroFecha + 'T00:00:00');
+        fechaMatch = (
+          (ausencia.fechaInicio && ausencia.fechaInicio.toDateString() === fechaFiltro.toDateString()) ||
+          (ausencia.fechaFin && ausencia.fechaFin.toDateString() === fechaFiltro.toDateString())
+        );
+      }
+      
+      const busquedaMatch = !filtroBusqueda || 
+        ausencia.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
+        ausencia.emailUsuario.toLowerCase().includes(filtroBusqueda) ||
+        ausencia.motivo.toLowerCase().includes(filtroBusqueda);
+
+      return estadoMatch && tipoMatch && fechaMatch && busquedaMatch;
+    });
+
+    if (ausenciasFiltradas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-search me-2"></i>
+            No se encontraron ausencias con los filtros aplicados
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Renderizar ausencias filtradas
+    ausenciasFiltradas.forEach(ausencia => {
+      const tr = document.createElement("tr");
+      const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
+      
+      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }) : "";
+      const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
+
+      tr.innerHTML = `
+        <td><div class="fw-bold">${ausencia.nombreUsuario}</div></td>
+        <td><span class="badge ${getBadgeClassTipo(ausencia.tipo)}">${formatearTipo(ausencia.tipo)}</span></td>
+        <td>${rangoFecha}</td>
+        <td><span class="badge bg-light text-dark">${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}</span></td>
+        <td><span class="badge ${getBadgeClassEstado(ausencia.estado)}">${formatearEstado(ausencia.estado)}</span></td>
+        <td>
+          <small class="text-muted">
+            ${ausencia.fechaCreacion.toLocaleDateString("es-MX")}<br>
+            ${ausencia.fechaCreacion.toLocaleTimeString("es-MX", { hour: '2-digit', minute: '2-digit' })}
+          </small>
+        </td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" onclick="verDetalleAusencia('${ausencia.id}')" title="Ver detalle">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-outline-primary" onclick="editarAusencia('${ausencia.id}')" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-success" onclick="aprobarAusencia('${ausencia.id}')" 
+                    title="Aprobar" ${ausencia.estado === 'aprobada' ? 'disabled' : ''}>
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button class="btn btn-outline-danger" onclick="rechazarAusencia('${ausencia.id}')" 
+                    title="Rechazar" ${ausencia.estado === 'rechazada' ? 'disabled' : ''}>
+              <i class="bi bi-x-lg"></i>
+            </button>
+            <button class="btn btn-outline-dark" onclick="eliminarAusenciaDirecta('${ausencia.id}')" 
+                    title="Eliminar permanentemente">
+              <i class="bi bi-trash text-white"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    
+    console.log(`✅ Tabla actualizada con ${ausenciasFiltradas.length} ausencias`);
+    
+  } catch (error) {
+    console.error("Error actualizando tabla de ausencias:", error);
+  }
+}
+
+
+// FUNCIÓN EDITAR AUSENCIA COMPLETA (línea ~2002)
 function editarAusencia(id) {
   const ausencia = ausenciasData.find(a => a.id === id);
-  if (!ausencia) return;
+  if (!ausencia) {
+    mostrarNotificacion("Ausencia no encontrada", "warning");
+    return;
+  }
 
   ausenciaEditandoId = id;
 
   const fechaInicioLocal = new Date(ausencia.fechaInicio.getTime() - (ausencia.fechaInicio.getTimezoneOffset() * 60000));
   const fechaFinLocal = ausencia.fechaFin ? new Date(ausencia.fechaFin.getTime() - (ausencia.fechaFin.getTimezoneOffset() * 60000)) : null;
   
-  // Llenar el formulario
   document.getElementById("editarAusenciaId").value = id;
   document.getElementById("editarUsuario").value = `${ausencia.nombreUsuario} (${ausencia.emailUsuario})`;
   document.getElementById("editarTipo").value = ausencia.tipo;
@@ -2108,9 +2149,71 @@ function editarAusencia(id) {
   new bootstrap.Modal(document.getElementById("modalEditarAusencia")).show();
 }
 
-/**
- * Maneja el envío del formulario de editar ausencia
- */
+// FUNCIÓN MANEJAR EDITAR AUSENCIA COMPLETA
+async function manejarEditarAusencia(e) {
+  e.preventDefault();
+  
+  if (!ausenciaEditandoId) {
+    mostrarNotificacion("No hay ausencia seleccionada para editar", "warning");
+    return;
+  }
+
+  const datosActualizados = {
+    tipo: document.getElementById("editarTipo").value,
+    fechaInicio: document.getElementById("editarFechaInicio").value,
+    fechaFin: document.getElementById("editarFechaFin").value || null,
+    motivo: document.getElementById("editarMotivo").value,
+    estado: document.getElementById("editarEstado").value,
+    comentariosAdmin: document.getElementById("editarComentarios").value,
+    fechaModificacion: new Date()
+  };
+
+  if (!datosActualizados.tipo || !datosActualizados.fechaInicio || !datosActualizados.motivo) {
+    mostrarNotificacion("Por favor completa todos los campos obligatorios", "warning");
+    return;
+  }
+
+  try {
+    await updateDoc(doc(db, "ausencias", ausenciaEditandoId), datosActualizados);
+    mostrarNotificacion("Ausencia actualizada correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
+    ausenciaEditandoId = null;
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error actualizando ausencia:", error);
+    mostrarNotificacion("Error al actualizar la ausencia", "danger");
+  }
+}
+
+// FUNCIÓN ELIMINAR AUSENCIA COMPLETA
+async function eliminarAusencia() {
+  if (!ausenciaEditandoId) {
+    mostrarNotificacion("No hay ausencia seleccionada para eliminar", "warning");
+    return;
+  }
+  
+  const ausencia = ausenciasData.find(a => a.id === ausenciaEditandoId);
+  if (!ausencia) {
+    mostrarNotificacion("Ausencia no encontrada", "warning");
+    return;
+  }
+
+  const confirmar = confirm(`¿Estás seguro de eliminar esta ausencia de ${ausencia.nombreUsuario}?\n\nEsta acción no se puede deshacer.`);
+  if (!confirmar) return;
+
+  try {
+    await deleteDoc(doc(db, "ausencias", ausenciaEditandoId));
+    mostrarNotificacion("Ausencia eliminada correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
+    ausenciaEditandoId = null;
+    cargarAusencias();
+  } catch (error) {
+    console.error("Error eliminando ausencia:", error);
+    mostrarNotificacion("Error al eliminar la ausencia", "danger");
+  }
+}
+
+
 async function manejarEditarAusencia(e) {
   e.preventDefault();
   
@@ -2288,6 +2391,128 @@ function actualizarTablaAusencias() {
   actualizarTablaAusenciasSafe();
 }
 
+function actualizarTablaAusenciasSafe() {
+  try {
+    const tbody = document.querySelector("#tabla-ausencias tbody");
+    if (!tbody) {
+      console.warn("⚠️ Elemento #tabla-ausencias tbody no encontrado");
+      return;
+    }
+    
+    tbody.innerHTML = "";
+
+    if (ausenciasData.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-inbox me-2"></i>
+            No hay ausencias registradas
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Obtener filtros
+    const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value || "";
+    const filtroTipo = document.getElementById("filtroTipoAusencia")?.value || "";
+    const filtroFecha = document.getElementById("filtroFechaAusencia")?.value || "";
+    const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value.toLowerCase() || "";
+
+    // Aplicar filtros
+    const ausenciasFiltradas = ausenciasData.filter(ausencia => {
+      const estadoMatch = !filtroEstado || ausencia.estado === filtroEstado;
+      const tipoMatch = !filtroTipo || ausencia.tipo === filtroTipo;
+      
+      let fechaMatch = true;
+      if (filtroFecha) {
+        const fechaFiltro = new Date(filtroFecha + 'T00:00:00');
+        fechaMatch = (
+          (ausencia.fechaInicio && ausencia.fechaInicio.toDateString() === fechaFiltro.toDateString()) ||
+          (ausencia.fechaFin && ausencia.fechaFin.toDateString() === fechaFiltro.toDateString())
+        );
+      }
+      
+      const busquedaMatch = !filtroBusqueda || 
+        ausencia.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
+        ausencia.emailUsuario.toLowerCase().includes(filtroBusqueda) ||
+        ausencia.motivo.toLowerCase().includes(filtroBusqueda);
+
+      return estadoMatch && tipoMatch && fechaMatch && busquedaMatch;
+    });
+
+    if (ausenciasFiltradas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-search me-2"></i>
+            No se encontraron ausencias con los filtros aplicados
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Renderizar ausencias filtradas
+    ausenciasFiltradas.forEach(ausencia => {
+      const tr = document.createElement("tr");
+      const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
+      
+      const fechaInicioStr = ausencia.fechaInicio.toLocaleDateString("es-MX", {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const fechaFinStr = ausencia.fechaFin ? ausencia.fechaFin.toLocaleDateString("es-MX", {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }) : "";
+      const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
+
+      tr.innerHTML = `
+        <td><div class="fw-bold">${ausencia.nombreUsuario}</div></td>
+        <td><span class="badge ${getBadgeClassTipo(ausencia.tipo)}">${formatearTipo(ausencia.tipo)}</span></td>
+        <td>${rangoFecha}</td>
+        <td><span class="badge bg-light text-dark">${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}</span></td>
+        <td><span class="badge ${getBadgeClassEstado(ausencia.estado)}">${formatearEstado(ausencia.estado)}</span></td>
+        <td>
+          <small class="text-muted">
+            ${ausencia.fechaCreacion.toLocaleDateString("es-MX")}<br>
+            ${ausencia.fechaCreacion.toLocaleTimeString("es-MX", { hour: '2-digit', minute: '2-digit' })}
+          </small>
+        </td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" onclick="verDetalleAusencia('${ausencia.id}')" title="Ver detalle">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-outline-primary" onclick="editarAusencia('${ausencia.id}')" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-success" onclick="aprobarAusencia('${ausencia.id}')" 
+                    title="Aprobar" ${ausencia.estado === 'aprobada' ? 'disabled' : ''}>
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button class="btn btn-outline-danger" onclick="rechazarAusencia('${ausencia.id}')" 
+                    title="Rechazar" ${ausencia.estado === 'rechazada' ? 'disabled' : ''}>
+              <i class="bi bi-x-lg"></i>
+            </button>
+            <button class="btn btn-outline-dark" onclick="eliminarAusenciaDirecta('${ausencia.id}')" 
+                    title="Eliminar permanentemente">
+              <i class="bi bi-trash text-white"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    
+    console.log(`✅ Tabla actualizada con ${ausenciasFiltradas.length} ausencias`);
+    
+  } catch (error) {
+    console.error("Error actualizando tabla de ausencias:", error);
+  }
+}
+
+
+
 // AGREGAR esta función antes de cargarAccesosSospechosos()
 async function obtenerNombreRealUsuario(email) {
   try {
@@ -2442,13 +2667,32 @@ window.cargarAccesosSospechosos = cargarAccesosSospechosos;
 
 window.actualizarTablaAusencias = actualizarTablaAusencias;
 
-// Modificar la función mostrarSeccion para cargar automáticamente
-const mostrarSeccionOriginal = window.mostrarSeccion;
-window.mostrarSeccion = function(seccionId) {
-  mostrarSeccionOriginal(seccionId);
-  
-  // Si se abre la sección de seguridad, cargar los datos
-  if (seccionId === 'seguridad') {
-    setTimeout(cargarAccesosSospechosos, 500);
+// =================== EVENT LISTENERS PARA AUSENCIAS ===================
+document.addEventListener('DOMContentLoaded', function() {
+  // Formulario nueva ausencia
+  const formNuevaAusencia = document.getElementById("formNuevaAusencia");
+  if (formNuevaAusencia) {
+    formNuevaAusencia.addEventListener("submit", manejarNuevaAusencia);
   }
-};
+  
+  // Formulario editar ausencia
+  const formEditarAusencia = document.getElementById("formEditarAusencia");
+  if (formEditarAusencia) {
+    formEditarAusencia.addEventListener("submit", manejarEditarAusencia);
+  }
+
+  // Filtros de ausencias
+  const filtros = [
+    { id: "filtroEstadoAusencia", event: "change" },
+    { id: "filtroTipoAusencia", event: "change" },
+    { id: "filtroFechaAusencia", event: "change" },
+    { id: "filtroBusquedaAusencia", event: "input" }
+  ];
+  
+  filtros.forEach(filtro => {
+    const elemento = document.getElementById(filtro.id);
+    if (elemento) {
+      elemento.addEventListener(filtro.event, actualizarTablaAusenciasSafe);
+    }
+  });
+});
