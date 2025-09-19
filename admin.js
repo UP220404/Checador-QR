@@ -1180,7 +1180,8 @@ async function cargarRankingMensualOptimizado(mes, anio) {
   }
 }
 
-// ✅ Para el mes actual (usa registros ya cargados)
+
+// ✅ VERSIÓN CORREGIDA (líneas 1125-1140 aproximadamente)
 async function calcularRankingMesActual() {
   const ahora = new Date();
   const mesActual = ahora.getMonth();
@@ -1196,7 +1197,6 @@ async function calcularRankingMesActual() {
   return calcularPuntajes(entradasMes);
 }
 
-// ✅ Para meses históricos (consulta específica)
 async function calcularYGuardarRankingHistorico(mes, anio) {
   // Consulta SOLO del mes específico
   const inicioMes = new Date(anio, mes, 1);
@@ -1232,7 +1232,7 @@ async function calcularYGuardarRankingHistorico(mes, anio) {
   return puntajes;
 }
 
-// ✅ Función común para calcular puntajes
+
 function calcularPuntajes(entradas) {
   const puntajes = {};
   
@@ -1260,6 +1260,7 @@ function calcularPuntajes(entradas) {
   
   return puntajes;
 }
+
 
 async function renderRankingPuntualidad() {
   const selectorMes = document.getElementById("selectorMesPuntualidad");
