@@ -1717,7 +1717,6 @@ async function migrarDatosHistoricos() {
 let ausenciasData = [];
 let ausenciaEditandoId = null;
 
-// ...existing code...
 
 async function cargarUsuariosParaAusencias() {
   try {
@@ -1729,47 +1728,23 @@ async function cargarUsuariosParaAusencias() {
     try {
       const usuariosQuery = query(
         collection(db, "usuarios"),
-        limit(50) // Suficiente para 24 usuarios
+        limit(50) // Suficiente para todos los usuarios
       );
       
       const usuariosSnapshot = await getDocs(usuariosQuery);
       console.log(`📊 Documentos en colección 'usuarios': ${usuariosSnapshot.size}`);
       
-      // ✅ DEBUG ESPECÍFICO PARA NAYELI
-      let nayeliEncontrada = false;
       let usuariosSinDatos = [];
       
       usuariosSnapshot.forEach(doc => {
         const data = doc.data();
         
-        // ✅ BUSCAR ESPECÍFICAMENTE POR EMAIL Y NOMBRE DE NAYELI
-        const esNayeli = (data.correo === 'atencionaclientescielitoh@gmail.com') || 
-                        (data.nombre && data.nombre.toLowerCase().includes('nayeli')) ||
-                        (data.nombre && data.nombre.toLowerCase().includes('pulido'));
-        
-        if (esNayeli) {
-          console.log("🔍 ¡NAYELI ENCONTRADA EN FIRESTORE!", { 
-            id: doc.id, 
-            nombre: data.nombre, 
-            correo: data.correo,
-            tipo: data.tipo,
-            nombreLength: data.nombre ? data.nombre.length : 0,
-            correoLength: data.correo ? data.correo.length : 0,
-            nombreTrim: data.nombre ? `"${data.nombre.trim()}"` : 'NULL',
-            correoTrim: data.correo ? `"${data.correo.trim()}"` : 'NULL',
-            nombreVacio: !data.nombre || data.nombre.trim() === '',
-            correoVacio: !data.correo || data.correo.trim() === ''
-          });
-          nayeliEncontrada = true;
-        }
-        
-        // ✅ DEBUG: Mostrar TODOS los usuarios encontrados con más detalle
+        // ✅ DEBUG: Mostrar usuarios encontrados
         console.log("👤 Usuario encontrado:", { 
           id: doc.id, 
-          nombre: `"${data.nombre || 'NULL'}"`, 
-          correo: `"${data.correo || 'NULL'}"`,
-          tipo: data.tipo,
-          esNayeli: esNayeli
+          nombre: data.nombre, 
+          correo: data.correo,
+          tipo: data.tipo
         });
         
         // ✅ VERIFICAR CONDICIONES DE VALIDACIÓN
@@ -1781,72 +1756,25 @@ async function cargarUsuariosParaAusencias() {
             id: doc.id,
             nombre: data.nombre,
             correo: data.correo,
-            problema: !tieneCorreo ? 'SIN_CORREO' : 'SIN_NOMBRE',
-            esNayeli: esNayeli
+            problema: !tieneCorreo ? 'SIN_CORREO' : 'SIN_NOMBRE'
           });
         }
         
-        // ✅ AGREGAR AL MAP SI PASA LAS VALIDACIONES
+        // ✅ AGREGAR AL MAP SI PASA LAS VALIDACIONES (USAR TRIM SIEMPRE)
         if (tieneCorreo && tieneNombre) {
           usuariosUnicos.set(data.correo.trim(), {
             email: data.correo.trim(),
             nombre: data.nombre.trim(),
             tipo: data.tipo || 'empleado'
           });
-          
-          if (esNayeli) {
-            console.log("✅ NAYELI AGREGADA AL MAP:", {
-              email: data.correo.trim(),
-              nombre: data.nombre.trim(),
-              tipo: data.tipo
-            });
-          }
-        } else if (esNayeli) {
-          console.error("❌ NAYELI NO PASÓ LAS VALIDACIONES:", {
-            tieneCorreo,
-            tieneNombre,
-            correoOriginal: data.correo,
-            nombreOriginal: data.nombre
-          });
         }
       });
       
-      // ✅ REPORTE FINAL DE NAYELI
-      console.log("=== REPORTE FINAL NAYELI ===");
-      if (nayeliEncontrada) {
-        const nayeliEnMap = usuariosUnicos.get('atencionaclientescielitoh@gmail.com');
-        if (nayeliEnMap) {
-          console.log("✅ Nayeli SÍ está en el Map final:", nayeliEnMap);
-        } else {
-          console.error("❌ Nayeli NO está en el Map final pero SÍ estaba en Firestore");
-          // Buscar en el Map por nombre
-          const nayeliPorNombre = Array.from(usuariosUnicos.values()).find(u => 
-            u.nombre.toLowerCase().includes('nayeli') || u.nombre.toLowerCase().includes('pulido')
-          );
-          if (nayeliPorNombre) {
-            console.log("🔍 Encontrada Nayeli en Map por nombre:", nayeliPorNombre);
-          }
-        }
-      } else {
-        console.error("❌ Nayeli NO encontrada en Firestore");
-        
-        // Buscar usuarios similares
-        console.log("🔍 Buscando usuarios con nombres similares:");
-        usuariosSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.nombre && (data.nombre.toLowerCase().includes('nay') || 
-                            data.nombre.toLowerCase().includes('puli') ||
-                            data.correo && data.correo.includes('atencion'))) {
-            console.log(`  - Posible match: ${data.nombre} (${data.correo})`);
-          }
-        });
-      }
-      
-      // ✅ MOSTRAR USUARIOS CON PROBLEMAS
+      // ✅ MOSTRAR USUARIOS CON PROBLEMAS (VALIDACIÓN GENERAL)
       if (usuariosSinDatos.length > 0) {
         console.warn(`⚠️ ${usuariosSinDatos.length} usuarios con datos incompletos:`);
         usuariosSinDatos.forEach(u => {
-          console.warn(`  - ${u.nombre || 'SIN_NOMBRE'} (${u.correo || 'SIN_CORREO'}) - ${u.problema}${u.esNayeli ? ' ⚠️ ES NAYELI!' : ''}`);
+          console.warn(`  - ${u.nombre || 'SIN_NOMBRE'} (${u.correo || 'SIN_CORREO'}) - ${u.problema}`);
         });
       }
       
@@ -1887,29 +1815,12 @@ async function cargarUsuariosParaAusencias() {
     });
     
     console.log("✅ Select poblado con", usuariosArray.length, "usuarios");
-    
-    // ✅ VERIFICACIÓN FINAL: Buscar Nayeli en el select HTML
-    const opcionNayeli = Array.from(selectUsuario.options).find(option => 
-      option.textContent.toLowerCase().includes('nayeli') || 
-      option.textContent.toLowerCase().includes('pulido') ||
-      option.value === 'atencionaclientescielitoh@gmail.com'
-    );
-    
-    if (opcionNayeli) {
-      console.log("✅ Nayeli SÍ aparece en el select HTML:", opcionNayeli.textContent);
-    } else {
-      console.error("❌ Nayeli NO aparece en el select HTML");
-      console.log("🔍 Todas las opciones en el select:");
-      Array.from(selectUsuario.options).forEach((option, index) => {
-        console.log(`  ${index}. ${option.textContent} (value: ${option.value})`);
-      });
-    }
-    
     mostrarNotificacion(`${usuariosArray.length} usuarios cargados correctamente`, "success");
     
-    // ✅ VERIFICAR SI TENEMOS LOS 24 USUARIOS ESPERADOS
-    if (usuariosArray.length !== 24) {
-      console.warn(`⚠️ Se esperaban 24 usuarios, pero se encontraron ${usuariosArray.length}`);
+    // ✅ VERIFICACIÓN GENERAL: Alertar si el número no coincide con lo esperado
+    const usuariosEsperados = 24; // Cambiar este número según tus usuarios reales
+    if (usuariosArray.length !== usuariosEsperados) {
+      console.warn(`⚠️ Se esperaban ${usuariosEsperados} usuarios, pero se encontraron ${usuariosArray.length}`);
     }
     
   } catch (error) {
@@ -1917,8 +1828,6 @@ async function cargarUsuariosParaAusencias() {
     mostrarNotificacion("Error al cargar la lista de usuarios: " + error.message, "danger");
   }
 }
-
-
 
 // ✅ FUNCIÓN CORREGIDA PARA CARGAR AUSENCIAS CON FILTRO DE MES
 async function cargarAusencias() {
