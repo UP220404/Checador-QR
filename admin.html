@@ -37,7 +37,7 @@
     <a href="#analisis" onclick="mostrarSeccion('analisis')">
       <i class="bi bi-graph-up-arrow"></i>Análisis
     </a>
-    <a href="#justificantes" onclick="mostrarSeccion('justificantes')">
+    <a href="#justificantes" onclick="mostrarSeccionModificada('justificantes')">
       <i class="bi bi-envelope-paper"></i>Gestion de Ausencias
     </a>
     <a href="#seguridad" onclick="mostrarSeccion('seguridad')">
@@ -628,45 +628,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script type="module" src="admin.js"></script>
 
-<script>  
-function mostrarSeccion(id) {
-  document.querySelectorAll('.seccion').forEach(s => s.classList.add('d-none'));
-  document.getElementById(id).classList.remove('d-none');
-  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-  document.querySelector(`.sidebar a[href="#${id}"]`)?.classList.add('active');
 
-  // Cargar datos específicos de cada sección
-  if (id === 'justificantes') {
-    // Esperar un momento para que el DOM se actualice
-    setTimeout(() => {
-      console.log("🔄 Cargando sección de ausencias...");
-      
-      if (typeof cargarUsuariosParaAusencias === 'function') {
-        cargarUsuariosParaAusencias();
-      }
-      if (typeof cargarAusencias === 'function') {
-        cargarAusencias();
-      }
-    }, 100);
-  }
-
-  // Actualizar el título de la página
-  const tituloSeccion = document.querySelector(`.sidebar a[href="#${id}"]`).textContent.trim();
-  document.title = `CH Panel Admin | ${tituloSeccion}`;
-}
-
-// Event listener para el modal (solo una vez)
-document.addEventListener('DOMContentLoaded', function() {
-  const modalNuevaAusencia = document.getElementById('modalNuevaAusencia');
-  if (modalNuevaAusencia) {
-    modalNuevaAusencia.addEventListener('shown.bs.modal', function () {
-      console.log("📋 Modal de nueva ausencia abierto");
-      if (typeof cargarUsuariosParaAusencias === 'function') {
-        cargarUsuariosParaAusencias();
-      }
-    });
-  }
-});
-</script>
 </body>
 </html>

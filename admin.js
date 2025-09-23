@@ -1717,79 +1717,178 @@ async function migrarDatosHistoricos() {
 let ausenciasData = [];
 let ausenciaEditandoId = null;
 
+
 async function cargarUsuariosParaAusencias() {
   try {
-    console.log("🔄 Cargando usuarios para ausencias...");
+    console.log("📄 Cargando usuarios para ausencias...");
     
-    // ✅ USAR COLECCIÓN USUARIOS DIRECTAMENTE (más eficiente)
-    const usuariosQuery = query(
-      collection(db, "usuarios"),
-      orderBy("nombre", "asc"),
-      limit(100) // Límite razonable
-    );
-    
-    const usuariosSnapshot = await getDocs(usuariosQuery);
     const usuariosUnicos = new Map();
     
-    if (usuariosSnapshot.empty) {
-      console.warn("⚠️ No hay usuarios en la base de datos");
-      return;
-    }
-    
-    usuariosSnapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.correo && data.nombre) {
-        usuariosUnicos.set(data.correo, {
+    // ✅ ESTRATEGIA MEJORADA: Buscar en colección "usuarios" 
+    try {
+      const usuariosQuery = query(
+        collection(db, "usuarios"),
+        limit(200) // Aumentar límite para asegurar que se carguen todos
+      );
+      
+      const usuariosSnapshot = await getDocs(usuariosQuery);
+      console.log(`📊 Documentos en colección 'usuarios': ${usuariosSnapshot.size}`);
+      
+      usuariosSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log("👤 Usuario encontrado:", { 
+          id: doc.id, 
+          nombre: data.nombre, 
           correo: data.correo,
-          nombre: data.nombre,
-          tipo: data.tipo || 'empleado'
-        });
-      }
-    });
+          email: data.email 
+        }); // Debug mejorado
+        
+        // ✅ CORREGIR: Verificar AMBOS campos (correo Y email)
+        const emailField = data.correo || data.email;
+        
+        if (emailField && data.nombre && emailField.trim() !== '' && data.nombre.trim() !== '') {
+          usuariosUnicos.set(emailField, {
+            email: emailField,
+            nombre: data.nombre,
+            tipo: data.tipo || 'empleado'
+          });
+        } else {
+          console.warn("⚠️ Usuario sin datos completos:", {
+            nombre: data.nombre,
+            correo: data.correo,
+            email: data.email
+          });
+        }
+      });
+      
+    } catch (usuariosError) {
+      console.error("❌ Error consultando colección usuarios:", usuariosError);
+    }
 
-    console.log("👥 Usuarios encontrados:", usuariosUnicos.size);
+    // ✅ ESTRATEGIA ALTERNATIVA: Si hay pocos usuarios, buscar en "registros"
+    if (usuariosUnicos.size < 5) {
+      console.log("🔄 Pocos usuarios encontrados, buscando en 'registros'...");
+      
+      const registrosQuery = query(
+        collection(db, "registros"),
+        limit(500)
+      );
+      
+      const registrosSnapshot = await getDocs(registrosQuery);
+      console.log(`📊 Documentos en colección 'registros': ${registrosSnapshot.size}`);
+      
+      registrosSnapshot.forEach(doc => {
+        const data = doc.data();
+        const emailField = data.correo || data.email;
+        
+        if (emailField && data.nombre && !usuariosUnicos.has(emailField)) {
+          usuariosUnicos.set(emailField, {
+            email: emailField,
+            nombre: data.nombre,
+            tipo: data.tipo || 'empleado'
+          });
+        }
+      });
+    }
 
+    console.log("👥 Total usuarios únicos encontrados:", usuariosUnicos.size);
+    console.log("📋 Lista completa de usuarios:", Array.from(usuariosUnicos.values()));
+
+    // Verificar que el elemento select existe
     const selectUsuario = document.getElementById("ausenciaUsuario");
     if (!selectUsuario) {
       console.error("❌ No se encontró el elemento ausenciaUsuario");
+      mostrarNotificacion("Error: Elemento del formulario no encontrado", "danger");
+      return;
+    }
+
+    // Limpiar y llenar el select
+    selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
+    
+    if (usuariosUnicos.size === 0) {
+      selectUsuario.innerHTML += '<option disabled>No hay usuarios disponibles</option>';
+      mostrarNotificacion("No se encontraron usuarios en la base de datos", "warning");
       return;
     }
     
-    selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
+    // ✅ ORDENAR ALFABÉTICAMENTE y llenar select
+    const usuariosArray = Array.from(usuariosUnicos.values()).sort((a, b) => 
+      a.nombre.localeCompare(b.nombre)
+    );
     
-    // Convertir a array y ya están ordenados por la consulta
-    Array.from(usuariosUnicos.values()).forEach(usuario => {
+    usuariosArray.forEach(usuario => {
       const option = document.createElement("option");
-      option.value = usuario.correo;
-      option.textContent = `${usuario.nombre}`;
+      option.value = usuario.email;
+      option.textContent = `${usuario.nombre} (${usuario.email})`;
       option.dataset.tipo = usuario.tipo;
       selectUsuario.appendChild(option);
     });
     
-    console.log("✅ Usuarios cargados desde colección usuarios");
+    console.log("✅ Select poblado con", usuariosArray.length, "usuarios");
+    mostrarNotificacion(`${usuariosArray.length} usuarios cargados correctamente`, "success");
+    
+    // ✅ DEBUG: Verificar si Nayeli está incluida
+    const nayeli = usuariosArray.find(u => u.nombre.toLowerCase().includes('nayeli'));
+    if (nayeli) {
+      console.log("✅ Nayeli encontrada:", nayeli);
+    } else {
+      console.warn("⚠️ Nayeli NO encontrada en la lista final");
+    }
+    
   } catch (error) {
-    console.error("❌ Error cargando usuarios:", error);
-    mostrarNotificacion("Error al cargar la lista de usuarios", "danger");
+    console.error("❌ Error general cargando usuarios:", error);
+    mostrarNotificacion("Error al cargar la lista de usuarios: " + error.message, "danger");
   }
 }
 
 
 
+// ✅ FUNCIÓN CORREGIDA PARA CARGAR AUSENCIAS CON FILTRO DE MES
 async function cargarAusencias() {
   try {
-    console.log("🔄 Cargando ausencias desde Firestore...");
+    console.log("📄 Cargando ausencias desde Firestore...");
     
-    const q = query(
-      collection(db, "ausencias"),
-      orderBy("fechaCreacion", "desc"),
-      limit(100)
-    );
+    // ✅ OBTENER FILTRO DE MES
+    const filtroMes = document.getElementById('filtroMesAusencia')?.value;
+    
+    let q;
+    
+    if (filtroMes && filtroMes !== '') {
+      // ✅ FILTRAR POR MES ESPECÍFICO - MEJORADO
+      const [año, mes] = filtroMes.split('-').map(Number);
+      const inicioMes = new Date(año, mes - 1, 1); // mes-1 porque Date usa índice 0-11
+      const finMes = new Date(año, mes, 0, 23, 59, 59); // día 0 del mes siguiente = último día del mes actual
+      
+      console.log(`📅 Filtrando ausencias del mes: ${filtroMes}`, { inicioMes, finMes });
+      
+      q = query(
+        collection(db, "ausencias"),
+        where("fechaInicio", ">=", inicioMes.toISOString().split('T')[0]),
+        where("fechaInicio", "<=", finMes.toISOString().split('T')[0]),
+        orderBy("fechaInicio", "desc"),
+        limit(100)
+      );
+    } else {
+      // ✅ CARGAR SOLO ÚLTIMOS 30 DÍAS SI NO HAY FILTRO
+      const hace30Dias = new Date();
+      hace30Dias.setDate(hace30Dias.getDate() - 30);
+      const fecha30Dias = hace30Dias.toISOString().split('T')[0];
+      
+      console.log(`📅 Cargando ausencias de los últimos 30 días desde: ${fecha30Dias}`);
+      
+      q = query(
+        collection(db, "ausencias"),
+        where("fechaInicio", ">=", fecha30Dias),
+        orderBy("fechaInicio", "desc"),
+        limit(100)
+      );
+    }
     
     const ausenciasSnapshot = await getDocs(q);
     ausenciasData = [];
     
     if (ausenciasSnapshot.empty) {
-      console.warn("⚠️ No se encontraron ausencias");
+      console.warn("⚠️ No se encontraron ausencias para el período seleccionado");
       actualizarTablaAusenciasSafe();
       actualizarEstadisticasAusenciasSafe();
       return;
@@ -1798,14 +1897,27 @@ async function cargarAusencias() {
     ausenciasSnapshot.forEach(doc => {
       const data = doc.data();
       
+      // ✅ CONVERSIÓN MEJORADA DE FECHAS
       let fechaInicio = data.fechaInicio;
       let fechaFin = data.fechaFin;
       
+      // Manejar diferentes formatos de fecha
       if (typeof fechaInicio === 'string') {
         fechaInicio = new Date(fechaInicio + 'T00:00:00');
+      } else if (fechaInicio && fechaInicio.toDate) {
+        fechaInicio = fechaInicio.toDate();
+      } else if (fechaInicio && fechaInicio.seconds) {
+        fechaInicio = new Date(fechaInicio.seconds * 1000);
       }
-      if (typeof fechaFin === 'string' && fechaFin) {
-        fechaFin = new Date(fechaFin + 'T00:00:00');
+      
+      if (fechaFin) {
+        if (typeof fechaFin === 'string') {
+          fechaFin = new Date(fechaFin + 'T00:00:00');
+        } else if (fechaFin.toDate) {
+          fechaFin = fechaFin.toDate();
+        } else if (fechaFin.seconds) {
+          fechaFin = new Date(fechaFin.seconds * 1000);
+        }
       }
       
       ausenciasData.push({
@@ -1818,14 +1930,18 @@ async function cargarAusencias() {
         motivo: data.motivo || '',
         estado: data.estado || 'pendiente',
         comentariosAdmin: data.comentariosAdmin || '',
-        fechaCreacion: data.fechaCreacion.toDate ? data.fechaCreacion.toDate() : new Date(data.fechaCreacion),
+        fechaCreacion: data.fechaCreacion && data.fechaCreacion.toDate ? 
+          data.fechaCreacion.toDate() : 
+          (data.fechaCreacion ? new Date(data.fechaCreacion) : new Date()),
         fechaModificacion: data.fechaModificacion ? 
           (data.fechaModificacion.toDate ? data.fechaModificacion.toDate() : new Date(data.fechaModificacion)) 
           : null
       });
     });
     
-    console.log(`✅ ${ausenciasData.length} ausencias cargadas correctamente`);
+    const periodoTexto = filtroMes ? `del mes ${filtroMes}` : 'de los últimos 30 días';
+    console.log(`✅ ${ausenciasData.length} ausencias cargadas ${periodoTexto}`);
+    
     actualizarTablaAusenciasSafe();
     actualizarEstadisticasAusenciasSafe();
     
@@ -1846,6 +1962,102 @@ async function cargarAusencias() {
     }
   }
 }
+
+// ✅ AGREGAR ESTO A admin.js
+function mostrarSeccionModificada(id) {
+  document.querySelectorAll('.seccion').forEach(s => s.classList.add('d-none'));
+  document.getElementById(id).classList.remove('d-none');
+  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+  document.querySelector(`.sidebar a[href="#${id}"]`)?.classList.add('active');
+
+  // Cargar datos específicos de cada sección
+  if (id === 'justificantes') {
+    inicializarSeccionAusencias();
+  }
+
+  // Actualizar el título de la página
+  const tituloSeccion = document.querySelector(`.sidebar a[href="#${id}"]`).textContent.trim();
+  document.title = `CH Panel Admin | ${tituloSeccion}`;
+}
+
+// ✅ VERSIÓN CORREGIDA PARA admin.js
+function agregarSelectorMesAusencias() {
+  const filterBar = document.querySelector('#justificantes .filter-bar');
+  if (!filterBar) return;
+  
+  // Verificar si ya existe el selector
+  if (document.getElementById('filtroMesAusencia')) return;
+  
+  // ✅ CREAR NUEVA FILA PARA EL SELECTOR DE MES (no modificar las existentes)
+  const nuevaFila = document.createElement('div');
+  nuevaFila.className = 'row g-2 mt-2 p-3 rounded-3 shadow-sm bg-light';
+  nuevaFila.innerHTML = `
+    <div class="col-md-3">
+      <label class="form-label mb-1">Filtrar por mes:</label>
+      <select id="filtroMesAusencia" class="form-select">
+        <option value="">Todos los meses</option>
+        <option value="2025-01">Enero 2025</option>
+        <option value="2025-02">Febrero 2025</option>
+        <option value="2025-03">Marzo 2025</option>
+        <option value="2025-04">Abril 2025</option>
+        <option value="2025-05">Mayo 2025</option>
+        <option value="2025-06">Junio 2025</option>
+        <option value="2025-07">Julio 2025</option>
+        <option value="2025-08">Agosto 2025</option>
+        <option value="2025-09">Septiembre 2025</option>
+        <option value="2025-10">Octubre 2025</option>
+        <option value="2025-11">Noviembre 2025</option>
+        <option value="2025-12">Diciembre 2025</option>
+      </select>
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+      <button type="button" class="btn btn-outline-primary" onclick="cargarAusencias()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+      </button>
+    </div>
+    <div class="col-md-6 d-flex align-items-end">
+      <small class="text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        Por defecto se muestra el mes actual.
+      </small>
+    </div>
+  `;
+  
+  // Agregar después del filterBar existente
+  filterBar.parentNode.appendChild(nuevaFila);
+  
+  // Establecer mes actual por defecto
+  const ahora = new Date();
+  const mesActual = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('filtroMesAusencia').value = mesActual;
+  
+  // Agregar event listener
+  document.getElementById('filtroMesAusencia').addEventListener('change', cargarAusencias);
+  
+  console.log(`✅ Selector de mes agregado con valor: ${mesActual}`);
+}
+
+// ✅ También agregar esta función
+function inicializarSeccionAusencias() {
+  console.log("🔧 Inicializando sección de ausencias...");
+  
+  // Agregar selector de mes si no existe
+  agregarSelectorMesAusencias();
+  
+  // Cargar usuarios y ausencias
+  setTimeout(() => {
+    if (typeof cargarUsuariosParaAusencias === 'function') {
+      cargarUsuariosParaAusencias();
+    }
+    if (typeof cargarAusencias === 'function') {
+      cargarAusencias();
+    }
+  }, 100);
+}
+
+// ✅ Hacer funciones disponibles globalmente
+window.mostrarSeccionModificada = mostrarSeccionModificada;
+
 
 
 async function eliminarAusenciaDirecta(id) {

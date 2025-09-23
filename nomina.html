@@ -1631,57 +1631,154 @@ function recalcularResumenGeneral() {
 }
 
 
-    // Función para exportar a Excel
-    window.exportarExcel = function() {
-      if (!resultadosNomina || resultadosNomina.length === 0) {
-        mostrarNotificacion('No hay datos para exportar', 'warning');
-        return;
-      }
+// Función para exportar a Excel CORREGIDA
+window.exportarExcel = function() {
+  if (!resultadosNomina || resultadosNomina.length === 0) {
+    mostrarNotificacion('No hay datos para exportar', 'warning');
+    return;
+  }
 
-      try {
-       
-        const datosExcel = resultadosNomina.map(resultado => {
-          const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
-          return {
-            'Empleado': resultado.empleado.nombre,
-            'Tipo': getTipoNombre(resultado.empleado.tipo),
-            'Cuenta Bancaria': resultado.empleado.cuentaBancaria || 'No especificada',
-            'Banco': resultado.empleado.nombreBanco || 'No especificado',
-            'Salario Base': resultado.salarioQuincenal,
-            'Días Esperados': resultado.diasLaboralesEsperados,
-            'Días Trabajados': resultado.diasTrabajados,
-            'Retardos': resultado.retardos,
-            'Días de Descuento': resultado.diasDescuento,
-            'Días Efectivos': resultado.diasEfectivos,
-            'Pago por Día': resultado.pagoPorDia,
-            'Subtotal': resultado.pagoTotal,
-            'Descuento IMSS': resultado.descuentoIMSS,
-            'Descuento Caja': resultado.descuentoCaja,
-            'Total Descuentos': resultado.totalDescuentos,
-            'Pago Final': pagoFinal,
-            'Estado': resultado.status,
-            'Comentarios': resultado.comentariosEdicion || ''
-          };
-        });
-
-
-        const ws = XLSX.utils.json_to_sheet(datosExcel);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Nómina");
-
-        const fecha = new Date().toISOString().split('T')[0];
-        const nombreArchivo = `Nomina_${quinceActual.replace(' ', '_')}_${mesActual.replace('/', '-')}_${fecha}.xlsx`;
+  try {
+    console.log('📊 Iniciando exportación Excel con', resultadosNomina.length, 'empleados');
+    
+    const datosExcel = resultadosNomina.map((resultado, index) => {
+      const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
+      
+      // ✅ DEBUGGING: Ver qué datos bancarios tenemos
+      console.log(`👤 Empleado ${index + 1}:`, {
+        nombre: resultado.empleado.nombre,
+        cuenta: resultado.empleado.cuentaBancaria,
+        banco: resultado.empleado.nombreBanco
+      });
+      
+      // ✅ VALIDACIÓN MEJORADA DE DATOS BANCARIOS
+      const cuentaBancaria = (resultado.empleado.cuentaBancaria && resultado.empleado.cuentaBancaria.trim() !== '') 
+        ? resultado.empleado.cuentaBancaria.trim() 
+        : 'No registrada';
         
-        XLSX.writeFile(wb, nombreArchivo);
-        mostrarNotificacion('Archivo Excel exportado correctamente', 'success');
-      } catch (error) {
-        console.error('Error exportando Excel:', error);
-        mostrarNotificacion('Error al exportar Excel', 'error');
-      }
-    };
+      const nombreBanco = (resultado.empleado.nombreBanco && resultado.empleado.nombreBanco.trim() !== '') 
+        ? resultado.empleado.nombreBanco.trim() 
+        : 'No especificado';
+      
+      return {
+        // Información básica del empleado
+        'Empleado': resultado.empleado.nombre || 'Sin nombre',
+        'Email': resultado.empleado.email || 'No registrado',
+        'Tipo': getTipoNombre(resultado.empleado.tipo),
+        
+        // 💳 DATOS BANCARIOS (PRIORITARIOS)
+        'Cuenta Bancaria': cuentaBancaria,
+        'Banco': nombreBanco,
+        
+        // Configuración salarial
+        'Salario Base Quincenal': resultado.salarioQuincenal || 0,
+        'Pago por Día': resultado.pagoPorDia || 0,
+        
+        // Asistencia
+        'Días Esperados': resultado.diasLaboralesEsperados || 0,
+        'Días Trabajados': resultado.diasTrabajados || 0,
+        'Días Efectivos': resultado.diasEfectivos || 0,
+        'Retardos': resultado.retardos || 0,
+        'Faltas': resultado.diasFaltantes || 0,
+        'Días de Descuento por Retardos': resultado.diasDescuento || 0,
+        
+        // Cálculos financieros
+        'Subtotal Bruto': resultado.pagoTotal || 0,
+        'Descuento IMSS': resultado.descuentoIMSS || 0,
+        'Descuento Caja de Ahorro': resultado.descuentoCaja || 0,
+        'Total Descuentos': resultado.totalDescuentos || 0,
+        'PAGO FINAL': pagoFinal || 0,
+        
+        // Información adicional
+        'Estado': resultado.status || 'Sin estado',
+        'Editado Manualmente': resultado.editadoManualmente ? 'SÍ' : 'NO',
+        'Comentarios': resultado.comentariosEdicion || 'Sin comentarios',
+        
+        // Beneficios
+        'Tiene IMSS': resultado.empleado.tieneIMSS ? 'SÍ' : 'NO',
+        'Participa en Caja de Ahorro': resultado.empleado.tieneCajaAhorro ? 'SÍ' : 'NO',
+        'Monto Caja de Ahorro': resultado.empleado.montoCajaAhorro || 0
+      };
+    });
 
-    // ✅ FUNCIONES PARA MANEJO DE COLECCIÓN "nominas"
+    // ✅ VERIFICAR DATOS ANTES DE EXPORTAR
+    console.log('📋 Muestra de datos para Excel:', datosExcel[0]);
+    console.log('💳 Verificando datos bancarios:');
+    datosExcel.forEach((emp, index) => {
+      console.log(`  ${index + 1}. ${emp.Empleado}: Cuenta=${emp['Cuenta Bancaria']}, Banco=${emp.Banco}`);
+    });
 
+    // Crear hoja de cálculo
+    const ws = XLSX.utils.json_to_sheet(datosExcel);
+    const wb = XLSX.utils.book_new();
+    
+    // ✅ CONFIGURAR ANCHOS DE COLUMNAS
+    const columnWidths = [
+      { wch: 25 }, // Empleado
+      { wch: 30 }, // Email  
+      { wch: 15 }, // Tipo
+      { wch: 20 }, // Cuenta Bancaria
+      { wch: 15 }, // Banco
+      { wch: 18 }, // Salario Base
+      { wch: 12 }, // Pago por Día
+      { wch: 12 }, // Días Esperados
+      { wch: 12 }, // Días Trabajados
+      { wch: 12 }, // Días Efectivos
+      { wch: 10 }, // Retardos
+      { wch: 10 }, // Faltas
+      { wch: 15 }, // Días Descuento
+      { wch: 15 }, // Subtotal Bruto
+      { wch: 12 }, // Descuento IMSS
+      { wch: 18 }, // Descuento Caja
+      { wch: 15 }, // Total Descuentos
+      { wch: 15 }, // PAGO FINAL
+      { wch: 20 }, // Estado
+      { wch: 15 }, // Editado
+      { wch: 30 }, // Comentarios
+      { wch: 12 }, // Tiene IMSS
+      { wch: 20 }, // Caja de Ahorro
+      { wch: 15 }  // Monto Caja
+    ];
+    
+    ws['!cols'] = columnWidths;
+    
+    // Agregar hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, "Nómina");
+
+    // ✅ NOMBRE DE ARCHIVO MEJORADO
+    const fecha = new Date().toISOString().split('T')[0];
+    const periodoLimpio = quinceActual.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const mesLimpio = mesActual.replace(/[^a-zA-Z0-9_]/g, '_');
+    const nombreArchivo = `Nomina_${periodoLimpio}_${mesLimpio}_${fecha}.xlsx`;
+    
+    console.log('💾 Guardando archivo:', nombreArchivo);
+    
+    // Guardar archivo
+    XLSX.writeFile(wb, nombreArchivo);
+    
+    // ✅ NOTIFICACIÓN DETALLADA
+    const empleadosConCuenta = datosExcel.filter(emp => 
+      emp['Cuenta Bancaria'] !== 'No registrada'
+    ).length;
+    
+    mostrarNotificacion(
+      `✅ Archivo Excel exportado exitosamente\n\n` +
+      `📄 Archivo: ${nombreArchivo}\n` +
+      `👥 ${datosExcel.length} empleados exportados\n` +
+      `💳 ${empleadosConCuenta} con datos bancarios completos\n` +
+      `📊 ${datosExcel.length - empleadosConCuenta} sin datos bancarios`, 
+      'success', 
+      6000
+    );
+    
+  } catch (error) {
+    console.error('❌ Error exportando Excel:', error);
+    mostrarNotificacion('Error al exportar Excel: ' + error.message, 'error');
+  }
+};
+
+
+// ✅ FUNCIONES PARA MANEJO DE COLECCIÓN "nominas"
 // Función para crear ID único de nómina
 function generarIdNomina(año, mes, periodo) {
   return `${año}-${String(mes).padStart(2, '0')}-${periodo}`;
