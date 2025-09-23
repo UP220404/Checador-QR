@@ -1980,69 +1980,19 @@ function mostrarSeccionModificada(id) {
   document.title = `CH Panel Admin | ${tituloSeccion}`;
 }
 
-// ✅ VERSIÓN CORREGIDA PARA admin.js
-function agregarSelectorMesAusencias() {
-  const filterBar = document.querySelector('#justificantes .filter-bar');
-  if (!filterBar) return;
-  
-  // Verificar si ya existe el selector
-  if (document.getElementById('filtroMesAusencia')) return;
-  
-  // ✅ CREAR NUEVA FILA PARA EL SELECTOR DE MES (no modificar las existentes)
-  const nuevaFila = document.createElement('div');
-  nuevaFila.className = 'row g-2 mt-2 p-3 rounded-3 shadow-sm bg-light';
-  nuevaFila.innerHTML = `
-    <div class="col-md-3">
-      <label class="form-label mb-1">Filtrar por mes:</label>
-      <select id="filtroMesAusencia" class="form-select">
-        <option value="">Todos los meses</option>
-        <option value="2025-01">Enero 2025</option>
-        <option value="2025-02">Febrero 2025</option>
-        <option value="2025-03">Marzo 2025</option>
-        <option value="2025-04">Abril 2025</option>
-        <option value="2025-05">Mayo 2025</option>
-        <option value="2025-06">Junio 2025</option>
-        <option value="2025-07">Julio 2025</option>
-        <option value="2025-08">Agosto 2025</option>
-        <option value="2025-09">Septiembre 2025</option>
-        <option value="2025-10">Octubre 2025</option>
-        <option value="2025-11">Noviembre 2025</option>
-        <option value="2025-12">Diciembre 2025</option>
-      </select>
-    </div>
-    <div class="col-md-3 d-flex align-items-end">
-      <button type="button" class="btn btn-outline-primary" onclick="cargarAusencias()">
-        <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
-      </button>
-    </div>
-    <div class="col-md-6 d-flex align-items-end">
-      <small class="text-muted">
-        <i class="bi bi-info-circle me-1"></i>
-        Por defecto se muestra el mes actual.
-      </small>
-    </div>
-  `;
-  
-  // Agregar después del filterBar existente
-  filterBar.parentNode.appendChild(nuevaFila);
+
+function inicializarSeccionAusencias() {
+  console.log("🔧 Inicializando sección de ausencias...");
   
   // Establecer mes actual por defecto
   const ahora = new Date();
   const mesActual = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
-  document.getElementById('filtroMesAusencia').value = mesActual;
-  
-  // Agregar event listener
-  document.getElementById('filtroMesAusencia').addEventListener('change', cargarAusencias);
-  
-  console.log(`✅ Selector de mes agregado con valor: ${mesActual}`);
-}
-
-// ✅ También agregar esta función
-function inicializarSeccionAusencias() {
-  console.log("🔧 Inicializando sección de ausencias...");
-  
-  // Agregar selector de mes si no existe
-  agregarSelectorMesAusencias();
+  const selectorMes = document.getElementById('filtroMesAusencia');
+  if (selectorMes) {
+    selectorMes.value = mesActual;
+    // Agregar event listener
+    selectorMes.addEventListener('change', cargarAusencias);
+  }
   
   // Cargar usuarios y ausencias
   setTimeout(() => {
@@ -2054,6 +2004,7 @@ function inicializarSeccionAusencias() {
     }
   }, 100);
 }
+
 
 // ✅ Hacer funciones disponibles globalmente
 window.mostrarSeccionModificada = mostrarSeccionModificada;
@@ -2429,6 +2380,7 @@ function actualizarTablaAusencias() {
   actualizarTablaAusenciasSafe();
 }
 
+
 function actualizarTablaAusenciasSafe() {
   try {
     const tbody = document.querySelector("#tabla-ausencias tbody");
@@ -2451,33 +2403,24 @@ function actualizarTablaAusenciasSafe() {
       return;
     }
 
-    // Obtener filtros
+    // Obtener filtros (quitar filtroFechaAusencia)
     const filtroEstado = document.getElementById("filtroEstadoAusencia")?.value || "";
     const filtroTipo = document.getElementById("filtroTipoAusencia")?.value || "";
-    const filtroFecha = document.getElementById("filtroFechaAusencia")?.value || "";
     const filtroBusqueda = document.getElementById("filtroBusquedaAusencia")?.value.toLowerCase() || "";
 
-    // Aplicar filtros
+    // Aplicar filtros (quitar fechaMatch)
     const ausenciasFiltradas = ausenciasData.filter(ausencia => {
       const estadoMatch = !filtroEstado || ausencia.estado === filtroEstado;
       const tipoMatch = !filtroTipo || ausencia.tipo === filtroTipo;
-      
-      let fechaMatch = true;
-      if (filtroFecha) {
-        const fechaFiltro = new Date(filtroFecha + 'T00:00:00');
-        fechaMatch = (
-          (ausencia.fechaInicio && ausencia.fechaInicio.toDateString() === fechaFiltro.toDateString()) ||
-          (ausencia.fechaFin && ausencia.fechaFin.toDateString() === fechaFiltro.toDateString())
-        );
-      }
       
       const busquedaMatch = !filtroBusqueda || 
         ausencia.nombreUsuario.toLowerCase().includes(filtroBusqueda) ||
         ausencia.emailUsuario.toLowerCase().includes(filtroBusqueda) ||
         ausencia.motivo.toLowerCase().includes(filtroBusqueda);
 
-      return estadoMatch && tipoMatch && fechaMatch && busquedaMatch;
+      return estadoMatch && tipoMatch && busquedaMatch;
     });
+
 
     if (ausenciasFiltradas.length === 0) {
       tbody.innerHTML = `
