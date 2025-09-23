@@ -126,6 +126,33 @@
             </div>
           </div>
         </div>
+      <!-- En la sección de employeeSalaryForm, después de la línea 120: -->
+
+<div class="row mt-3">
+  <div class="col-md-12">
+    <div class="card p-3">
+      <h6 class="card-title mb-3">📋 Tipo de Nómina</h6>
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Modalidad de Pago</label>
+          <select class="form-select" id="tipoNomina" onchange="actualizarCalculoPago()">
+            <option value="quincenal">Quincenal (10 días laborales)</option>
+            <option value="semanal">Semanal (5 días laborales)</option>
+          </select>
+          <small class="text-muted">Define cómo se calculará el pago del empleado</small>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Período Base</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" id="salarioBase" class="form-control" readonly>
+          </div>
+          <small class="text-muted" id="periodoTexto">Por 10 días laborales</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
         <!-- ✅ NUEVO CAMPO: CUENTA BANCARIA -->
 <div class="row mt-3">
@@ -228,48 +255,17 @@
     </div>
 
     <!-- Selector de Período -->
-    <div class="period-selector">
-      <div class="row align-items-end">
-        <div class="col-md-3">
-          <label class="form-label">Mes y Año</label>
-          <input type="month" id="monthSelect" class="form-control" value="">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Período</label>
-          <select id="quinceSelect" class="form-select">
-            <option value="primera">Período 1 (Primeros 10 días laborales)</option>
-            <option value="segunda">Período 2 (Siguientes 10 días laborales)</option>
-          </select>
-        </div>
 
-        <div class="col-md-6">
-  <div class="btn-container">
-    <button onclick="calcularNomina()" class="btn btn-primary btn-principal">
-      <i class="bi bi-calculator me-2"></i>
-      <span class="btn-text">Calcular Nómina</span>
-    </button>
-    
-    <div class="btn-group-actions" id="actionButtons" style="display: none;">
-      <button onclick="guardarNominaCompleta()" class="btn btn-info btn-action" id="saveBtn">
-        <i class="bi bi-save me-2"></i>
-        <span class="btn-text">Guardar</span>
-      </button>
-      <button onclick="exportarExcel()" class="btn btn-success btn-action" id="exportBtn">
-        <i class="bi bi-file-earmark-excel me-2"></i>
-        <span class="btn-text">Excel</span>
-      </button>
-      <button onclick="generarTodosLosPDFs()" class="btn btn-warning btn-action" id="pdfMasivoBtn">
-        <i class="bi bi-file-earmark-pdf me-2"></i>
-        <span class="btn-text">PDFs</span>
-      </button>
+    <div class="col-md-3">
+      <label class="form-label">Tipo de Nómina</label>
+      <select id="tipoNominaCalculo" class="form-select" onchange="cambiarTipoNomina()">
+        <option value="quincenal">📅 Nómina Quincenal</option>
+        <option value="semanal">📆 Nómina Semanal</option>
+      </select>
     </div>
-  </div>
-</div>
-
-
-      </div>
+    <div class="col-md-3" id="selectorPeriodo">
+      <!-- Se llena dinámicamente según el tipo -->
     </div>
-
     <!-- Resumen General -->
     <div id="summaryCard" class="summary-card" style="display: none;">
       <div class="summary-stats">
@@ -626,26 +622,31 @@
       manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
     };
 
-    window.loadEmployeeSalary = function() {
-      const employeeId = document.getElementById('employeeSelect').value;
-      if (!employeeId) return;
+   
+// Modificar la función loadEmployeeSalary (línea ~628):
 
-      const empleado = empleadosGlobales.find(emp => emp.uid === employeeId);
-      if (!empleado) return;
+window.loadEmployeeSalary = function() {
+  const employeeId = document.getElementById('employeeSelect').value;
+  if (!employeeId) return;
 
-      document.getElementById('employeeSalaryForm').style.display = 'block';
-      document.getElementById('individualSalary').value = empleado.salarioQuincenal || '';
-      document.getElementById('individualHours').value = empleado.horasQuincenal || '';
-      
-      document.getElementById('tieneIMSS').checked = empleado.tieneIMSS || false;
-      document.getElementById('tieneCajaAhorro').checked = empleado.tieneCajaAhorro || false;
-      document.getElementById('montoCajaAhorro').value = empleado.montoCajaAhorro || '';
-      document.getElementById('cuentaBancaria').value = empleado.cuentaBancaria || '';
-      document.getElementById('nombreBanco').value = empleado.nombreBanco || '';
-      
-      toggleCajaAhorro();
-      calcularPagoPorDia();
-    };
+  const empleado = empleadosGlobales.find(emp => emp.uid === employeeId);
+  if (!empleado) return;
+
+  document.getElementById('employeeSalaryForm').style.display = 'block';
+  document.getElementById('individualSalary').value = empleado.salarioQuincenal || '';
+  document.getElementById('individualHours').value = empleado.horasQuincenal || '';
+  document.getElementById('tipoNomina').value = empleado.tipoNomina || 'quincenal'; // ✅ NUEVO
+  
+  document.getElementById('tieneIMSS').checked = empleado.tieneIMSS || false;
+  document.getElementById('tieneCajaAhorro').checked = empleado.tieneCajaAhorro || false;
+  document.getElementById('montoCajaAhorro').value = empleado.montoCajaAhorro || '';
+  document.getElementById('cuentaBancaria').value = empleado.cuentaBancaria || '';
+  document.getElementById('nombreBanco').value = empleado.nombreBanco || '';
+  
+  toggleCajaAhorro();
+  actualizarCalculoPago(); // ✅ ACTUALIZAR CÁLCULO
+};
+
 
     // Calcular pago por día automáticamente
     document.getElementById('individualSalary').addEventListener('input', calcularPagoPorDia);
@@ -658,6 +659,7 @@
     }
 
     window.saveEmployeeSalary = async function() {
+
       const employeeId = document.getElementById('employeeSelect').value;
       const salary = parseFloat(document.getElementById('individualSalary').value);
       const hours = parseInt(document.getElementById('individualHours').value);
@@ -666,6 +668,7 @@
       const montoCajaAhorro = parseFloat(document.getElementById('montoCajaAhorro').value) || 0;
       const cuentaBancaria = document.getElementById('cuentaBancaria').value.trim();
       const nombreBanco = document.getElementById('nombreBanco').value;
+      const tipoNomina = document.getElementById('tipoNomina').value;
 
       if (!employeeId || !salary || !hours) {
         mostrarNotificacion('Complete todos los campos obligatorios', 'warning');
@@ -678,12 +681,13 @@
       }
 
       try {
-        const empleadoRef = doc(db, 'usuarios', employeeId);
+        const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
         await updateDoc(empleadoRef, {
           salarioQuincenal: salary,
           horasQuincenal: hours,
           pagoPorHora: parseFloat((salary / (hours || 1)).toFixed(2)),
           pagoPorDia: parseFloat((salary / 10).toFixed(2)),
+          tipoNomina: tipoNomina,
           tieneIMSS: tieneIMSS,
           tieneCajaAhorro: tieneCajaAhorro,
           montoCajaAhorro: tieneCajaAhorro ? montoCajaAhorro : 0,
@@ -839,6 +843,665 @@
         default: return tipo;
       }
     }
+
+
+
+  // Agregar después de la línea 800:
+
+// Reemplazar las funciones de gestión de tipos de nómina:
+
+// ===== GESTIÓN DE TIPOS DE NÓMINA =====
+function cambiarTipoNomina() {
+  const tipo = document.getElementById('tipoNominaCalculo').value;
+  const selectorPeriodo = document.getElementById('selectorPeriodo');
+  
+  if (tipo === 'quincenal') {
+    // ✅ QUINCENAS FIJAS: 1-15 y 16-fin del mes
+    selectorPeriodo.innerHTML = `
+      <label class="form-label">Quincena</label>
+      <select id="quinceSelect" class="form-select">
+        <option value="primera">Primera Quincena (1-15)</option>
+        <option value="segunda">Segunda Quincena (16-fin de mes)</option>
+      </select>
+    `;
+  } else {
+    // ✅ SEMANAS VARIABLES: Según calendario
+    const monthSelect = document.getElementById('monthSelect').value;
+    if (monthSelect) {
+      const [año, mes] = monthSelect.split('-').map(Number);
+      selectorPeriodo.innerHTML = `
+        <label class="form-label">Semana</label>
+        <select id="semanaSelect" class="form-select">
+          ${generarOpcionesSemanas(año, mes)}
+        </select>
+      `;
+    } else {
+      selectorPeriodo.innerHTML = `
+        <label class="form-label">Semana</label>
+        <select id="semanaSelect" class="form-select">
+          <option value="">Primero seleccione el mes</option>
+        </select>
+      `;
+    }
+  }
+}
+
+function generarOpcionesSemanas(año, mes) {
+  const semanas = obtenerSemanasDelMes(año, mes - 1); // mes - 1 porque Date usa base 0
+  
+  if (semanas.length === 0) {
+    return '<option value="">No hay semanas completas en este mes</option>';
+  }
+  
+  return semanas.map((semana, index) => {
+    const fechaInicio = formatearFechaCorta(semana.inicio);
+    const fechaFin = formatearFechaCorta(semana.fin);
+    const esSemanaActual = esSemanaActiva(semana.inicio, semana.fin);
+    
+    return `
+      <option value="${index}" ${esSemanaActual ? 'selected' : ''}>
+        Semana ${index + 1}: ${fechaInicio} - ${fechaFin}
+      </option>
+    `;
+  }).join('');
+}
+
+function obtenerSemanasDelMes(año, mes) {
+  const semanas = [];
+  const primerDia = new Date(año, mes, 1);
+  const ultimoDia = new Date(año, mes + 1, 0);
+  
+  // ✅ ENCONTRAR EL PRIMER LUNES DEL MES
+  let fechaActual = new Date(primerDia);
+  while (fechaActual.getDay() !== 1 && fechaActual <= ultimoDia) {
+    fechaActual.setDate(fechaActual.getDate() + 1);
+  }
+  
+  // ✅ GENERAR SEMANAS COMPLETAS (LUNES A VIERNES)
+  while (fechaActual <= ultimoDia) {
+    const inicioSemana = new Date(fechaActual);
+    const finSemana = new Date(fechaActual);
+    finSemana.setDate(finSemana.getDate() + 4); // Viernes
+    
+    // ✅ SOLO AGREGAR SI LA SEMANA ESTÁ COMPLETAMENTE EN EL MES
+    if (inicioSemana.getMonth() === mes && finSemana.getMonth() === mes && finSemana <= ultimoDia) {
+      semanas.push({
+        inicio: new Date(inicioSemana),
+        fin: new Date(finSemana),
+        diasLaborales: obtenerDiasLaboralesSemana(inicioSemana, finSemana)
+      });
+    }
+    
+    fechaActual.setDate(fechaActual.getDate() + 7); // Siguiente lunes
+  }
+  
+  return semanas;
+}
+
+function obtenerDiasLaboralesSemana(inicioSemana, finSemana) {
+  const dias = [];
+  const fechaActual = new Date(inicioSemana);
+  
+  while (fechaActual <= finSemana) {
+    const diaSemana = fechaActual.getDay();
+    if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a Viernes
+      dias.push(fechaActual.getDate());
+    }
+    fechaActual.setDate(fechaActual.getDate() + 1);
+  }
+  
+  return dias;
+}
+
+function esSemanaActiva(inicioSemana, finSemana) {
+  const hoy = new Date();
+  return hoy >= inicioSemana && hoy <= finSemana;
+}
+
+function formatearFechaCorta(fecha) {
+  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
+
+// ✅ FUNCIÓN MEJORADA PARA CALCULAR DÍAS LABORALES POR TIPO
+function calcularDiasLaboralesPorTipo(año, mes, periodo, tipo) {
+  if (tipo === 'quincenal') {
+    // ✅ QUINCENAS FIJAS: Días naturales 1-15 y 16-fin, filtrar solo laborales
+    return calcularDiasLaboralesQuincenaFija(año, mes, periodo);
+  } else {
+    // ✅ SEMANAS VARIABLES: Días según el índice de semana seleccionado
+    return calcularDiasLaboralesSemanales(año, mes, periodo);
+  }
+}
+
+function calcularDiasLaboralesQuincenaFija(año, mes, periodo) {
+  const diasLaborales = [];
+  const ultimoDia = new Date(año, mes, 0).getDate();
+  
+  // ✅ QUINCENA FIJA: 1-15 o 16-fin del mes
+  const diaInicio = periodo === 'primera' ? 1 : 16;
+  const diaFin = periodo === 'primera' ? 15 : ultimoDia;
+  
+  for (let dia = diaInicio; dia <= diaFin; dia++) {
+    const fecha = new Date(año, mes - 1, dia);
+    const diaSemana = fecha.getDay();
+    
+    // ✅ SOLO DÍAS LABORALES (Lunes=1 a Viernes=5)
+    if (diaSemana >= 1 && diaSemana <= 5) {
+      diasLaborales.push(dia);
+    }
+  }
+  
+  return diasLaborales;
+}
+
+function calcularDiasLaboralesSemanales(año, mes, indiceSemana) {
+  const semanas = obtenerSemanasDelMes(año, mes - 1);
+  
+  if (indiceSemana >= 0 && indiceSemana < semanas.length) {
+    return semanas[indiceSemana].diasLaborales;
+  }
+  
+  return [];
+}
+
+function actualizarCalculoPago() {
+  const tipoNomina = document.getElementById('tipoNomina').value;
+  const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
+  const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
+  
+  document.getElementById('salarioBase').value = salary;
+  document.getElementById('periodoTexto').textContent = `Por ${diasPeriodo} días laborales`;
+  
+  const dailyRate = salary / diasPeriodo;
+  document.getElementById('dailyRate').value = dailyRate.toFixed(2);
+}
+
+// ✅ FUNCIÓN PRINCIPAL MODIFICADA PARA AMBOS TIPOS
+window.calcularNomina = async function() {
+  const monthSelect = document.getElementById('monthSelect').value;
+  const tipoNomina = document.getElementById('tipoNominaCalculo').value;
+  
+  if (!monthSelect) {
+    mostrarNotificacion('Selecciona un mes', 'warning');
+    return;
+  }
+
+  // ✅ OBTENER PERÍODO SEGÚN TIPO
+  let periodoSelect, diasLaborales, tituloCalculo, periodoId;
+  
+  const [año, mes] = monthSelect.split('-');
+  const mesNum = parseInt(mes);
+  const añoNum = parseInt(año);
+  
+  if (tipoNomina === 'quincenal') {
+    periodoSelect = document.getElementById('quinceSelect').value;
+    diasLaborales = calcularDiasLaboralesQuincenaFija(añoNum, mesNum, periodoSelect);
+    quinceActual = periodoSelect === 'primera' ? 'Primera Quincena' : 'Segunda Quincena';
+    tituloCalculo = `Nómina Quincenal - ${quinceActual}`;
+    periodoId = periodoSelect;
+  } else {
+    const semanaIndex = parseInt(document.getElementById('semanaSelect').value);
+    if (isNaN(semanaIndex)) {
+      mostrarNotificacion('Selecciona una semana válida', 'warning');
+      return;
+    }
+    
+    diasLaborales = calcularDiasLaboralesSemanales(añoNum, mesNum, semanaIndex);
+    quinceActual = `Semana ${semanaIndex + 1}`;
+    tituloCalculo = `Nómina Semanal - ${quinceActual}`;
+    periodoId = `semana-${semanaIndex}`;
+  }
+
+  // ✅ VALIDAR QUE TENEMOS DÍAS LABORALES
+  if (!diasLaborales || diasLaborales.length === 0) {
+    mostrarNotificacion(`No se encontraron días laborales para ${tituloCalculo.toLowerCase()}`, 'error');
+    return;
+  }
+
+  console.log(`📅 Calculando: ${tituloCalculo}`);
+  console.log(`📊 Días laborales:`, diasLaborales);
+  console.log(`📊 Total días: ${diasLaborales.length}`);
+
+  // Actualizar variables globales
+  mesActualNum = mesNum;
+  añoActualNum = añoNum;
+  mesActual = `${mesNum}/${añoNum}`;
+
+  // Verificar nómina existente
+  const nominaId = generarIdNominaConTipo(añoNum, mesNum, periodoId, tipoNomina);
+  const existeNomina = await verificarNominaExistentePorTipo(nominaId);
+  if (existeNomina) return;
+  
+  document.getElementById('loadingSpinner').style.display = 'block';
+  
+  try {
+    // ✅ FILTRAR EMPLEADOS POR TIPO DE NÓMINA
+    const usuariosSnapshot = await getDocs(query(collection(db, "usuarios")));
+    const empleados = [];
+    
+    usuariosSnapshot.forEach(doc => {
+      const userData = doc.data();
+      
+      if (!userData || !userData.nombre || !userData.salarioQuincenal) return;
+      
+      // ✅ FILTRAR SOLO EMPLEADOS DEL TIPO DE NÓMINA SELECCIONADO
+      const tipoEmpleado = userData.tipoNomina || 'quincenal'; // Default quincenal
+      if (tipoEmpleado !== tipoNomina) return;
+      
+      const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
+      
+      empleados.push({
+        uid: doc.id,
+        nombre: userData.nombre,
+        email: userData.email || 'sin-email@cielitohome.com',
+        tipo: userData.tipo || 'tiempo_completo',
+        tipoNomina: tipoEmpleado,
+        salarioQuincenal: userData.salarioQuincenal,
+        pagoPorDia: userData.salarioQuincenal / diasPeriodo,
+        tieneIMSS: userData.tieneIMSS || false,
+        tieneCajaAhorro: userData.tieneCajaAhorro || false,
+        montoCajaAhorro: userData.montoCajaAhorro || 0,
+        cuentaBancaria: userData.cuentaBancaria || '',
+        nombreBanco: userData.nombreBanco || ''
+      });
+    });
+    
+    if (empleados.length === 0) {
+      mostrarNotificacion(`❌ No hay empleados configurados para ${tituloCalculo.toLowerCase()}`, 'error', 6000);
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
+    }
+
+    console.log(`👥 ${empleados.length} empleados encontrados para ${tituloCalculo}`);
+    
+    // ✅ CONSULTA DE REGISTROS OPTIMIZADA
+    const fechaInicio = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.min(...diasLaborales)).padStart(2, '0')}`;
+    const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
+    
+    const registrosQuery = query(
+      collection(db, "registros"),
+      where("tipoEvento", "==", "entrada"),
+      where("fecha", ">=", fechaInicio),
+      where("fecha", "<=", fechaFin)
+    );
+
+    const registrosSnapshot = await getDocs(registrosQuery);
+    console.log(`📊 Registros obtenidos: ${registrosSnapshot.size}`);
+    
+    // ✅ PROCESAR REGISTROS FILTRADOS POR DÍAS ESPECÍFICOS
+    const registrosPorEmpleado = {};
+    let registrosProcesados = 0;
+    
+    registrosSnapshot.forEach(doc => {
+      const registro = doc.data();
+      const uid = registro.uid;
+      
+      const fechaRegistro = registro.fecha;
+      if (!fechaRegistro) return;
+      
+      const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
+      
+      // ✅ FILTRO POR DÍAS ESPECÍFICOS DEL PERÍODO
+      if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
+        if (!registrosPorEmpleado[uid]) {
+          registrosPorEmpleado[uid] = [];
+        }
+        registrosPorEmpleado[uid].push(registro);
+        registrosProcesados++;
+      }
+    });
+
+    console.log(`📊 Registros procesados para ${tituloCalculo}: ${registrosProcesados}`);
+    
+    // ✅ CONTINUAR CON EL CÁLCULO NORMAL...
+    const resultados = [];
+    let totalRetardos = 0;
+    let empleadosConDescuento = 0;
+    let totalNominaFinal = 0;
+
+    for (const empleado of empleados) {
+      try {
+        const registros = registrosPorEmpleado[empleado.uid] || [];
+        
+        const salarioBase = empleado.salarioQuincenal;
+        const pagoPorDia = empleado.pagoPorDia;
+        const diasEsperados = diasLaborales.length;
+
+        let retardos = 0;
+        let diasTrabajados = registros.length;
+        const detalleRetardos = [];
+        const diasAsistidos = [];
+
+        registros.forEach(registro => {
+          const [regAño, regMes, regDia] = registro.fecha.split('-').map(Number);
+          diasAsistidos.push(regDia);
+          
+          if (registro.estado === 'retardo') {
+            retardos++;
+            detalleRetardos.push({
+              fecha: registro.fecha,
+              hora: registro.hora
+            });
+          }
+        });
+
+        const diasFaltantes = diasLaborales.filter(dia => !diasAsistidos.includes(dia));
+        const diasDescuento = Math.floor(retardos / 4);
+        const diasEfectivos = diasTrabajados - diasDescuento;
+        const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
+
+        // Aplicar descuentos
+        let descuentoIMSS = 0;
+        let descuentoCaja = 0;
+        
+        if (empleado.tieneIMSS) {
+          descuentoIMSS = 300; // ✅ SIEMPRE FIJO
+        }
+
+        if (empleado.tieneCajaAhorro && empleado.montoCajaAhorro) {
+          descuentoCaja = empleado.montoCajaAhorro; // ✅ SIEMPRE EL MONTO CONFIGURADO
+        }
+
+        const totalDescuentos = descuentoIMSS + descuentoCaja;
+        const pagoFinal = Math.max(0, pagoTotal - totalDescuentos);
+        
+        if (diasDescuento > 0 || totalDescuentos > 0) empleadosConDescuento++;
+        totalRetardos += retardos;
+
+        // Determinar estado
+        let status, statusClass;
+        if (diasFaltantes.length > 0) {
+          status = `${diasFaltantes.length} falta${diasFaltantes.length > 1 ? 's' : ''} • ${retardos} retardo${retardos !== 1 ? 's' : ''}`;
+          statusClass = 'status-penalty';
+        } else if (diasDescuento > 0) {
+          status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
+          statusClass = 'status-penalty';
+        } else if (retardos >= 3) {
+          status = 'En límite de retardos';
+          statusClass = 'status-warning';
+        } else {
+          status = 'Sin penalizaciones';
+          statusClass = 'status-ok';
+        }
+
+        const resultado = {
+          empleado,
+          salarioQuincenal: salarioBase,
+          diasLaboralesEsperados: diasEsperados,
+          diasTrabajados,
+          diasFaltantes: diasFaltantes.length,
+          retardos,
+          diasDescuento,
+          diasEfectivos,
+          pagoPorDia: Math.round(pagoPorDia),
+          pagoTotal: Math.round(pagoTotal),
+          descuentoIMSS,
+          descuentoCaja,
+          totalDescuentos,
+          pagoFinal: Math.round(pagoFinal),
+          status,
+          statusClass,
+          detalleRetardos,
+          diasAsistidos,
+          diasFaltantesDetalle: diasFaltantes,
+          tipoNomina: tipoNomina // ✅ AGREGAR TIPO PARA REFERENCIA
+        };
+        
+        resultados.push(resultado);
+        totalNominaFinal += Math.round(resultado.pagoFinal);
+        
+      } catch (error) {
+        console.error(`❌ Error procesando empleado ${empleado.nombre}:`, error);
+        mostrarNotificacion(`Error procesando ${empleado.nombre}, se omitirá`, 'warning');
+      }
+    }
+
+    resultadosNomina = resultados;
+    mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaFinal, periodoSelect, monthSelect);
+
+  } catch (error) {
+    console.error('Error calculando nómina:', error);
+    mostrarNotificacion('Error al calcular la nómina: ' + error.message, 'error');
+  } finally {
+    document.getElementById('loadingSpinner').style.display = 'none';
+  }
+};
+
+// ✅ FUNCIONES AUXILIARES PARA DIFERENTES TIPOS
+function generarIdNominaConTipo(año, mes, periodo, tipo) {
+  return `${año}-${String(mes).padStart(2, '0')}-${periodo}-${tipo}`;
+}
+
+async function verificarNominaExistentePorTipo(nominaId) {
+  try {
+    const nominaRef = doc(db, 'nominas', nominaId);
+    const nominaDoc = await getDoc(nominaRef);
+    
+    if (nominaDoc.exists()) {
+      const confirmar = confirm(
+        `Se encontró una nómina guardada.\n\n¿Desea cargar la nómina existente o recalcular desde cero?\n\n- Aceptar: Cargar existente\n- Cancelar: Recalcular`
+      );
+      
+      if (confirmar) {
+        cargarNominaDesdeDocumento(nominaDoc.data());
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error verificando nómina:', error);
+    return false;
+  }
+}
+
+// ✅ EVENT LISTENERS MEJORADOS
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar selector de tipo de nómina
+  cambiarTipoNomina();
+  
+  // ✅ ACTUALIZAR SEMANAS CUANDO CAMBIE EL MES
+  document.getElementById('monthSelect')?.addEventListener('change', function() {
+    const tipoNomina = document.getElementById('tipoNominaCalculo').value;
+    if (tipoNomina === 'semanal') {
+      cambiarTipoNomina(); // Regenerar opciones de semanas
+    }
+  });
+  
+  // Event listener para cambio de tipo
+  document.getElementById('tipoNominaCalculo')?.addEventListener('change', cambiarTipoNomina);
+  
+  // Resto de inicialización...
+  configurarCheckboxesJustificaciones();
+  document.getElementById('btnGuardarEdicion')?.addEventListener('click', guardarEdicionManual);
+});
+
+function generarOpcionesSemanas() {
+  const hoy = new Date();
+  const mesActual = hoy.getMonth();
+  const añoActual = hoy.getFullYear();
+  
+  // Obtener todas las semanas del mes actual
+  const semanas = obtenerSemanasDelMes(añoActual, mesActual);
+  
+  return semanas.map((semana, index) => {
+    const fechaInicio = formatearFecha(semana.inicio);
+    const fechaFin = formatearFecha(semana.fin);
+    const esSemanaActual = esSemanaActiva(semana.inicio, semana.fin);
+    
+    return `
+      <option value="${index}" ${esSemanaActual ? 'selected' : ''}>
+        Semana ${index + 1}: ${fechaInicio} - ${fechaFin}
+      </option>
+    `;
+  }).join('');
+}
+
+function obtenerSemanasDelMes(año, mes) {
+  const semanas = [];
+  const primerDia = new Date(año, mes, 1);
+  const ultimoDia = new Date(año, mes + 1, 0);
+  
+  let fechaActual = new Date(primerDia);
+  
+  // Ajustar al primer lunes del mes
+  while (fechaActual.getDay() !== 1) {
+    fechaActual.setDate(fechaActual.getDate() + 1);
+    if (fechaActual > ultimoDia) break;
+  }
+  
+  while (fechaActual <= ultimoDia) {
+    const inicioSemana = new Date(fechaActual);
+    const finSemana = new Date(fechaActual);
+    finSemana.setDate(finSemana.getDate() + 4); // Viernes
+    
+    // Solo agregar si la semana está completamente en el mes
+    if (finSemana <= ultimoDia) {
+      semanas.push({
+        inicio: new Date(inicioSemana),
+        fin: new Date(finSemana)
+      });
+    }
+    
+    fechaActual.setDate(fechaActual.getDate() + 7); // Siguiente lunes
+  }
+  
+  return semanas;
+}
+
+function esSemanaActiva(inicioSemana, finSemana) {
+  const hoy = new Date();
+  return hoy >= inicioSemana && hoy <= finSemana;
+}
+
+function actualizarCalculoPago() {
+  const tipoNomina = document.getElementById('tipoNomina').value;
+  const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
+  const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
+  
+  document.getElementById('salarioBase').value = salary;
+  document.getElementById('periodoTexto').textContent = `Por ${diasPeriodo} días laborales`;
+  
+  const dailyRate = salary / diasPeriodo;
+  document.getElementById('dailyRate').value = dailyRate.toFixed(2);
+}
+
+// ===== MODIFICAR FUNCIÓN PRINCIPAL DE CÁLCULO =====
+window.calcularNomina = async function() {
+  const monthSelect = document.getElementById('monthSelect').value;
+  const tipoNomina = document.getElementById('tipoNominaCalculo').value;
+  
+  if (!monthSelect) {
+    mostrarNotificacion('Selecciona un mes', 'warning');
+    return;
+  }
+
+  // Configurar variables según tipo de nómina
+  let periodoSelect, diasLaborales, tituloCalculo;
+  
+  if (tipoNomina === 'quincenal') {
+    periodoSelect = document.getElementById('quinceSelect').value;
+    mesActualNum = parseInt(monthSelect.split('-')[1]);
+    añoActualNum = parseInt(monthSelect.split('-')[0]);
+    diasLaborales = calcularDiasLaboralesPeriodo(añoActualNum, mesActualNum, periodoSelect);
+    quinceActual = periodoSelect === 'primera' ? 'Período 1' : 'Período 2';
+    tituloCalculo = `Nómina Quincenal - ${quinceActual}`;
+  } else {
+    const semanaIndex = parseInt(document.getElementById('semanaSelect').value);
+    const semanas = obtenerSemanasDelMes(añoActualNum, mesActualNum);
+    const semanaSeleccionada = semanas[semanaIndex];
+    
+    diasLaborales = obtenerDiasLaboralesSemana(semanaSeleccionada.inicio, semanaSeleccionada.fin);
+    quinceActual = `Semana ${semanaIndex + 1}`;
+    tituloCalculo = `Nómina Semanal - ${quinceActual}`;
+  }
+
+  console.log(`📅 Calculando: ${tituloCalculo}`);
+  console.log(`📊 Días laborales:`, diasLaborales);
+
+  // Verificar nómina existente
+  const existeNomina = await verificarNominaExistente();
+  if (existeNomina) return;
+  
+  // Continuar con el cálculo normal...
+  document.getElementById('loadingSpinner').style.display = 'block';
+  
+  try {
+    // ✅ FILTRAR EMPLEADOS POR TIPO DE NÓMINA
+    const usuariosSnapshot = await getDocs(query(collection(db, "usuarios")));
+    const empleados = [];
+    
+    usuariosSnapshot.forEach(doc => {
+      const userData = doc.data();
+      
+      if (!userData || !userData.nombre || !userData.salarioQuincenal) return;
+      
+      // ✅ FILTRAR SOLO EMPLEADOS DEL TIPO DE NÓMINA SELECCIONADO
+      const tipoEmpleado = userData.tipoNomina || 'quincenal'; // Default quincenal
+      if (tipoEmpleado !== tipoNomina) return;
+      
+      const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
+      
+      empleados.push({
+        uid: doc.id,
+        nombre: userData.nombre,
+        email: userData.email || 'sin-email@cielitohome.com',
+        tipo: userData.tipo || 'tiempo_completo',
+        tipoNomina: tipoEmpleado,
+        salarioQuincenal: userData.salarioQuincenal,
+        pagoPorDia: userData.salarioQuincenal / diasPeriodo,
+        tieneIMSS: userData.tieneIMSS || false,
+        tieneCajaAhorro: userData.tieneCajaAhorro || false,
+        montoCajaAhorro: userData.montoCajaAhorro || 0,
+        cuentaBancaria: userData.cuentaBancaria || '',
+        nombreBanco: userData.nombreBanco || ''
+      });
+    });
+    
+    if (empleados.length === 0) {
+      mostrarNotificacion(`❌ No hay empleados configurados para ${tituloCalculo.toLowerCase()}`, 'error', 6000);
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
+    }
+
+    console.log(`👥 ${empleados.length} empleados encontrados para ${tituloCalculo}`);
+    
+    // Continuar con el resto del cálculo (consulta de registros, etc.)...
+    // [El resto del código permanece igual]
+    
+  } catch (error) {
+    console.error('Error calculando nómina:', error);
+    mostrarNotificacion('Error al calcular la nómina: ' + error.message, 'error');
+  } finally {
+    document.getElementById('loadingSpinner').style.display = 'none';
+  }
+};
+
+function obtenerDiasLaboralesSemana(inicioSemana, finSemana) {
+  const dias = [];
+  const fechaActual = new Date(inicioSemana);
+  
+  while (fechaActual <= finSemana) {
+    const diaSemana = fechaActual.getDay();
+    if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a Viernes
+      dias.push(fechaActual.getDate());
+    }
+    fechaActual.setDate(fechaActual.getDate() + 1);
+  }
+  
+  return dias;
+}
+
+// ===== INICIALIZACIÓN =====
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar selector de tipo de nómina
+  cambiarTipoNomina();
+  
+  // Event listener para cambio de tipo
+  document.getElementById('tipoNominaCalculo')?.addEventListener('change', cambiarTipoNomina);
+  
+  // ...existing code...
+});
 
     // Función principal para calcular nómina OPTIMIZADA
 window.calcularNomina = async function() {
@@ -1101,6 +1764,44 @@ function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosC
   llenarTabla(resultados);
 
   document.getElementById('exportBtn').style.display = 'inline-block';
+
+  // Mostrar vista compacta por defecto
+  mostrarVistaCompacta(resultados);
+  llenarTabla(resultados);
+
+  const actionButtons = document.getElementById('actionButtons');
+  if (actionButtons) {
+    actionButtons.style.display = 'block';
+  } else {
+    // ✅ CREAR LOS BOTONES SI NO EXISTEN
+    const buttonsHTML = `
+      <div id="actionButtons" class="d-flex gap-2 mt-3" style="display: block;">
+        <button id="saveBtn" class="btn btn-success" onclick="guardarNominaCompleta()">
+          <i class="bi bi-floppy me-2"></i>Guardar Nómina
+        </button>
+        <button id="exportBtn" class="btn btn-primary" onclick="exportarExcel()">
+          <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar Excel
+        </button>
+        <button class="btn btn-info" onclick="generarTodosLosPDFs()">
+          <i class="bi bi-file-earmark-pdf me-2"></i>Generar Todos los PDFs
+        </button>
+      </div>
+    `;
+    
+    // Insertar después del viewControls
+    const viewControls = document.getElementById('viewControls');
+    if (viewControls) {
+      viewControls.insertAdjacentHTML('afterend', buttonsHTML);
+    }
+  }
+
+  // ✅ MOSTRAR TAMBIÉN LOS BOTONES INDIVIDUALES (FALLBACK)
+  const saveBtn = document.getElementById('saveBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  if (saveBtn) saveBtn.style.display = 'inline-block';
+  if (exportBtn) exportBtn.style.display = 'inline-block';
+
+
 }
 
 // Función para cambiar vista
@@ -2128,12 +2829,12 @@ function generarPeriodoDetallado() {
   }
 }
 
-// Función para crear el HTML del ticket PROFESIONAL
+// Reemplazar la función crearTicketHTML completa (línea ~2827):
+
 function crearTicketHTML(resultado) {
   const fecha = new Date();
   const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
   
-  // Obtener email desde Firebase si está disponible, si no, no mostrar
   const emailEmpleado = resultado.empleado.email && resultado.empleado.email !== 'sin-email@cielitohome.com' 
     ? resultado.empleado.email 
     : '';
@@ -2148,7 +2849,7 @@ function crearTicketHTML(resultado) {
       color: #333;
       box-shadow: 0 0 20px rgba(0,0,0,0.1);
     ">
-      <!-- HEADER PROFESIONAL -->
+      <!-- HEADER PROFESIONAL COMPLETO -->
       <div style="
         background: linear-gradient(135deg, #155d27 0%, #2d7a3e 100%);
         padding: 20px 40px;
@@ -2161,7 +2862,6 @@ function crearTicketHTML(resultado) {
           justify-content: space-between;
           align-items: center;
         ">
-          <!-- Logo y Empresa -->
           <div style="display: flex; align-items: center;">
             <div style="
               width: 60px;
@@ -2174,18 +2874,12 @@ function crearTicketHTML(resultado) {
               margin-right: 20px;
               box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             ">
-              <img src="img/cielitohome.png" alt="Logo" style="
-                width: 45px;
-                height: 45px;
-                border-radius: 50%;
-                object-fit: cover;
-              " onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
               <div style="
-                display: none;
                 width: 45px;
                 height: 45px;
                 background: #155d27;
                 border-radius: 50%;
+                display: flex;
                 align-items: center;
                 justify-content: center;
                 color: white;
@@ -2209,28 +2903,27 @@ function crearTicketHTML(resultado) {
             </div>
           </div>
           
-          <!-- Fecha y Folio -->
           <div style="text-align: right;">
-            <div style="
-              background: rgba(255,255,255,0.2);
-              padding: 8px 12px;
-              border-radius: 8px;
-              margin-bottom: 8px;
-            ">
-            <p style="margin: 0; font-size: 12px; font-weight: bold;">
-              ${generarPeriodoDetallado()}
-            </p>
-             
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 8px;">FECHA DE EMISIÓN</div>
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">
+              ${fecha.toLocaleDateString('es-MX', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
             </div>
+            
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 5px;">FOLIO</div>
             <div style="
+              font-size: 13px;
+              font-weight: 600;
+              padding: 5px 10px;
               background: rgba(255,255,255,0.2);
-              padding: 8px 12px;
-              border-radius: 8px;
+              border-radius: 4px;
+              display: inline-block;
             ">
-              <p style="margin: 0; font-size: 10px; opacity: 0.8;">PERÍODO DE PAGO</p>
-              <p style="margin: 0; font-size: 12px; font-weight: bold;">
-                ${fecha.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }).toUpperCase()}
-              </p>
+              NOM-${fecha.getFullYear()}${String(fecha.getMonth() + 1).padStart(2, '0')}-${resultado.empleado.uid.slice(-4).toUpperCase()}
             </div>
           </div>
         </div>
@@ -2252,7 +2945,7 @@ function crearTicketHTML(resultado) {
         ">RECIBO DE PAGO</h2>
       </div>
 
-      <!-- INFORMACIÓN DEL EMPLEADO -->
+      <!-- INFORMACIÓN DEL EMPLEADO COMPLETA -->
       <div style="
         padding: 25px 40px;
         border-bottom: 1px solid #e9ecef;
@@ -2263,7 +2956,6 @@ function crearTicketHTML(resultado) {
           gap: 30px;
           align-items: start;
         ">
-          <!-- Datos del Empleado -->
           <div>
             <h3 style="
               margin: 0 0 15px 0;
@@ -2291,73 +2983,46 @@ function crearTicketHTML(resultado) {
             ` : ''}
             
             <div style="margin-bottom: 10px;">
-              <span style="font-weight: bold; color: #666; font-size: 12px;">TIPO DE EMPLEADO:</span>
-              <div style="
-                display: inline-block;
-                background: ${resultado.empleado.tipo === 'becario' ? '#17a2b8' : '#6c757d'};
-                color: white;
-                padding: 3px 8px;
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 500;
-                margin-top: 5px;
-              ">
+              <span style="font-weight: bold; color: #666; font-size: 12px;">TIPO:</span>
+              <div style="font-size: 14px; color: #666; margin-top: 2px;">
                 ${getTipoNombre(resultado.empleado.tipo)}
               </div>
             </div>
-
+            
             <div style="margin-bottom: 10px;">
               <span style="font-weight: bold; color: #666; font-size: 12px;">PERÍODO:</span>
-              <div style="
-                font-size: 11px;
-                opacity: 0.8;
-                margin-top: 8px;
-                font-style: italic;
-              ">
+              <div style="font-size: 14px; color: #666; margin-top: 2px;">
                 ${generarPeriodoDetallado()}
               </div>
             </div>
           </div>
 
-          <!-- Información del Salario -->
-          <div style="
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 4px solid #155d27;
-          ">
-            <h4 style="
-              margin: 0 0 15px 0;
-              font-size: 14px;
-              color: #155d27;
-              text-align: center;
-            ">SALARIO BASE</h4>
-            <div style="text-align: center;">
-              <div style="
-                font-size: 24px;
-                font-weight: 800;
-                color: #155d27;
-                margin-bottom: 5px;
-              ">$${formatearNumero(resultado.salarioQuincenal)}</div>
-              <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
-                QUINCENAL
+          <div style="border-left: 4px solid #155d27; padding-left: 15px;">
+            <div style="margin-bottom: 8px;">
+              <span style="font-weight: bold; color: #666; font-size: 11px;">SALARIO BASE</span>
+              <div style="font-size: 16px; font-weight: 600; color: #155d27;">
+                $${formatearNumero(resultado.salarioQuincenal)}
               </div>
-              <div style="
-                background: white;
-                padding: 8px;
-                border-radius: 6px;
-                font-size: 11px;
-                color: #666;
-              ">
-                <strong>Días laborales:</strong> ${resultado.diasLaboralesEsperados}<br>
-                <strong>Pago por día:</strong> $${formatearNumero(resultado.pagoPorDia)}
+            </div>
+            
+            <div style="margin-bottom: 8px;">
+              <span style="font-weight: bold; color: #666; font-size: 11px;">PAGO POR DÍA</span>
+              <div style="font-size: 14px; color: #666;">
+                $${formatearNumero(resultado.pagoPorDia)}
+              </div>
+            </div>
+            
+            <div>
+              <span style="font-weight: bold; color: #666; font-size: 11px;">FOLIO</span>
+              <div style="font-size: 12px; color: #666;">
+                NOM-${fecha.getFullYear()}${String(fecha.getMonth() + 1).padStart(2, '0')}-${resultado.empleado.uid.slice(-4).toUpperCase()}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- DESGLOSE DE ASISTENCIA -->
+      <!-- DESGLOSE DE ASISTENCIA COMPLETO -->
       <div style="
         padding: 25px 40px;
         border-bottom: 1px solid #e9ecef;
@@ -2378,13 +3043,22 @@ function crearTicketHTML(resultado) {
         ">
           <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
             <div style="font-size: 20px; font-weight: bold; color: #155d27;">
+              ${resultado.diasLaboralesEsperados}
+            </div>
+            <div style="font-size: 11px; color: #666; margin-top: 3px;">
+              DÍAS ESPERADOS
+            </div>
+          </div>
+
+          <div style="text-align: center; padding: 15px; background: ${resultado.diasTrabajados >= resultado.diasLaboralesEsperados ? '#e8f5e8' : '#fff3cd'}; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: ${resultado.diasTrabajados >= resultado.diasLaboralesEsperados ? '#155d27' : '#856404'};">
               ${resultado.diasTrabajados}
             </div>
             <div style="font-size: 11px; color: #666; margin-top: 3px;">
               DÍAS TRABAJADOS
             </div>
           </div>
-          
+
           <div style="text-align: center; padding: 15px; background: ${resultado.retardos > 0 ? '#fff3cd' : '#e8f5e8'}; border-radius: 8px;">
             <div style="font-size: 20px; font-weight: bold; color: ${resultado.retardos > 0 ? '#856404' : '#155d27'};">
               ${resultado.retardos}
@@ -2393,7 +3067,7 @@ function crearTicketHTML(resultado) {
               RETARDOS
             </div>
           </div>
-          
+
           <div style="text-align: center; padding: 15px; background: ${resultado.diasFaltantes > 0 ? '#f8d7da' : '#e8f5e8'}; border-radius: 8px;">
             <div style="font-size: 20px; font-weight: bold; color: ${resultado.diasFaltantes > 0 ? '#721c24' : '#155d27'};">
               ${resultado.diasFaltantes}
@@ -2402,22 +3076,11 @@ function crearTicketHTML(resultado) {
               FALTAS
             </div>
           </div>
-          
-          <div style="text-align: center; padding: 15px; background: #e7f3ff; border-radius: 8px;">
-            <div style="font-size: 20px; font-weight: bold; color: #0066cc;">
-              ${resultado.diasEfectivos}
-            </div>
-            <div style="font-size: 11px; color: #666; margin-top: 3px;">
-              DÍAS EFECTIVOS
-            </div>
-          </div>
         </div>
       </div>
 
-      <!-- DESGLOSE FINANCIERO -->
-      <div style="
-        padding: 25px 40px;
-      ">
+      <!-- DESGLOSE FINANCIERO COMPLETO -->
+      <div style="padding: 25px 40px;">
         <h3 style="
           margin: 0 0 20px 0;
           font-size: 16px;
@@ -2432,143 +3095,78 @@ function crearTicketHTML(resultado) {
           grid-template-columns: 1fr 1fr;
           gap: 30px;
         ">
-          <!-- Columna Izquierda: Conceptos -->
           <div>
             <div style="
               display: flex;
               justify-content: space-between;
               padding: 12px 0;
               border-bottom: 1px solid #eee;
-              font-size: 14px;
             ">
-              <span>Salario base</span>
-              <span style="font-weight: bold;">$${formatearNumero(resultado.salarioQuincenal)}</span>
+              <span style="font-size: 13px; color: #666;">Días efectivos trabajados:</span>
+              <span style="font-weight: 600;">${resultado.diasEfectivos} días</span>
             </div>
             
-            <div style="
-              display: flex;
-              justify-content: space-between;
-              padding: 12px 0;
-              border-bottom: 1px solid #eee;
-              font-size: 14px;
-            ">
-              <span>Días efectivos (${resultado.diasEfectivos})</span>
-              <span style="font-weight: bold;">$${formatearNumero(resultado.pagoTotal)}</span>
-            </div>
-
             ${resultado.diasDescuento > 0 ? `
               <div style="
                 display: flex;
                 justify-content: space-between;
                 padding: 12px 0;
                 border-bottom: 1px solid #eee;
-                font-size: 14px;
                 color: #dc3545;
               ">
-                <span>Descuento por retardos (${resultado.diasDescuento} días)</span>
-                <span style="font-weight: bold;">-$${formatearNumero(resultado.diasDescuento * resultado.pagoPorDia)}</span>
+                <span style="font-size: 13px;">Descuento por retardos:</span>
+                <span style="font-weight: 600;">-${resultado.diasDescuento} días</span>
               </div>
             ` : ''}
-
-            ${resultado.editadoManualmente && resultado.diasExtra > 0 ? `
-              <div style="
-                display: flex;
-                justify-content: space-between;
-                padding: 12px 0;
-                border-bottom: 1px solid #eee;
-                font-size: 14px;
-                color: #28a745;
-              ">
-                <span>Días extra (${resultado.diasExtra})</span>
-                <span style="font-weight: bold;">+$${formatearNumero(resultado.diasExtra * resultado.pagoPorDia)}</span>
-              </div>
-            ` : ''}
-
-            ${resultado.editadoManualmente && resultado.bonoExtra > 0 ? `
-              <div style="
-                display: flex;
-                justify-content: space-between;
-                padding: 12px 0;
-                border-bottom: 1px solid #eee;
-                font-size: 14px;
-                color: #28a745;
-              ">
-                <span>Bono especial</span>
-                <span style="font-weight: bold;">+$${formatearNumero(resultado.bonoExtra)}</span>
-              </div>
-            ` : ''}
+            
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid #eee;
+            ">
+              <span style="font-size: 13px; color: #666;">Subtotal bruto:</span>
+              <span style="font-weight: 600;">$${formatearNumero(resultado.pagoTotal)}</span>
+            </div>
           </div>
 
-          <!-- Columna Derecha: Descuentos -->
           <div>
-            <h4 style="
-              margin: 0 0 15px 0;
-              font-size: 14px;
-              color: #666;
-              text-transform: uppercase;
-            ">Descuentos</h4>
-            
             ${resultado.descuentoIMSS > 0 ? `
               <div style="
                 display: flex;
                 justify-content: space-between;
                 padding: 12px 0;
                 border-bottom: 1px solid #eee;
-                font-size: 14px;
                 color: #dc3545;
               ">
-                <span>IMSS</span>
-                <span style="font-weight: bold;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
+                <span style="font-size: 13px;">Descuento IMSS:</span>
+                <span style="font-weight: 600;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
               </div>
             ` : ''}
-
+            
             ${resultado.descuentoCaja > 0 ? `
               <div style="
                 display: flex;
                 justify-content: space-between;
                 padding: 12px 0;
                 border-bottom: 1px solid #eee;
-                font-size: 14px;
                 color: #dc3545;
               ">
-                <span>Caja de ahorro</span>
-                <span style="font-weight: bold;">-$${formatearNumero(resultado.descuentoCaja)}</span>
+                <span style="font-size: 13px;">Caja de ahorro:</span>
+                <span style="font-weight: 600;">-$${formatearNumero(resultado.descuentoCaja)}</span>
               </div>
             ` : ''}
-
-            ${resultado.totalDescuentos === 0 ? `
-              <div style="
-                padding: 20px;
-                text-align: center;
-                background: #e8f5e8;
-                border-radius: 8px;
-                color: #155d27;
-                font-weight: 500;
-              ">
-                Sin descuentos
-              </div>
-            ` : ''}
-
-            <!-- Total de Descuentos -->
-            ${resultado.totalDescuentos > 0 ? `
-              <div style="
-                margin-top: 15px;
-                padding: 12px;
-                background: #fff5f5;
-                border-radius: 6px;
-                border-left: 4px solid #dc3545;
-              ">
-                <div style="
-                  display: flex;
-                  justify-content: space-between;
-                  font-weight: bold;
-                  color: #dc3545;
-                ">
-                  <span>Total descuentos:</span>
-                  <span>-$${formatearNumero(resultado.totalDescuentos)}</span>
-                </div>
-              </div>
-            ` : ''}
+            
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 2px solid #155d27;
+              margin-top: 10px;
+            ">
+              <span style="font-size: 14px; font-weight: 600; color: #155d27;">TOTAL DESCUENTOS:</span>
+              <span style="font-weight: 700; color: #dc3545;">-$${formatearNumero(resultado.totalDescuentos)}</span>
+            </div>
           </div>
         </div>
 
@@ -2576,16 +3174,13 @@ function crearTicketHTML(resultado) {
           <div style="
             margin-top: 20px;
             padding: 15px;
-            background: #f0f4ff;
-            border-radius: 8px;
-            border-left: 4px solid #6f42c1;
+            background: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            border-radius: 4px;
           ">
-            <h5 style="
-              margin: 0 0 8px 0;
-              font-size: 12px;
-              color: #6f42c1;
-              font-weight: 600;
-            ">OBSERVACIONES:</h5>
+            <div style="font-weight: 600; color: #17a2b8; margin-bottom: 8px;">
+              📝 OBSERVACIONES:
+            </div>
             <p style="margin: 0; color: #495057; font-size: 13px; line-height: 1.4;">
               ${resultado.comentariosEdicion}
             </p>
@@ -2655,12 +3250,13 @@ function crearTicketHTML(resultado) {
           padding-top: 10px;
           opacity: 0.6;
         ">
-          Este documento es un comprobante oficial de pago • ${fecha.getFullYear()} Cielito Home 2025 - Todos los derechos reservados
+          Este documento es un comprobante oficial de pago • ${fecha.getFullYear()} Cielito Home - Todos los derechos reservados
         </div>
       </div>
     </div>
   `;
 }
+
 
 // Generar todos los PDFs de una vez
 window.generarTodosLosPDFs = async function() {
