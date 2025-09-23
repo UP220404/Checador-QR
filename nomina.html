@@ -950,16 +950,6 @@ function esSemanaActiva(inicioSemana, finSemana) {
   return hoy >= inicioSemana && hoy <= finSemana;
 }
 
-function calcularDiasLaboralesSemanales(año, mes, indiceSemana) {
-  const semanas = obtenerSemanasDelMes(año, mes - 1);
-  
-  if (indiceSemana >= 0 && indiceSemana < semanas.length) {
-    return semanas[indiceSemana].diasLaborales;
-  }
-  
-  return [];
-}
-
 function actualizarCalculoPago() {
   const tipoNomina = document.getElementById('tipoNomina').value;
   const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
