@@ -1724,11 +1724,11 @@ async function cargarUsuariosParaAusencias() {
     
     const usuariosUnicos = new Map();
     
-    // ✅ ESTRATEGIA MEJORADA: Buscar en colección "usuarios" 
+    // ✅ BUSCAR DIRECTAMENTE EN COLECCIÓN "usuarios" 
     try {
       const usuariosQuery = query(
         collection(db, "usuarios"),
-        limit(200) // Aumentar límite para asegurar que se carguen todos
+        limit(50) // Suficiente para 24 usuarios
       );
       
       const usuariosSnapshot = await getDocs(usuariosQuery);
@@ -1736,27 +1736,29 @@ async function cargarUsuariosParaAusencias() {
       
       usuariosSnapshot.forEach(doc => {
         const data = doc.data();
+        
+        // ✅ DEBUG: Mostrar TODOS los usuarios encontrados
         console.log("👤 Usuario encontrado:", { 
           id: doc.id, 
           nombre: data.nombre, 
           correo: data.correo,
-          email: data.email 
-        }); // Debug mejorado
+          tipo: data.tipo
+        });
         
-        // ✅ CORREGIR: Verificar AMBOS campos (correo Y email)
-        const emailField = data.correo || data.email;
-        
-        if (emailField && data.nombre && emailField.trim() !== '' && data.nombre.trim() !== '') {
-          usuariosUnicos.set(emailField, {
-            email: emailField,
+        // ✅ USAR SOLO EL CAMPO 'correo' (no 'email')
+        if (data.correo && data.nombre && data.correo.trim() !== '' && data.nombre.trim() !== '') {
+          usuariosUnicos.set(data.correo, {
+            email: data.correo, // Mapear correo -> email para compatibilidad
             nombre: data.nombre,
             tipo: data.tipo || 'empleado'
           });
         } else {
-          console.warn("⚠️ Usuario sin datos completos:", {
+          console.warn("⚠️ Usuario con datos incompletos:", {
+            id: doc.id,
             nombre: data.nombre,
             correo: data.correo,
-            email: data.email
+            tipo: data.tipo,
+            problema: !data.correo ? 'sin correo' : !data.nombre ? 'sin nombre' : 'campos vacíos'
           });
         }
       });
@@ -1765,34 +1767,14 @@ async function cargarUsuariosParaAusencias() {
       console.error("❌ Error consultando colección usuarios:", usuariosError);
     }
 
-    // ✅ ESTRATEGIA ALTERNATIVA: Si hay pocos usuarios, buscar en "registros"
-    if (usuariosUnicos.size < 5) {
-      console.log("🔄 Pocos usuarios encontrados, buscando en 'registros'...");
-      
-      const registrosQuery = query(
-        collection(db, "registros"),
-        limit(500)
-      );
-      
-      const registrosSnapshot = await getDocs(registrosQuery);
-      console.log(`📊 Documentos en colección 'registros': ${registrosSnapshot.size}`);
-      
-      registrosSnapshot.forEach(doc => {
-        const data = doc.data();
-        const emailField = data.correo || data.email;
-        
-        if (emailField && data.nombre && !usuariosUnicos.has(emailField)) {
-          usuariosUnicos.set(emailField, {
-            email: emailField,
-            nombre: data.nombre,
-            tipo: data.tipo || 'empleado'
-          });
-        }
-      });
-    }
-
     console.log("👥 Total usuarios únicos encontrados:", usuariosUnicos.size);
-    console.log("📋 Lista completa de usuarios:", Array.from(usuariosUnicos.values()));
+    
+    // ✅ MOSTRAR LISTA COMPLETA PARA DEBUG
+    const listaCompleta = Array.from(usuariosUnicos.values());
+    console.log("📋 Lista completa de usuarios:");
+    listaCompleta.forEach((usuario, index) => {
+      console.log(`  ${index + 1}. ${usuario.nombre} (${usuario.email})`);
+    });
 
     // Verificar que el elemento select existe
     const selectUsuario = document.getElementById("ausenciaUsuario");
@@ -1818,7 +1800,7 @@ async function cargarUsuariosParaAusencias() {
     
     usuariosArray.forEach(usuario => {
       const option = document.createElement("option");
-      option.value = usuario.email;
+      option.value = usuario.email; // Usar el correo como valor
       option.textContent = `${usuario.nombre} (${usuario.email})`;
       option.dataset.tipo = usuario.tipo;
       selectUsuario.appendChild(option);
@@ -1827,12 +1809,21 @@ async function cargarUsuariosParaAusencias() {
     console.log("✅ Select poblado con", usuariosArray.length, "usuarios");
     mostrarNotificacion(`${usuariosArray.length} usuarios cargados correctamente`, "success");
     
-    // ✅ DEBUG: Verificar si Nayeli está incluida
+    // ✅ VERIFICACIÓN ESPECÍFICA: Buscar por Nayeli
     const nayeli = usuariosArray.find(u => u.nombre.toLowerCase().includes('nayeli'));
     if (nayeli) {
       console.log("✅ Nayeli encontrada:", nayeli);
     } else {
       console.warn("⚠️ Nayeli NO encontrada en la lista final");
+      console.log("🔍 Usuarios que contienen 'N':");
+      usuariosArray.filter(u => u.nombre.toLowerCase().includes('n')).forEach(u => {
+        console.log(`  - ${u.nombre} (${u.email})`);
+      });
+    }
+    
+    // ✅ VERIFICAR QUE TENEMOS 24 USUARIOS
+    if (usuariosArray.length !== 24) {
+      console.warn(`⚠️ Se esperaban 24 usuarios, pero se encontraron ${usuariosArray.length}`);
     }
     
   } catch (error) {
@@ -1840,7 +1831,6 @@ async function cargarUsuariosParaAusencias() {
     mostrarNotificacion("Error al cargar la lista de usuarios: " + error.message, "danger");
   }
 }
-
 
 
 // ✅ FUNCIÓN CORREGIDA PARA CARGAR AUSENCIAS CON FILTRO DE MES
