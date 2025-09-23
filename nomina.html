@@ -950,10 +950,6 @@ function esSemanaActiva(inicioSemana, finSemana) {
   return hoy >= inicioSemana && hoy <= finSemana;
 }
 
-function formatearFechaCorta(fecha) {
-  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
-}
-
 function calcularDiasLaboralesQuincenaFija(año, mes, periodo) {
   const diasLaborales = [];
   const ultimoDia = new Date(año, mes, 0).getDate();
