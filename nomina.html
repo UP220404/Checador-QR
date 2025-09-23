@@ -950,17 +950,6 @@ function esSemanaActiva(inicioSemana, finSemana) {
   return hoy >= inicioSemana && hoy <= finSemana;
 }
 
-function actualizarCalculoPago() {
-  const tipoNomina = document.getElementById('tipoNomina').value;
-  const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
-  const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
-  
-  document.getElementById('salarioBase').value = salary;
-  document.getElementById('periodoTexto').textContent = `Por ${diasPeriodo} días laborales`;
-  
-  const dailyRate = salary / diasPeriodo;
-  document.getElementById('dailyRate').value = dailyRate.toFixed(2);
-}
 
 // MANTENER SOLO UNA FUNCIÓN PRINCIPAL DE CÁLCULO
 window.calcularNomina = async function() {
@@ -1084,17 +1073,6 @@ function calcularDiasLaboralesSemanales(año, mes, indiceSemana) {
   return [];
 }
 
-function actualizarCalculoPago() {
-  const tipoNomina = document.getElementById('tipoNomina').value;
-  const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
-  const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
-  
-  document.getElementById('salarioBase').value = salary;
-  document.getElementById('periodoTexto').textContent = `Por ${diasPeriodo} días laborales`;
-  
-  const dailyRate = salary / diasPeriodo;
-  document.getElementById('dailyRate').value = dailyRate.toFixed(2);
-}
 
 // ✅ FUNCIONES AUXILIARES PARA DIFERENTES TIPOS
 function generarIdNominaConTipo(año, mes, periodo, tipo) {
