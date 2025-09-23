@@ -1717,12 +1717,6 @@ async function migrarDatosHistoricos() {
 let ausenciasData = [];
 let ausenciaEditandoId = null;
 
-/**
- * Carga la lista de usuarios para el select de ausencias
- */
-/**
- * Carga la lista de usuarios para el select de ausencias
- */
 async function cargarUsuariosParaAusencias() {
   try {
     console.log("🔄 Cargando usuarios para ausencias...");
@@ -1744,9 +1738,9 @@ async function cargarUsuariosParaAusencias() {
     
     usuariosSnapshot.forEach(doc => {
       const data = doc.data();
-      if (data.email && data.nombre) {
-        usuariosUnicos.set(data.email, {
-          email: data.email,
+      if (data.correo && data.nombre) {
+        usuariosUnicos.set(data.correo, {
+          correo: data.correo,
           nombre: data.nombre,
           tipo: data.tipo || 'empleado'
         });
@@ -1766,7 +1760,7 @@ async function cargarUsuariosParaAusencias() {
     // Convertir a array y ya están ordenados por la consulta
     Array.from(usuariosUnicos.values()).forEach(usuario => {
       const option = document.createElement("option");
-      option.value = usuario.email;
+      option.value = usuario.correo;
       option.textContent = `${usuario.nombre}`;
       option.dataset.tipo = usuario.tipo;
       selectUsuario.appendChild(option);

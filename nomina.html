@@ -1644,11 +1644,9 @@ function recalcularResumenGeneral() {
           const pagoFinal = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
           return {
             'Empleado': resultado.empleado.nombre,
-            'Email': resultado.empleado.email,
             'Tipo': getTipoNombre(resultado.empleado.tipo),
-            // ✅ AGREGAR DATOS BANCARIOS AL EXCEL
-            'Banco': resultado.empleado.nombreBanco || 'No especificado',
             'Cuenta Bancaria': resultado.empleado.cuentaBancaria || 'No especificada',
+            'Banco': resultado.empleado.nombreBanco || 'No especificado',
             'Salario Base': resultado.salarioQuincenal,
             'Días Esperados': resultado.diasLaboralesEsperados,
             'Días Trabajados': resultado.diasTrabajados,
