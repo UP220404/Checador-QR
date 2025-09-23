@@ -950,25 +950,6 @@ function esSemanaActiva(inicioSemana, finSemana) {
   return hoy >= inicioSemana && hoy <= finSemana;
 }
 
-function calcularDiasLaboralesQuincenaFija(año, mes, periodo) {
-  const diasLaborales = [];
-  const ultimoDia = new Date(año, mes, 0).getDate();
-  
-  const diaInicio = periodo === 'primera' ? 1 : 16;
-  const diaFin = periodo === 'primera' ? 15 : ultimoDia;
-  
-  for (let dia = diaInicio; dia <= diaFin; dia++) {
-    const fecha = new Date(año, mes - 1, dia);
-    const diaSemana = fecha.getDay();
-    
-    if (diaSemana >= 1 && diaSemana <= 5) {
-      diasLaborales.push(dia);
-    }
-  }
-  
-  return diasLaborales;
-}
-
 function calcularDiasLaboralesSemanales(año, mes, indiceSemana) {
   const semanas = obtenerSemanasDelMes(año, mes - 1);
   
