@@ -846,17 +846,13 @@ window.loadEmployeeSalary = function() {
 
 
 
-  // Agregar después de la línea 800:
 
-// Reemplazar las funciones de gestión de tipos de nómina:
-
-// ===== GESTIÓN DE TIPOS DE NÓMINA =====
+// ===== GESTIÓN DE TIPOS DE NÓMINA ===== (MANTENER ESTA SECCIÓN)
 function cambiarTipoNomina() {
   const tipo = document.getElementById('tipoNominaCalculo').value;
   const selectorPeriodo = document.getElementById('selectorPeriodo');
   
   if (tipo === 'quincenal') {
-    // ✅ QUINCENAS FIJAS: 1-15 y 16-fin del mes
     selectorPeriodo.innerHTML = `
       <label class="form-label">Quincena</label>
       <select id="quinceSelect" class="form-select">
@@ -865,7 +861,6 @@ function cambiarTipoNomina() {
       </select>
     `;
   } else {
-    // ✅ SEMANAS VARIABLES: Según calendario
     const monthSelect = document.getElementById('monthSelect').value;
     if (monthSelect) {
       const [año, mes] = monthSelect.split('-').map(Number);
@@ -887,7 +882,7 @@ function cambiarTipoNomina() {
 }
 
 function generarOpcionesSemanas(año, mes) {
-  const semanas = obtenerSemanasDelMes(año, mes - 1); // mes - 1 porque Date usa base 0
+  const semanas = obtenerSemanasDelMes(año, mes - 1);
   
   if (semanas.length === 0) {
     return '<option value="">No hay semanas completas en este mes</option>';
@@ -911,19 +906,16 @@ function obtenerSemanasDelMes(año, mes) {
   const primerDia = new Date(año, mes, 1);
   const ultimoDia = new Date(año, mes + 1, 0);
   
-  // ✅ ENCONTRAR EL PRIMER LUNES DEL MES
   let fechaActual = new Date(primerDia);
   while (fechaActual.getDay() !== 1 && fechaActual <= ultimoDia) {
     fechaActual.setDate(fechaActual.getDate() + 1);
   }
   
-  // ✅ GENERAR SEMANAS COMPLETAS (LUNES A VIERNES)
   while (fechaActual <= ultimoDia) {
     const inicioSemana = new Date(fechaActual);
     const finSemana = new Date(fechaActual);
-    finSemana.setDate(finSemana.getDate() + 4); // Viernes
+    finSemana.setDate(finSemana.getDate() + 4);
     
-    // ✅ SOLO AGREGAR SI LA SEMANA ESTÁ COMPLETAMENTE EN EL MES
     if (inicioSemana.getMonth() === mes && finSemana.getMonth() === mes && finSemana <= ultimoDia) {
       semanas.push({
         inicio: new Date(inicioSemana),
@@ -932,7 +924,7 @@ function obtenerSemanasDelMes(año, mes) {
       });
     }
     
-    fechaActual.setDate(fechaActual.getDate() + 7); // Siguiente lunes
+    fechaActual.setDate(fechaActual.getDate() + 7);
   }
   
   return semanas;
@@ -944,7 +936,7 @@ function obtenerDiasLaboralesSemana(inicioSemana, finSemana) {
   
   while (fechaActual <= finSemana) {
     const diaSemana = fechaActual.getDay();
-    if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a Viernes
+    if (diaSemana >= 1 && diaSemana <= 5) {
       dias.push(fechaActual.getDate());
     }
     fechaActual.setDate(fechaActual.getDate() + 1);
@@ -957,6 +949,127 @@ function esSemanaActiva(inicioSemana, finSemana) {
   const hoy = new Date();
   return hoy >= inicioSemana && hoy <= finSemana;
 }
+
+function formatearFechaCorta(fecha) {
+  return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
+
+function calcularDiasLaboralesQuincenaFija(año, mes, periodo) {
+  const diasLaborales = [];
+  const ultimoDia = new Date(año, mes, 0).getDate();
+  
+  const diaInicio = periodo === 'primera' ? 1 : 16;
+  const diaFin = periodo === 'primera' ? 15 : ultimoDia;
+  
+  for (let dia = diaInicio; dia <= diaFin; dia++) {
+    const fecha = new Date(año, mes - 1, dia);
+    const diaSemana = fecha.getDay();
+    
+    if (diaSemana >= 1 && diaSemana <= 5) {
+      diasLaborales.push(dia);
+    }
+  }
+  
+  return diasLaborales;
+}
+
+function calcularDiasLaboralesSemanales(año, mes, indiceSemana) {
+  const semanas = obtenerSemanasDelMes(año, mes - 1);
+  
+  if (indiceSemana >= 0 && indiceSemana < semanas.length) {
+    return semanas[indiceSemana].diasLaborales;
+  }
+  
+  return [];
+}
+
+function actualizarCalculoPago() {
+  const tipoNomina = document.getElementById('tipoNomina').value;
+  const salary = parseFloat(document.getElementById('individualSalary').value) || 0;
+  const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
+  
+  document.getElementById('salarioBase').value = salary;
+  document.getElementById('periodoTexto').textContent = `Por ${diasPeriodo} días laborales`;
+  
+  const dailyRate = salary / diasPeriodo;
+  document.getElementById('dailyRate').value = dailyRate.toFixed(2);
+}
+
+// MANTENER SOLO UNA FUNCIÓN PRINCIPAL DE CÁLCULO
+window.calcularNomina = async function() {
+  const monthSelect = document.getElementById('monthSelect').value;
+  const tipoNomina = document.getElementById('tipoNominaCalculo').value;
+  
+  if (!monthSelect) {
+    mostrarNotificacion('Selecciona un mes', 'warning');
+    return;
+  }
+
+  let periodoSelect, diasLaborales, tituloCalculo, periodoId;
+  
+  const [año, mes] = monthSelect.split('-');
+  const mesNum = parseInt(mes);
+  const añoNum = parseInt(año);
+  
+  if (tipoNomina === 'quincenal') {
+    periodoSelect = document.getElementById('quinceSelect').value;
+    diasLaborales = calcularDiasLaboralesQuincenaFija(añoNum, mesNum, periodoSelect);
+    quinceActual = periodoSelect === 'primera' ? 'Primera Quincena' : 'Segunda Quincena';
+    tituloCalculo = `Nómina Quincenal - ${quinceActual}`;
+    periodoId = periodoSelect;
+  } else {
+    const semanaIndex = parseInt(document.getElementById('semanaSelect').value);
+    if (isNaN(semanaIndex)) {
+      mostrarNotificacion('Selecciona una semana válida', 'warning');
+      return;
+    }
+    
+    diasLaborales = calcularDiasLaboralesSemanales(añoNum, mesNum, semanaIndex);
+    quinceActual = `Semana ${semanaIndex + 1}`;
+    tituloCalculo = `Nómina Semanal - ${quinceActual}`;
+    periodoId = `semana-${semanaIndex}`;
+  }
+
+  if (!diasLaborales || diasLaborales.length === 0) {
+    mostrarNotificacion(`No se encontraron días laborales para ${tituloCalculo.toLowerCase()}`, 'error');
+    return;
+  }
+
+  console.log(`📅 Calculando: ${tituloCalculo}`);
+  
+  // Actualizar variables globales
+  mesActualNum = mesNum;
+  añoActualNum = añoNum;
+  mesActual = `${mesNum}/${añoNum}`;
+
+  // Verificar nómina existente
+  const nominaId = generarIdNominaConTipo(añoNum, mesNum, periodoId, tipoNomina);
+  const existeNomina = await verificarNominaExistentePorTipo(nominaId);
+  if (existeNomina) return;
+  
+  // Continuar con el resto del cálculo...
+  document.getElementById('loadingSpinner').style.display = 'block';
+  
+  // ... resto del código de cálculo de nómina ...
+};
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  cambiarTipoNomina();
+  
+  document.getElementById('monthSelect')?.addEventListener('change', function() {
+    const tipoNomina = document.getElementById('tipoNominaCalculo').value;
+    if (tipoNomina === 'semanal') {
+      cambiarTipoNomina();
+    }
+  });
+  
+  document.getElementById('tipoNominaCalculo')?.addEventListener('change', cambiarTipoNomina);
+  
+  configurarCheckboxesJustificaciones();
+  document.getElementById('btnGuardarEdicion')?.addEventListener('click', guardarEdicionManual);
+});
+
 
 function formatearFechaCorta(fecha) {
   return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
@@ -1015,257 +1128,6 @@ function actualizarCalculoPago() {
   const dailyRate = salary / diasPeriodo;
   document.getElementById('dailyRate').value = dailyRate.toFixed(2);
 }
-
-// ✅ FUNCIÓN PRINCIPAL MODIFICADA PARA AMBOS TIPOS
-window.calcularNomina = async function() {
-  const monthSelect = document.getElementById('monthSelect').value;
-  const tipoNomina = document.getElementById('tipoNominaCalculo').value;
-  
-  if (!monthSelect) {
-    mostrarNotificacion('Selecciona un mes', 'warning');
-    return;
-  }
-
-  // ✅ OBTENER PERÍODO SEGÚN TIPO
-  let periodoSelect, diasLaborales, tituloCalculo, periodoId;
-  
-  const [año, mes] = monthSelect.split('-');
-  const mesNum = parseInt(mes);
-  const añoNum = parseInt(año);
-  
-  if (tipoNomina === 'quincenal') {
-    periodoSelect = document.getElementById('quinceSelect').value;
-    diasLaborales = calcularDiasLaboralesQuincenaFija(añoNum, mesNum, periodoSelect);
-    quinceActual = periodoSelect === 'primera' ? 'Primera Quincena' : 'Segunda Quincena';
-    tituloCalculo = `Nómina Quincenal - ${quinceActual}`;
-    periodoId = periodoSelect;
-  } else {
-    const semanaIndex = parseInt(document.getElementById('semanaSelect').value);
-    if (isNaN(semanaIndex)) {
-      mostrarNotificacion('Selecciona una semana válida', 'warning');
-      return;
-    }
-    
-    diasLaborales = calcularDiasLaboralesSemanales(añoNum, mesNum, semanaIndex);
-    quinceActual = `Semana ${semanaIndex + 1}`;
-    tituloCalculo = `Nómina Semanal - ${quinceActual}`;
-    periodoId = `semana-${semanaIndex}`;
-  }
-
-  // ✅ VALIDAR QUE TENEMOS DÍAS LABORALES
-  if (!diasLaborales || diasLaborales.length === 0) {
-    mostrarNotificacion(`No se encontraron días laborales para ${tituloCalculo.toLowerCase()}`, 'error');
-    return;
-  }
-
-  console.log(`📅 Calculando: ${tituloCalculo}`);
-  console.log(`📊 Días laborales:`, diasLaborales);
-  console.log(`📊 Total días: ${diasLaborales.length}`);
-
-  // Actualizar variables globales
-  mesActualNum = mesNum;
-  añoActualNum = añoNum;
-  mesActual = `${mesNum}/${añoNum}`;
-
-  // Verificar nómina existente
-  const nominaId = generarIdNominaConTipo(añoNum, mesNum, periodoId, tipoNomina);
-  const existeNomina = await verificarNominaExistentePorTipo(nominaId);
-  if (existeNomina) return;
-  
-  document.getElementById('loadingSpinner').style.display = 'block';
-  
-  try {
-    // ✅ FILTRAR EMPLEADOS POR TIPO DE NÓMINA
-    const usuariosSnapshot = await getDocs(query(collection(db, "usuarios")));
-    const empleados = [];
-    
-    usuariosSnapshot.forEach(doc => {
-      const userData = doc.data();
-      
-      if (!userData || !userData.nombre || !userData.salarioQuincenal) return;
-      
-      // ✅ FILTRAR SOLO EMPLEADOS DEL TIPO DE NÓMINA SELECCIONADO
-      const tipoEmpleado = userData.tipoNomina || 'quincenal'; // Default quincenal
-      if (tipoEmpleado !== tipoNomina) return;
-      
-      const diasPeriodo = tipoNomina === 'semanal' ? 5 : 10;
-      
-      empleados.push({
-        uid: doc.id,
-        nombre: userData.nombre,
-        email: userData.email || 'sin-email@cielitohome.com',
-        tipo: userData.tipo || 'tiempo_completo',
-        tipoNomina: tipoEmpleado,
-        salarioQuincenal: userData.salarioQuincenal,
-        pagoPorDia: userData.salarioQuincenal / diasPeriodo,
-        tieneIMSS: userData.tieneIMSS || false,
-        tieneCajaAhorro: userData.tieneCajaAhorro || false,
-        montoCajaAhorro: userData.montoCajaAhorro || 0,
-        cuentaBancaria: userData.cuentaBancaria || '',
-        nombreBanco: userData.nombreBanco || ''
-      });
-    });
-    
-    if (empleados.length === 0) {
-      mostrarNotificacion(`❌ No hay empleados configurados para ${tituloCalculo.toLowerCase()}`, 'error', 6000);
-      document.getElementById('loadingSpinner').style.display = 'none';
-      return;
-    }
-
-    console.log(`👥 ${empleados.length} empleados encontrados para ${tituloCalculo}`);
-    
-    // ✅ CONSULTA DE REGISTROS OPTIMIZADA
-    const fechaInicio = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.min(...diasLaborales)).padStart(2, '0')}`;
-    const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
-    
-    const registrosQuery = query(
-      collection(db, "registros"),
-      where("tipoEvento", "==", "entrada"),
-      where("fecha", ">=", fechaInicio),
-      where("fecha", "<=", fechaFin)
-    );
-
-    const registrosSnapshot = await getDocs(registrosQuery);
-    console.log(`📊 Registros obtenidos: ${registrosSnapshot.size}`);
-    
-    // ✅ PROCESAR REGISTROS FILTRADOS POR DÍAS ESPECÍFICOS
-    const registrosPorEmpleado = {};
-    let registrosProcesados = 0;
-    
-    registrosSnapshot.forEach(doc => {
-      const registro = doc.data();
-      const uid = registro.uid;
-      
-      const fechaRegistro = registro.fecha;
-      if (!fechaRegistro) return;
-      
-      const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
-      
-      // ✅ FILTRO POR DÍAS ESPECÍFICOS DEL PERÍODO
-      if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
-        if (!registrosPorEmpleado[uid]) {
-          registrosPorEmpleado[uid] = [];
-        }
-        registrosPorEmpleado[uid].push(registro);
-        registrosProcesados++;
-      }
-    });
-
-    console.log(`📊 Registros procesados para ${tituloCalculo}: ${registrosProcesados}`);
-    
-    // ✅ CONTINUAR CON EL CÁLCULO NORMAL...
-    const resultados = [];
-    let totalRetardos = 0;
-    let empleadosConDescuento = 0;
-    let totalNominaFinal = 0;
-
-    for (const empleado of empleados) {
-      try {
-        const registros = registrosPorEmpleado[empleado.uid] || [];
-        
-        const salarioBase = empleado.salarioQuincenal;
-        const pagoPorDia = empleado.pagoPorDia;
-        const diasEsperados = diasLaborales.length;
-
-        let retardos = 0;
-        let diasTrabajados = registros.length;
-        const detalleRetardos = [];
-        const diasAsistidos = [];
-
-        registros.forEach(registro => {
-          const [regAño, regMes, regDia] = registro.fecha.split('-').map(Number);
-          diasAsistidos.push(regDia);
-          
-          if (registro.estado === 'retardo') {
-            retardos++;
-            detalleRetardos.push({
-              fecha: registro.fecha,
-              hora: registro.hora
-            });
-          }
-        });
-
-        const diasFaltantes = diasLaborales.filter(dia => !diasAsistidos.includes(dia));
-        const diasDescuento = Math.floor(retardos / 4);
-        const diasEfectivos = diasTrabajados - diasDescuento;
-        const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
-
-        // Aplicar descuentos
-        let descuentoIMSS = 0;
-        let descuentoCaja = 0;
-        
-        if (empleado.tieneIMSS) {
-          descuentoIMSS = 300; // ✅ SIEMPRE FIJO
-        }
-
-        if (empleado.tieneCajaAhorro && empleado.montoCajaAhorro) {
-          descuentoCaja = empleado.montoCajaAhorro; // ✅ SIEMPRE EL MONTO CONFIGURADO
-        }
-
-        const totalDescuentos = descuentoIMSS + descuentoCaja;
-        const pagoFinal = Math.max(0, pagoTotal - totalDescuentos);
-        
-        if (diasDescuento > 0 || totalDescuentos > 0) empleadosConDescuento++;
-        totalRetardos += retardos;
-
-        // Determinar estado
-        let status, statusClass;
-        if (diasFaltantes.length > 0) {
-          status = `${diasFaltantes.length} falta${diasFaltantes.length > 1 ? 's' : ''} • ${retardos} retardo${retardos !== 1 ? 's' : ''}`;
-          statusClass = 'status-penalty';
-        } else if (diasDescuento > 0) {
-          status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
-          statusClass = 'status-penalty';
-        } else if (retardos >= 3) {
-          status = 'En límite de retardos';
-          statusClass = 'status-warning';
-        } else {
-          status = 'Sin penalizaciones';
-          statusClass = 'status-ok';
-        }
-
-        const resultado = {
-          empleado,
-          salarioQuincenal: salarioBase,
-          diasLaboralesEsperados: diasEsperados,
-          diasTrabajados,
-          diasFaltantes: diasFaltantes.length,
-          retardos,
-          diasDescuento,
-          diasEfectivos,
-          pagoPorDia: Math.round(pagoPorDia),
-          pagoTotal: Math.round(pagoTotal),
-          descuentoIMSS,
-          descuentoCaja,
-          totalDescuentos,
-          pagoFinal: Math.round(pagoFinal),
-          status,
-          statusClass,
-          detalleRetardos,
-          diasAsistidos,
-          diasFaltantesDetalle: diasFaltantes,
-          tipoNomina: tipoNomina // ✅ AGREGAR TIPO PARA REFERENCIA
-        };
-        
-        resultados.push(resultado);
-        totalNominaFinal += Math.round(resultado.pagoFinal);
-        
-      } catch (error) {
-        console.error(`❌ Error procesando empleado ${empleado.nombre}:`, error);
-        mostrarNotificacion(`Error procesando ${empleado.nombre}, se omitirá`, 'warning');
-      }
-    }
-
-    resultadosNomina = resultados;
-    mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaFinal, periodoSelect, monthSelect);
-
-  } catch (error) {
-    console.error('Error calculando nómina:', error);
-    mostrarNotificacion('Error al calcular la nómina: ' + error.message, 'error');
-  } finally {
-    document.getElementById('loadingSpinner').style.display = 'none';
-  }
-};
 
 // ✅ FUNCIONES AUXILIARES PARA DIFERENTES TIPOS
 function generarIdNominaConTipo(año, mes, periodo, tipo) {
