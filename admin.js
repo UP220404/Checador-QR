@@ -2492,9 +2492,33 @@ function actualizarTablaAusenciasSafe() {
   }
 }
 
+// ...existing code...
+
+// Función para mostrar secciones (faltaba esta función)
+window.mostrarSeccion = function(id) {
+  // Ocultar todas las secciones
+  document.querySelectorAll('.seccion').forEach(s => s.classList.add('d-none'));
+  
+  // Mostrar la sección seleccionada
+  document.getElementById(id).classList.remove('d-none');
+  
+  // Actualizar estado activo en el sidebar
+  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+  document.querySelector(`.sidebar a[href="#${id}"]`)?.classList.add('active');
+
+  // Actualizar el título de la página
+  const tituloSeccion = document.querySelector(`.sidebar a[href="#${id}"]`).textContent.trim();
+  document.title = `CH Panel Admin | ${tituloSeccion}`;
+
+  // Acciones específicas por sección
+  if (id === 'seguridad') {
+    cargarAccesosSospechosos();
+  } else if (id === 'analisis') {
+    renderRankingPuntualidad();
+  }
+};
 
 
-// AGREGAR esta función antes de cargarAccesosSospechosos()
 async function obtenerNombreRealUsuario(email) {
   try {
     // Buscar en la colección "usuarios" por email
