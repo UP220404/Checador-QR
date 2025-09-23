@@ -103,169 +103,152 @@
         </div>
       </div>
       
-      <div id="employeeSalaryForm" style="display: none;">
-        <div class="row">
-          <div class="col-md-4">
-            <label class="form-label">Salario por Período (10 días)</label>
-            <div class="input-group">
-              <span class="input-group-text">$</span>
-              <input type="number" id="individualSalary" class="form-control" min="0" placeholder="2,000">
-              <span class="input-group-text">.00</span>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Horas por Período (referencia)</label>
-            <input type="number" id="individualHours" class="form-control" min="1" max="80" placeholder="40">
-            <small class="text-muted">Solo para referencia, el pago es por día</small>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Pago por Día</label>
-            <div class="input-group">
-              <span class="input-group-text">$</span>
-              <input type="number" id="dailyRate" class="form-control" readonly>
-            </div>
-          </div>
-        </div>
-      <!-- En la sección de employeeSalaryForm, después de la línea 120: -->
 
-<div class="row mt-3">
-  <div class="col-md-12">
-    <div class="card p-3">
-      <h6 class="card-title mb-3">📋 Tipo de Nómina</h6>
-      <div class="row">
-        <div class="col-md-6">
-          <label class="form-label">Modalidad de Pago</label>
-          <select class="form-select" id="tipoNomina" onchange="actualizarCalculoPago()">
-            <option value="quincenal">Quincenal (10 días laborales)</option>
-            <option value="semanal">Semanal (5 días laborales)</option>
-          </select>
-          <small class="text-muted">Define cómo se calculará el pago del empleado</small>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Período Base</label>
-          <div class="input-group">
-            <span class="input-group-text">$</span>
-            <input type="number" id="salarioBase" class="form-control" readonly>
-          </div>
-          <small class="text-muted" id="periodoTexto">Por 10 días laborales</small>
-        </div>
+      <!-- Reemplazar las líneas incompletas con esto: -->
+
+<div id="employeeSalaryForm" style="display: none;">
+  <div class="row">
+    <div class="col-md-4">
+      <label class="form-label">Salario por Período (10 días)</label>
+      <div class="input-group">
+        <span class="input-group-text">$</span>
+        <input type="number" id="individualSalary" class="form-control" min="0" step="100" placeholder="3000">
+        <span class="input-group-text">.00</span>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Horas por Período (referencia)</label>
+      <input type="number" id="individualHours" class="form-control" min="1" max="80" placeholder="40">
+      <small class="text-muted">Solo para referencia, el pago es por día</small>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Pago por Día</label>
+      <div class="input-group">
+        <span class="input-group-text">$</span>
+        <input type="number" id="dailyRate" class="form-control" readonly>
+        <span class="input-group-text">.00</span>
       </div>
     </div>
   </div>
 </div>
-
-        <!-- ✅ NUEVO CAMPO: CUENTA BANCARIA -->
-<div class="row mt-3">
-  <div class="col-md-12">
-    <div class="card p-3">
-      <h6 class="card-title mb-3">🏦 Información Bancaria</h6>
-      <div class="row">
-        <div class="col-md-6">
-          <label class="form-label">Número de Cuenta</label>
-          <input type="text" id="cuentaBancaria" class="form-control" placeholder="1234567890123456" maxlength="20">
-          <small class="text-muted">Para exportación en Excel</small>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Banco</label>
-          <select class="form-select" id="nombreBanco">
-            <option value="">Seleccionar banco...</option>
-            <option value="BBVA">BBVA</option>
-            <option value="Banamex">Banamex</option>
-            <option value="Santander">Santander</option>
-            <option value="Banorte">Banorte</option>
-            <option value="HSBC">HSBC</option>
-            <option value="Scotiabank">Scotiabank</option>
-            <option value="Inbursa">Inbursa</option>
-            <option value="Azteca">Azteca</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-        
-        <!-- Nuevas opciones: IMSS y Caja de Ahorro -->
-        <div class="row mt-3">
-          <div class="col-md-6">
-            <div class="card p-3">
-              <h6 class="card-title mb-3">🏥 Seguro Social (IMSS)</h6>
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="tieneIMSS">
-                <label class="form-check-label" for="tieneIMSS">
-                  <strong>Empleado asegurado</strong>
-                </label>
-              </div>
-              <small class="text-muted mt-1 d-block">Se descuentan $300 fijos por quincena</small>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="card p-3">
-              <h6 class="card-title mb-3">🏦 Caja de Ahorro</h6>
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="tieneCajaAhorro" onchange="toggleCajaAhorro()">
-                <label class="form-check-label" for="tieneCajaAhorro">
-                  <strong>Participa en caja de ahorro</strong>
-                </label>
-              </div>
-              <div id="cajaAhorroOptions" style="display: none;">
-                <label class="form-label">Descuento quincenal:</label>
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input type="number" id="montoCajaAhorro" class="form-control" min="0" placeholder="200">
-                  <span class="input-group-text">.00</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="row mt-3">
-          <div class="col-md-12">
-            <button onclick="saveEmployeeSalary()" class="btn btn-success me-2">
-              <i class="bi bi-floppy me-2"></i>Guardar Configuración
-            </button>
-            <button onclick="clearEmployeeSalary()" class="btn btn-warning me-2">
-              <i class="bi bi-trash me-2"></i>Eliminar Configuración
-            </button>
-            <button onclick="toggleSalaryManager()" class="btn btn-secondary">
-              <i class="bi bi-x me-2"></i>Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    
+      
 
     <!-- Dashboard Caja de Ahorro -->
     <div id="cajaAhorroDashboard" class="row mt-3" style="display: none;">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header bg-success text-white">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-piggy-bank me-2"></i>Dashboard Caja de Ahorro
-            </h5>
+        <div class="card-header bg-success text-white">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-piggy-bank me-2"></i>Dashboard Caja de Ahorro
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row" id="cajaAhorroStats">
+            <!-- Se llena dinámicamente -->
           </div>
-          <div class="card-body">
-            <div class="row" id="cajaAhorroStats">
-              <!-- Se llena dinámicamente -->
-            </div>
-          </div>
+        </div>
         </div>
       </div>
     </div>
 
-    <!-- Selector de Período -->
 
+    <div class="container main-container">
+  <!-- Selector de Período Principal -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <label class="form-label">Mes y Año</label>
+      <input type="month" id="monthSelect" class="form-control" required>
+    </div>
     <div class="col-md-3">
       <label class="form-label">Tipo de Nómina</label>
-      <select id="tipoNominaCalculo" class="form-select" onchange="cambiarTipoNomina()">
+      <select id="tipoNominaCalculo" class="form-select">
         <option value="quincenal">📅 Nómina Quincenal</option>
         <option value="semanal">📆 Nómina Semanal</option>
       </select>
     </div>
     <div class="col-md-3" id="selectorPeriodo">
-      <!-- Se llena dinámicamente según el tipo -->
+      <!-- Se llena dinámicamente -->
     </div>
+    <div class="col-md-3">
+      <button onclick="calcularNomina()" class="btn btn-success btn-lg w-100">
+        <i class="bi bi-calculator me-2"></i>Calcular Nómina
+      </button>
+    </div>
+  </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Salario Base</label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="number" id="salarioBase" class="form-control" readonly>
+          <span class="input-group-text">.00</span>
+        </div>
+        <small id="periodoTexto" class="text-muted">Por 10 días laborales</small>
+      </div>
+
+      <!-- Beneficios -->
+      <div class="row mt-3">
+        <div class="col-md-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="tieneIMSS">
+            <label class="form-check-label" for="tieneIMSS">
+              <strong>Tiene IMSS</strong> <small class="text-muted">(-$300)</small>
+            </label>
+          </div>
+
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="tieneCajaAhorro" onchange="toggleCajaAhorro()">
+            <label class="form-check-label" for="tieneCajaAhorro">
+              <strong>Caja de Ahorro</strong>
+            </label>
+          </div>
+        </div>
+        <div class="col-md-3" id="cajaAhorroOptions" style="display: none;">
+          <label class="form-label">Monto Quincenal</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" id="montoCajaAhorro" class="form-control" min="0" step="50">
+            <span class="input-group-text">.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos Bancarios -->
+      <div class="row mt-3">
+        <div class="col-md-6">
+          <label class="form-label">Cuenta Bancaria</label>
+          <input type="text" id="cuentaBancaria" class="form-control" placeholder="1234567890">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Banco</label>
+          <select id="nombreBanco" class="form-select">
+            <option value="">Seleccionar banco...</option>
+            <option value="BBVA">BBVA</option>
+            <option value="Santander">Santander</option>
+            <option value="Banamex">Banamex</option>
+            <option value="Banorte">Banorte</option>
+            <option value="HSBC">HSBC</option>
+            <option value="Scotiabank">Scotiabank</option>
+            <option value="Azteca">Banco Azteca</option>
+            <option value="Inbursa">Inbursa</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="mt-4">
+        <button onclick="saveEmployeeSalary()" class="btn btn-success me-2">
+          <i class="bi bi-floppy me-2"></i>Guardar Configuración
+        </button>
+        <button onclick="clearEmployeeSalary()" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-2"></i>Limpiar
+        </button>
+      </div>
+        
+
+
     <!-- Resumen General -->
     <div id="summaryCard" class="summary-card" style="display: none;">
       <div class="summary-stats">
@@ -355,106 +338,99 @@
             <form id="formEditarNomina">
               <input type="hidden" id="editEmpleadoId">
               
-              <!-- Información del empleado -->
-              <div class="card mb-3">
-                <div class="card-header bg-primary text-white">
-                  <h6 class="mb-0" id="editEmpleadoNombre">Empleado</h6>
-                </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-6">
-                      <span class="badge bg-secondary" id="editEmpleadoTipo">Tipo</span>
-                      <span class="badge bg-success ms-2" id="editSalarioBase">$0</span>
-                    </div>
-                    <div class="col-md-6 text-end">
-                      <small class="text-muted">Período: <span id="editPeriodo"></span></small>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <!-- Ajustes de asistencia -->
-              <div class="card mb-3">
-                <div class="card-header">
-                  <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Ajustes de Asistencia</h6>
-                </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-3">
-                      <label class="form-label">Días Trabajados</label>
-                      <input type="number" id="editDiasTrabajados" class="form-control" min="0" max="10">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label">Retardos</label>
-                      <input type="number" id="editRetardos" class="form-control" min="0" max="20">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label">Días Extra (Sábados)</label>
-                      <input type="number" id="editDiasExtra" class="form-control" min="0" max="5">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label">Bono Extra ($)</label>
-                      <input type="number" id="editBonoExtra" class="form-control" min="0" step="50">
-                    </div>
-                  </div>
-                </div>
+                    <!-- Información del empleado -->
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">
+            <h6 class="mb-0" id="editEmpleadoNombre">Empleado</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <span class="badge bg-secondary" id="editEmpleadoTipo">Tipo</span>
+                <span class="badge bg-success ms-2" id="editSalarioBase">$0</span>
               </div>
+              <div class="col-md-6 text-end">
+                <small class="text-muted">Período: <span id="editPeriodo"></span></small>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <!-- Justificaciones -->
-              <div class="card mb-3">
-                <div class="card-header">
-                  <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Ausencias y Justificaciones</h6>
-                </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-4">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="tieneVacaciones">
-                        <label class="form-check-label" for="tieneVacaciones">
-                          <strong>Vacaciones</strong>
-                        </label>
-                      </div>
-                      <input type="number" id="diasVacaciones" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="tieneIncapacidad">
-                        <label class="form-check-label" for="tieneIncapacidad">
-                          <strong>Incapacidad</strong>
-                        </label>
-                      </div>
-                      <input type="number" id="diasIncapacidad" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="tieneViaje">
-                        <label class="form-check-label" for="tieneViaje">
-                          <strong>Viaje de Negocios</strong>
-                        </label>
-                      </div>
-                      <input type="number" id="diasViaje" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <!-- Ajustes de asistencia -->
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <label class="form-label">Días Trabajados</label>
+              <input type="number" id="editDiasTrabajados" class="form-control" min="0" max="15">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Retardos</label>
+              <input type="number" id="editRetardos" class="form-control" min="0" max="20">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Días Extra (Sábados)</label>
+              <input type="number" id="editDiasExtra" class="form-control" min="0" max="5">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Bono Extra ($)</label>
+              <input type="number" id="editBonoExtra" class="form-control" min="0" step="50">
+            </div>
+          </div>
+        </div>
 
-              <!-- Comentarios -->
-              <div class="mb-3">
-                <label class="form-label">Comentarios/Observaciones</label>
-                <textarea id="editComentarios" class="form-control" rows="3" placeholder="Ejemplo: Paulina estuvo en viaje de negocios en Alemania del 1 al 6 de septiembre"></textarea>
+        <!-- Justificantes -->
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tieneVacaciones">
+                <label class="form-check-label" for="tieneVacaciones">
+                  <strong>Vacaciones</strong>
+                </label>
               </div>
+              <input type="number" id="diasVacaciones" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tieneIncapacidad">
+                <label class="form-check-label" for="tieneIncapacidad">
+                  <strong>Incapacidad</strong>
+                </label>
+              </div>
+              <input type="number" id="diasIncapacidad" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tieneViaje">
+                <label class="form-check-label" for="tieneViaje">
+                  <strong>Viaje de Negocios</strong>
+                </label>
+              </div>
+              <input type="number" id="diasViaje" class="form-control mt-2" min="0" max="10" placeholder="Días" disabled>
+            </div>
+          </div>
+        </div>
+        <!-- Comentarios -->
+        <div class="mb-3">
+          <label class="form-label">Comentarios/Observaciones</label>
+          <textarea id="editComentarios" class="form-control" rows="3" placeholder="Ejemplo: Paulina estuvo en viaje de negocios en Alemania del 1 al 6 de septiembre"></textarea>
+        </div>
 
-              <!-- Vista previa del cálculo -->
-              <div class="card bg-light">
-                <div class="card-header">
-                  <h6 class="mb-0"><i class="bi bi-calculator me-2"></i>Vista Previa del Cálculo</h6>
-                </div>
-                <div class="card-body">
-                  <div class="row" id="previaCálculo">
-                    <!-- Se llena dinámicamente -->
-                  </div>
-                </div>
-              </div>
+        <!-- Vista previa del cálculo -->
+        <div class="card bg-light">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-calculator me-2"></i>Vista Previa del Cálculo</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="previaCálculo">
+              <!-- Se llena dinámicamente -->
+            </div>
+          </div>
+        </div>
+  
+              
+              
             </form>
           </div>
           <div class="modal-footer">
