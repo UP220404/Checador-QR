@@ -49,11 +49,18 @@ document.addEventListener('DOMContentLoaded', function() {
   inicializarEventListeners();
 });
 
-// ===== SISTEMA DE NOTIFICACIONES =====
-function mostrarNotificacion(mensaje, tipo = 'info', duracion = 4000) {
-  const existingNotifications = document.querySelectorAll('.custom-notification');
-  existingNotifications.forEach(notif => notif.remove());
+// Reemplaza la función mostrarNotificacion existente:
 
+// ===== SISTEMA DE NOTIFICACIONES MEJORADO =====
+function mostrarNotificacion(mensaje, tipo = 'info', duracion = 4000) {
+  // Remover notificaciones existentes
+  const existingNotifications = document.querySelectorAll('.custom-notification');
+  existingNotifications.forEach(notif => {
+    notif.classList.remove('show');
+    setTimeout(() => notif.remove(), 300);
+  });
+
+  // Crear nueva notificación
   const notification = document.createElement('div');
   notification.className = `custom-notification notification-${tipo}`;
   
@@ -63,6 +70,14 @@ function mostrarNotificacion(mensaje, tipo = 'info', duracion = 4000) {
     'warning': 'bi-exclamation-triangle-fill',
     'info': 'bi-info-circle-fill'
   };
+
+  // Agregar sonido (opcional)
+  if (tipo === 'success') {
+    // Crear un sonido sutil de éxito
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAZBCaJzen1vT4wh9bz2YU2Bhx9yvLZiTwIF2m99OycTgwLUKnj8bllHgg2jdT0y3YnBSF4x+/dkEEJE1+z5ulTFAlFnOHzsGAXBCWMyOvusjsGJ3zI8dmHNwYZbLfp65ZOhSfq4v3pO+G71vLTey4FJHjH79qCNwYmaLbt5KeWnot6Bc==');
+    audio.volume = 0.1;
+    audio.play().catch(() => {}); // Ignorar si no se puede reproducir
+  }
 
   notification.innerHTML = `
     <div class="notification-content">
@@ -77,15 +92,38 @@ function mostrarNotificacion(mensaje, tipo = 'info', duracion = 4000) {
     <div class="notification-progress"></div>
   `;
 
+  // Añadir al DOM
   document.body.appendChild(notification);
-  setTimeout(() => notification.classList.add('show'), 100);
+  
+  // Activar animación
+  setTimeout(() => notification.classList.add('show'), 50);
 
+  // Auto-remover después del tiempo especificado
   if (duracion > 0) {
     setTimeout(() => {
       notification.classList.remove('show');
-      setTimeout(() => notification.remove(), 300);
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 400);
     }, duracion);
   }
+
+  // Agregar efecto de hover
+  notification.addEventListener('mouseenter', () => {
+    const progress = notification.querySelector('.notification-progress');
+    if (progress) {
+      progress.style.animationPlayState = 'paused';
+    }
+  });
+
+  notification.addEventListener('mouseleave', () => {
+    const progress = notification.querySelector('.notification-progress');
+    if (progress) {
+      progress.style.animationPlayState = 'running';
+    }
+  });
 }
 
 // ===== UTILIDADES =====
