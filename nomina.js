@@ -336,18 +336,50 @@ async function cargarEmpleados() {
   }
 }
 
-function inicializarListeners() {
+
+// Actualizar el listener del tipo de nómina para manejar semanas
+function inicializarListenersExtendido() {
   const tipoNominaCalculo = document.getElementById('tipoNominaCalculo');
   if (tipoNominaCalculo) {
     tipoNominaCalculo.addEventListener('change', function() {
       const selectorPeriodo = document.getElementById('selectorPeriodo');
       const quinceSelect = document.getElementById('quinceSelect');
+      const labelPeriodo = selectorPeriodo.querySelector('label');
       
       if (this.value === 'semanal') {
-        selectorPeriodo.style.display = 'none';
-        quinceSelect.innerHTML = '<option value="todas">Todas las Semanas</option>';
+        selectorPeriodo.style.display = 'block';
+        labelPeriodo.textContent = 'Seleccionar Semana';
+        
+        // Obtener el mes seleccionado
+        const monthSelect = document.getElementById('monthSelect').value;
+        if (monthSelect) {
+          const [año, mes] = monthSelect.split('-');
+          const semanas = obtenerSemanasDelMes(parseInt(año), parseInt(mes));
+          
+          quinceSelect.innerHTML = '';
+          semanas.forEach((semana, index) => {
+            const option = document.createElement('option');
+            option.value = `semana_${semana.numero}`;
+            option.textContent = semana.label;
+            quinceSelect.appendChild(option);
+          });
+          
+          // Seleccionar la semana actual si está en el mes
+          const semanaActual = obtenerSemanaActual();
+          if (semanaActual.año === parseInt(año) && semanaActual.mes === parseInt(mes)) {
+            const opcionActual = Array.from(quinceSelect.options).find(option => 
+              option.textContent.includes(semanaActual.label)
+            );
+            if (opcionActual) {
+              opcionActual.selected = true;
+            }
+          }
+        } else {
+          quinceSelect.innerHTML = '<option value="">Selecciona un mes primero</option>';
+        }
       } else {
         selectorPeriodo.style.display = 'block';
+        labelPeriodo.textContent = 'Quincena';
         quinceSelect.innerHTML = `
           <option value="primera">Primera Quincena (1-15)</option>
           <option value="segunda">Segunda Quincena (16-fin de mes)</option>
@@ -356,6 +388,19 @@ function inicializarListeners() {
     });
   }
 
+  // Actualizar semanas cuando cambie el mes
+  const monthSelect = document.getElementById('monthSelect');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', function() {
+      const tipoNomina = document.getElementById('tipoNominaCalculo').value;
+      if (tipoNomina === 'semanal') {
+        // Trigger para actualizar las semanas
+        document.getElementById('tipoNominaCalculo').dispatchEvent(new Event('change'));
+      }
+    });
+  }
+
+  // Otros listeners existentes...
   const tipoNominaEmpleado = document.getElementById('tipoNominaEmpleado');
   if (tipoNominaEmpleado) {
     tipoNominaEmpleado.addEventListener('change', function() {
@@ -364,12 +409,10 @@ function inicializarListeners() {
     });
   }
 
-  // Listeners para cálculo automático
-  document.getElementById('individualSalary').addEventListener('input', calcularPagoPorDia);
-  document.getElementById('individualHours').addEventListener('input', calcularPagoPorDia);
-  
-  console.log('Listeners inicializados correctamente');
+  document.getElementById('individualSalary')?.addEventListener('input', calcularPagoPorDia);
+  document.getElementById('individualHours')?.addEventListener('input', calcularPagoPorDia);
 }
+
 
 function inicializarEventListeners() {
   // Configurar checkboxes de justificaciones en el modal
@@ -679,15 +722,35 @@ window.calcularNomina = async function() {
 
     // Determinar días laborales según el tipo de nómina
     let diasLaborales = [];
+    let periodoTexto = '';
+    
     if (tipoNominaCalculo === 'semanal') {
-      diasLaborales = calcularDiasLaboralesSemanales(añoNum, mesNum);
-      quinceActual = `Nómina Semanal`;
+      if (quinceSelect.startsWith('semana_')) {
+        const numeroSemana = parseInt(quinceSelect.split('_')[1]);
+        diasLaborales = obtenerDiasLaboralesSemana(añoNum, mesNum, numeroSemana);
+        
+        const semanas = obtenerSemanasDelMes(añoNum, mesNum);
+        const semanaInfo = semanas.find(s => s.numero === numeroSemana);
+        periodoTexto = semanaInfo ? semanaInfo.label : `Semana ${numeroSemana}`;
+        quinceActual = `Nómina Semanal - ${periodoTexto}`;
+      } else {
+        mostrarNotificacion('Selecciona una semana específica', 'warning');
+        document.getElementById('loadingSpinner').style.display = 'none';
+        return;
+      }
     } else {
       diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, quinceSelect);
       quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
+      periodoTexto = quinceActual;
     }
 
-    console.log(`Días laborales del período:`, diasLaborales);
+    console.log(`Días laborales del período (${periodoTexto}):`, diasLaborales);
+
+    if (diasLaborales.length === 0) {
+      mostrarNotificacion('No se encontraron días laborales para el período seleccionado', 'error');
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
+    }
 
     // Consulta de empleados
     const usuariosQuery = query(collection(db, "usuarios"));
@@ -705,7 +768,7 @@ window.calcularNomina = async function() {
           nombre: userData.nombre,
           email: userData.email || 'sin-email@cielitohome.com',
           tipo: userData.tipo || 'tiempo_completo',
-          tipoNomina: userData.tipoNomina || 'quincenal', // Tipo de nómina del empleado
+          tipoNomina: userData.tipoNomina || 'quincenal',
           salarioQuincenal: userData.salarioQuincenal,
           horasQuincenal: userData.horasQuincenal,
           pagoPorDia: userData.salarioQuincenal / (userData.tipoNomina === 'semanal' ? 5 : 10),
@@ -723,7 +786,7 @@ window.calcularNomina = async function() {
       if (tipoNominaCalculo === 'semanal') {
         return emp.tipoNomina === 'semanal';
       } else {
-        return emp.tipoNomina === 'quincenal' || !emp.tipoNomina; // Por defecto quincenal
+        return emp.tipoNomina === 'quincenal' || !emp.tipoNomina;
       }
     });
 
@@ -751,7 +814,7 @@ window.calcularNomina = async function() {
 
     console.log(`Empleados encontrados para nómina ${tipoNominaCalculo}: ${empleados.length}`);
 
-    // Consulta de registros optimizada
+    // Consulta de registros optimizada - solo para los días específicos
     const fechaInicio = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.min(...diasLaborales)).padStart(2, '0')}`;
     const fechaFin = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(Math.max(...diasLaborales)).padStart(2, '0')}`;
     
@@ -765,7 +828,7 @@ window.calcularNomina = async function() {
     const registrosSnapshot = await getDocs(registrosQuery);
     console.log(`Registros obtenidos: ${registrosSnapshot.size}`);
     
-    // Procesar registros
+    // Procesar registros solo para los días específicos del período
     const registrosPorEmpleado = {};
     
     registrosSnapshot.forEach(doc => {
@@ -777,6 +840,7 @@ window.calcularNomina = async function() {
       
       const [regAño, regMes, regDia] = fechaRegistro.split('-').map(Number);
       
+      // Solo incluir si el día está en la lista específica de días laborales
       if (regAño === añoNum && regMes === mesNum && diasLaborales.includes(regDia)) {
         if (!registrosPorEmpleado[uid]) {
           registrosPorEmpleado[uid] = [];
@@ -821,20 +885,24 @@ window.calcularNomina = async function() {
         const diasEfectivos = diasTrabajados - diasDescuento;
         const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
 
-        // Descuentos
+        // Descuentos ajustados por tipo de nómina
         let descuentoIMSS = 0;
         let descuentoCaja = 0;
         
         if (empleado.tieneIMSS) {
-          // Para nómina semanal, el IMSS podría ser proporcional
-          descuentoIMSS = tipoNominaCalculo === 'semanal' ? 150 : 300;
+          if (tipoNominaCalculo === 'semanal') {
+            descuentoIMSS = 150; // Proporcional para una semana
+          } else {
+            descuentoIMSS = 300; // Quincenal completo
+          }
         }
         
         if (empleado.tieneCajaAhorro && empleado.montoCajaAhorro) {
-          // Para nómina semanal, la caja de ahorro podría ser proporcional
-          descuentoCaja = tipoNominaCalculo === 'semanal' ? 
-                         Math.round(empleado.montoCajaAhorro / 2) : 
-                         empleado.montoCajaAhorro;
+          if (tipoNominaCalculo === 'semanal') {
+            descuentoCaja = Math.round(empleado.montoCajaAhorro / 2);
+          } else {
+            descuentoCaja = empleado.montoCajaAhorro;
+          }
         }
         
         const totalDescuentos = descuentoIMSS + descuentoCaja;
@@ -879,7 +947,8 @@ window.calcularNomina = async function() {
           statusClass,
           detalleRetardos,
           diasAsistidos,
-          diasFaltantesDetalle: diasFaltantes
+          diasFaltantesDetalle: diasFaltantes,
+          periodoTexto
         };
         
         resultados.push(resultado);
@@ -895,21 +964,21 @@ window.calcularNomina = async function() {
     mesActual = `${mesNum}/${añoNum}`;
     resultadosNomina = resultados;
 
-    // Agregar información del tipo de nómina al resumen
+    // Mostrar resultados
     const tipoTexto = tipoNominaCalculo === 'semanal' ? 'Semanal' : 'Quincenal';
     mostrarResultados(resultados, empleados.length, totalRetardos, empleadosConDescuento, totalNominaFinal, quinceSelect, monthSelect, tipoTexto);
 
-    // Mostrar información adicional para nómina semanal
+    // Mostrar información específica para nómina semanal
     if (tipoNominaCalculo === 'semanal') {
-      const semanasDelMes = organizarDiasPorSemanas(añoNum, mesNum);
       mostrarNotificacion(
-        `Nómina semanal calculada exitosamente\n\n` +
-        `📅 Período: ${mesActual}\n` +
-        `👥 Empleados semanales: ${empleados.length}\n` +
-        `📊 Días laborales: ${diasLaborales.length} (${semanasDelMes.length} semanas)\n` +
+        `✅ Nómina semanal calculada exitosamente\n\n` +
+        `📅 Período: ${periodoTexto}\n` +
+        `👥 Empleados: ${empleados.length}\n` +
+        `📊 Días laborales: ${diasLaborales.length} días\n` +
+        `📋 Días específicos: ${diasLaborales.join(', ')}\n` +
         `💰 Total a pagar: $${formatearNumero(totalNominaFinal)}`,
         'success',
-        6000
+        8000
       );
     }
 
@@ -920,7 +989,6 @@ window.calcularNomina = async function() {
     document.getElementById('loadingSpinner').style.display = 'none';
   }
 };
-
 
 // Actualizar la función mostrarResultados para incluir el tipo de nómina
 function mostrarResultados(resultados, totalEmpleados, totalRetardos, empleadosConDescuento, totalPago, periodo, mes, tipoNomina = 'Quincenal') {
@@ -2767,6 +2835,116 @@ function organizarDiasPorSemanas(año, mes) {
   return semanas;
 }
 
+// ===== CORRECCIÓN PARA NÓMINA SEMANAL CON SELECTOR DE SEMANA =====
+
+// Función para obtener todas las semanas de un mes
+function obtenerSemanasDelMes(año, mes) {
+  const semanas = [];
+  const primerDia = new Date(año, mes - 1, 1);
+  const ultimoDia = new Date(año, mes, 0);
+  
+  // Encontrar el primer lunes del mes o anterior
+  let fechaActual = new Date(primerDia);
+  while (fechaActual.getDay() !== 1) {
+    fechaActual.setDate(fechaActual.getDate() - 1);
+  }
+  
+  let numeroSemana = 1;
+  
+  while (fechaActual <= ultimoDia || fechaActual.getMonth() === mes - 1) {
+    const inicioSemana = new Date(fechaActual);
+    const finSemana = new Date(fechaActual);
+    finSemana.setDate(finSemana.getDate() + 4); // Viernes
+    
+    // Solo incluir si tiene días del mes actual
+    if (inicioSemana.getMonth() === mes - 1 || finSemana.getMonth() === mes - 1 || 
+        (inicioSemana.getMonth() < mes - 1 && finSemana.getMonth() > mes - 1)) {
+      
+      const diasLaborales = [];
+      for (let i = 0; i < 5; i++) {
+        const dia = new Date(inicioSemana);
+        dia.setDate(dia.getDate() + i);
+        
+        // Solo agregar si está en el rango del mes seleccionado o es parte de la semana
+        if (dia <= ultimoDia) {
+          diasLaborales.push(dia.getDate());
+        }
+      }
+      
+      if (diasLaborales.length > 0) {
+        semanas.push({
+          numero: numeroSemana,
+          inicio: new Date(inicioSemana),
+          fin: new Date(finSemana),
+          diasLaborales: diasLaborales.filter(dia => {
+            const fecha = new Date(año, mes - 1, dia);
+            return fecha.getMonth() === mes - 1;
+          }),
+          label: `Semana ${numeroSemana}: ${inicioSemana.getDate()}/${inicioSemana.getMonth() + 1} - ${finSemana.getDate()}/${finSemana.getMonth() + 1}`
+        });
+      }
+    }
+    
+    fechaActual.setDate(fechaActual.getDate() + 7);
+    numeroSemana++;
+  }
+  
+  return semanas;
+}
+
+// Función para obtener la semana actual
+function obtenerSemanaActual() {
+  const hoy = new Date();
+  const año = hoy.getFullYear();
+  const mes = hoy.getMonth() + 1;
+  
+  // Encontrar el lunes de esta semana
+  const inicioSemana = new Date(hoy);
+  const diasHastaLunes = (hoy.getDay() + 6) % 7;
+  inicioSemana.setDate(hoy.getDate() - diasHastaLunes);
+  
+  const finSemana = new Date(inicioSemana);
+  finSemana.setDate(finSemana.getDate() + 4);
+  
+  return {
+    año: año,
+    mes: mes,
+    inicio: inicioSemana,
+    fin: finSemana,
+    label: `${inicioSemana.getDate()}/${inicioSemana.getMonth() + 1} - ${finSemana.getDate()}/${finSemana.getMonth() + 1}`
+  };
+}
+
+
+
+// Función para obtener días laborales de una semana específica
+function obtenerDiasLaboralesSemana(año, mes, numeroSemana) {
+  const semanas = obtenerSemanasDelMes(año, mes);
+  const semanaSeleccionada = semanas.find(s => s.numero === numeroSemana);
+  
+  if (!semanaSeleccionada) {
+    return [];
+  }
+  
+  return semanaSeleccionada.diasLaborales;
+}
+
+
+
+// Reemplazar el inicializador existente
+window.inicializarListeners = inicializarListenersExtendido;
+
+// Llamar al inicializador cuando se cargue
+document.addEventListener('DOMContentLoaded', function() {
+  // Configurar fecha actual
+  const hoy = new Date();
+  document.getElementById('monthSelect').value = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Inicializar listeners extendidos
+  inicializarListenersExtendido();
+});
+
+console.log('🔧 Corrección de Nómina Semanal con selector de semana cargada');
 
 // Reemplazar la función original
 window.mostrarVistaCompacta = mostrarVistaCompactaExtendida;
