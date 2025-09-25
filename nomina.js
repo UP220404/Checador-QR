@@ -2682,6 +2682,31 @@ window.addEventListener('beforeunload', function(e) {
   }
 });
 
+
+
+// ===== EXPORTAR FUNCIONES GLOBALMENTE =====
+window.toggleSalaryManager = window.toggleSalaryManager || function() {
+  if (!validarAccesoAutorizado()) return;
+  const manager = document.getElementById('salaryManager');
+  manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
+};
+
+window.loadEmployeeSalary = window.loadEmployeeSalary || loadEmployeeSalary;
+window.saveEmployeeSalary = window.saveEmployeeSalary || saveEmployeeSalary;
+window.clearEmployeeSalary = window.clearEmployeeSalary || clearEmployeeSalary;
+window.calcularNomina = window.calcularNomina || calcularNomina;
+window.cambiarVista = window.cambiarVista || cambiarVista;
+window.abrirEdicionNomina = window.abrirEdicionNomina || abrirEdicionNomina;
+window.exportarExcel = window.exportarExcel || exportarExcel;
+window.guardarNominaCompleta = window.guardarNominaCompleta || guardarNominaCompleta;
+window.generarTicketPDF = window.generarTicketPDF || generarTicketPDF;
+window.generarTodosLosPDFs = window.generarTodosLosPDFs || generarTodosLosPDFs;
+window.validarAccesoNomina = window.validarAccesoNomina || validarAccesoNomina;
+window.regresarAdmin = window.regresarAdmin || regresarAdmin;
+window.toggleCajaAhorro = window.toggleCajaAhorro || toggleCajaAhorro;
+
+console.log(`🏢 Sistema de Nómina Cielito Home - Funciones exportadas correctamente`);
+
 // ===== MENSAJES DE ESTADO =====
 console.log(`
 🏢 Sistema de Nómina Cielito Home
