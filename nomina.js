@@ -3033,8 +3033,526 @@ window.addEventListener('beforeunload', function(e) {
   }
 });
 
+// ===== FUNCIONES DE EMAIL PARA NOMINA.JS =====
+// Agregar estas funciones al final de nomina.js (antes del console.log final)
 
+// ===== FUNCIÓN PRINCIPAL DE ENVÍO DE EMAIL =====
+window.enviarEmailIndividual = async function(empleadoData, ticketHTML = '', pdfBase64 = null) {
+  try {
+    // Verificar configuración de EmailJS
+    if (!window.EMAIL_CONFIG || !window.EMAIL_CONFIG.USER_ID) {
+      throw new Error('EmailJS no está configurado correctamente');
+    }
 
+    // Validar email del empleado
+    if (!empleadoData.email || !window.validarEmail(empleadoData.email)) {
+      throw new Error('Email del empleado inválido');
+    }
+
+    // Preparar el contenido del email (solo texto)
+    const emailContent = generarContenidoEmailTexto(empleadoData);
+    
+    // Preparar parámetros para EmailJS
+    const templateParams = {
+      to_email: empleadoData.email,
+      to_name: empleadoData.nombre,
+      subject: empleadoData.subject,
+      message: emailContent,
+      from_name: 'Recursos Humanos - Cielito Home',
+      from_email: 'sistemas@cielitohome.com'
+    };
+
+    console.log('Enviando email a:', empleadoData.email);
+    console.log('Parámetros:', templateParams);
+
+    // Enviar usando EmailJS
+    const response = await emailjs.send(
+      window.EMAIL_CONFIG.SERVICE_ID,
+      window.EMAIL_CONFIG.TEMPLATE_ID,
+      templateParams,
+      window.EMAIL_CONFIG.USER_ID
+    );
+
+    console.log('✅ Email enviado exitosamente:', response);
+    return { success: true, response };
+
+  } catch (error) {
+    console.error('❌ Error enviando email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ===== GENERAR CONTENIDO DE EMAIL EN TEXTO =====
+function generarContenidoEmailTexto(empleadoData) {
+  const fecha = new Date().toLocaleDateString('es-MX');
+  
+  let content = `Hola ${empleadoData.nombre},
+
+Adjunto encontrarás tu ticket de nómina correspondiente al período ${empleadoData.periodo}.
+
+═══════════════════════════════════════════════════════════
+                    RESUMEN DE TU NÓMINA
+═══════════════════════════════════════════════════════════
+
+👤 EMPLEADO: ${empleadoData.nombre}
+📅 PERÍODO: ${empleadoData.periodo}
+📊 DÍAS TRABAJADOS: ${empleadoData.diasTrabajados}
+⏰ RETARDOS: ${empleadoData.retardos}
+💰 PAGO FINAL: $${empleadoData.pagoFinal}
+
+═══════════════════════════════════════════════════════════`;
+
+  // Agregar mensaje personalizado si existe
+  if (empleadoData.customMessage && empleadoData.customMessage.trim() !== '') {
+    content += `
+
+📝 MENSAJE ESPECIAL:
+${empleadoData.customMessage}
+
+═══════════════════════════════════════════════════════════`;
+  }
+
+  content += `
+
+Este es tu comprobante oficial de pago generado automáticamente el ${fecha}.
+
+Si tienes alguna duda sobre tu nómina, por favor contacta al departamento de Recursos Humanos.
+
+Atentamente,
+Equipo de Recursos Humanos
+Cielito Home - Experiencias a la Carta
+
+═══════════════════════════════════════════════════════════
+Este es un mensaje automático, por favor no responder a este correo.
+Para consultas, contactar: sistemas@cielitohome.com
+═══════════════════════════════════════════════════════════`;
+
+  return content;
+}
+
+// ===== ENVÍO INDIVIDUAL DESDE TARJETA DE EMPLEADO =====
+window.enviarEmailIndividualEmpleado = async function(empleadoId) {
+  if (!validarAccesoAutorizado()) return;
+  
+  const resultado = resultadosNomina.find(r => r.empleado.uid === empleadoId);
+  if (!resultado) {
+    mostrarNotificacion('No se encontraron datos del empleado', 'error');
+    return;
+  }
+  
+  const email = resultado.empleado.email;
+  if (!email || email === 'sin-email@cielitohome.com' || !window.validarEmail(email)) {
+    mostrarNotificacion(`${resultado.empleado.nombre} no tiene un email válido registrado`, 'warning');
+    return;
+  }
+  
+  // Verificar configuración
+  if (!window.validarConfiguracionEmail || !window.validarConfiguracionEmail()) {
+    mostrarNotificacion('EmailJS no está configurado correctamente', 'error');
+    return;
+  }
+  
+  const confirmar = confirm(
+    `¿Enviar ticket por email a ${resultado.empleado.nombre}?\n\n` +
+    `Email: ${email}\n` +
+    `Pago: $${formatearNumero(resultado.pagoFinal)}`
+  );
+  
+  if (!confirmar) return;
+  
+  mostrarNotificacion(`Enviando email a ${resultado.empleado.nombre}...`, 'info', 3000);
+  
+  try {
+    // Preparar datos del empleado
+    const empleadoData = {
+      email: resultado.empleado.email,
+      nombre: resultado.empleado.nombre,
+      subject: 'Ticket de Nómina - Cielito Home',
+      customMessage: '',
+      periodo: `${quinceActual} - ${mesActual}`,
+      diasTrabajados: resultado.diasTrabajados,
+      retardos: resultado.retardos,
+      pagoFinal: formatearNumero(resultado.pagoFinal)
+    };
+    
+    const response = await window.enviarEmailIndividual(empleadoData);
+    
+    if (response.success) {
+      mostrarNotificacion(`✅ Email enviado exitosamente a ${resultado.empleado.nombre}`, 'success');
+    } else {
+      mostrarNotificacion(`❌ Error enviando email a ${resultado.empleado.nombre}: ${response.error}`, 'error');
+    }
+    
+  } catch (error) {
+    console.error('Error enviando email individual:', error);
+    mostrarNotificacion('Error enviando el email', 'error');
+  }
+};
+
+// ===== PROCESO DE ENVÍO MASIVO OPTIMIZADO =====
+async function procesarEnvioMasivo(empleados, configuracion) {
+  let exitosos = 0;
+  let fallidos = 0;
+  const errores = [];
+  
+  mostrarNotificacion(
+    `Iniciando envío masivo de ${empleados.length} emails...\nPor favor no cierres la ventana.`, 
+    'info', 
+    5000
+  );
+  
+  for (let i = 0; i < empleados.length; i++) {
+    const resultado = empleados[i];
+    
+    // Mostrar progreso
+    mostrarNotificacion(
+      `Enviando email ${i + 1}/${empleados.length}: ${resultado.empleado.nombre}`, 
+      'info', 
+      2000
+    );
+    
+    try {
+      // Preparar datos del empleado
+      const empleadoData = {
+        email: resultado.empleado.email,
+        nombre: resultado.empleado.nombre,
+        subject: configuracion.subject,
+        customMessage: configuracion.customMessage,
+        periodo: `${quinceActual} - ${mesActual}`,
+        diasTrabajados: resultado.diasTrabajados,
+        retardos: resultado.retardos,
+        pagoFinal: formatearNumero(resultado.pagoFinal)
+      };
+      
+      const response = await window.enviarEmailIndividual(empleadoData);
+      
+      if (response.success) {
+        exitosos++;
+        console.log(`✅ Email enviado a: ${resultado.empleado.nombre}`);
+      } else {
+        fallidos++;
+        errores.push(`${resultado.empleado.nombre}: ${response.error}`);
+      }
+      
+      // Pausa para no saturar el servicio EmailJS
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+    } catch (error) {
+      fallidos++;
+      errores.push(`${resultado.empleado.nombre}: ${error.message}`);
+      console.error(`❌ Error enviando email a ${resultado.empleado.nombre}:`, error);
+    }
+  }
+  
+  // Mostrar resultado final
+  mostrarResultadoEnvioMasivo(exitosos, fallidos, errores);
+}
+
+// ===== MODAL DE CONFIGURACIÓN DE ENVÍO =====
+window.mostrarModalEnvioEmail = function() {
+  if (!validarAccesoAutorizado()) return;
+  
+  if (!resultadosNomina || resultadosNomina.length === 0) {
+    mostrarNotificacion('No hay datos de nómina para enviar', 'warning');
+    return;
+  }
+  
+  // Verificar configuración de EmailJS
+  if (!window.validarConfiguracionEmail || !window.validarConfiguracionEmail()) {
+    mostrarNotificacion(
+      'EmailJS no está configurado correctamente.\n\n' +
+      'Por favor configura:\n' +
+      '1. USER_ID en emailConfig.js\n' +
+      '2. SERVICE_ID en emailConfig.js\n' +
+      '3. TEMPLATE_ID en emailConfig.js\n\n' +
+      'Ve a https://www.emailjs.com/ para obtener estos valores.',
+      'error',
+      8000
+    );
+    return;
+  }
+  
+  // Llenar lista de empleados
+  actualizarListaEmpleadosEmail();
+  
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalEnvioEmail'));
+  modal.show();
+};
+
+// ===== ACTUALIZAR LISTA DE EMPLEADOS EN MODAL =====
+function actualizarListaEmpleadosEmail() {
+  const container = document.getElementById('listaEmpleadosEmail');
+  if (!container) return;
+  
+  let html = '';
+  let empleadosConEmail = 0;
+  let empleadosSinEmail = 0;
+  
+  resultadosNomina.forEach(resultado => {
+    const email = resultado.empleado.email;
+    const tieneEmail = email && email !== 'sin-email@cielitohome.com' && window.validarEmail(email);
+    
+    if (tieneEmail) {
+      empleadosConEmail++;
+    } else {
+      empleadosSinEmail++;
+    }
+    
+    html += `
+      <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+        <div>
+          <strong>${resultado.empleado.nombre}</strong>
+          <br>
+          <small class="text-muted">${email || 'Sin email'}</small>
+        </div>
+        <div>
+          <span class="badge ${tieneEmail ? 'bg-success' : 'bg-danger'}">
+            ${tieneEmail ? 'Válido' : 'Sin email'}
+          </span>
+          <span class="badge bg-info ms-1">
+            $${formatearNumero(resultado.pagoFinal)}
+          </span>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Agregar resumen
+  const resumen = `
+    <div class="alert alert-info mb-3">
+      <h6 class="mb-2">Resumen de envío:</h6>
+      <div class="row">
+        <div class="col-6">
+          <span class="badge bg-success">${empleadosConEmail}</span> Con email válido
+        </div>
+        <div class="col-6">
+          <span class="badge bg-danger">${empleadosSinEmail}</span> Sin email
+        </div>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = resumen + html;
+}
+
+// ===== CONFIRMAR ENVÍO DE EMAILS =====
+window.confirmarEnvioEmails = async function() {
+  const subject = document.getElementById('emailSubject').value.trim();
+  const customMessage = document.getElementById('emailMessage').value.trim();
+  
+  if (!subject) {
+    mostrarNotificacion('Por favor ingresa un asunto para el email', 'warning');
+    return;
+  }
+  
+  // Filtrar empleados con email válido
+  const empleadosConEmail = resultadosNomina.filter(resultado => {
+    const email = resultado.empleado.email;
+    return email && email !== 'sin-email@cielitohome.com' && window.validarEmail(email);
+  });
+  
+  if (empleadosConEmail.length === 0) {
+    mostrarNotificacion('No hay empleados con emails válidos para enviar', 'error');
+    return;
+  }
+  
+  const confirmar = confirm(
+    `¿Enviar tickets por email a ${empleadosConEmail.length} empleados?\n\n` +
+    `Asunto: ${subject}\n` +
+    `Mensaje personalizado: ${customMessage ? 'Sí' : 'No'}\n\n` +
+    'Esta operación puede tomar varios minutos.'
+  );
+  
+  if (!confirmar) return;
+  
+  // Cerrar modal
+  bootstrap.Modal.getInstance(document.getElementById('modalEnvioEmail')).hide();
+  
+  // Iniciar proceso de envío
+  await procesarEnvioMasivo(empleadosConEmail, {
+    subject,
+    customMessage
+  });
+};
+
+// ===== ENVÍO MASIVO RÁPIDO =====
+window.enviarTodosLosEmails = function() {
+  if (!validarAccesoAutorizado()) return;
+  
+  if (!resultadosNomina || resultadosNomina.length === 0) {
+    mostrarNotificacion('No hay datos de nómina para enviar', 'warning');
+    return;
+  }
+  
+  // Verificar configuración
+  if (!window.validarConfiguracionEmail || !window.validarConfiguracionEmail()) {
+    mostrarNotificacion('EmailJS no está configurado correctamente', 'error');
+    return;
+  }
+  
+  // Filtrar empleados con email válido
+  const empleadosConEmail = resultadosNomina.filter(resultado => {
+    const email = resultado.empleado.email;
+    return email && email !== 'sin-email@cielitohome.com' && window.validarEmail(email);
+  });
+  
+  if (empleadosConEmail.length === 0) {
+    mostrarNotificacion('No hay empleados con emails válidos', 'error');
+    return;
+  }
+  
+  const confirmar = confirm(
+    `¿Enviar tickets por email a ${empleadosConEmail.length} empleados?\n\n` +
+    'Se usará la configuración predeterminada:\n' +
+    '• Asunto: Ticket de Nómina - Cielito Home\n' +
+    '• Sin mensaje personalizado\n' +
+    '• Solo texto (sin PDFs)\n\n' +
+    'Esta operación puede tomar varios minutos.'
+  );
+  
+  if (!confirmar) return;
+  
+  // Configuración predeterminada
+  const configuracion = {
+    subject: 'Ticket de Nómina - Cielito Home',
+    customMessage: ''
+  };
+  
+  // Iniciar envío
+  procesarEnvioMasivo(empleadosConEmail, configuracion);
+};
+
+// ===== MOSTRAR RESULTADO DE ENVÍO MASIVO =====
+function mostrarResultadoEnvioMasivo(exitosos, fallidos, errores) {
+  const totalEnviados = exitosos + fallidos;
+  
+  let modalHtml = `
+    <div class="modal fade" id="modalResultadoEnvio" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header ${fallidos === 0 ? 'bg-success' : 'bg-warning'} text-white">
+            <h5 class="modal-title">
+              <i class="bi bi-envelope-check me-2"></i>Resultado del Envío Masivo
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="text-center p-3 bg-success text-white rounded">
+                  <h3>${exitosos}</h3>
+                  <small>Enviados exitosamente</small>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="text-center p-3 bg-danger text-white rounded">
+                  <h3>${fallidos}</h3>
+                  <small>Fallidos</small>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="text-center p-3 bg-info text-white rounded">
+                  <h3>${totalEnviados}</h3>
+                  <small>Total procesados</small>
+                </div>
+              </div>
+            </div>
+  `;
+  
+  if (errores.length > 0) {
+    modalHtml += `
+      <div class="alert alert-warning">
+        <h6>Errores detectados:</h6>
+        <ul class="mb-0">
+          ${errores.slice(0, 10).map(error => `<li>${error}</li>`).join('')}
+          ${errores.length > 10 ? `<li>... y ${errores.length - 10} errores más</li>` : ''}
+        </ul>
+      </div>
+    `;
+  }
+  
+  if (exitosos > 0) {
+    modalHtml += `
+      <div class="alert alert-success">
+        <i class="bi bi-check-circle me-2"></i>
+        <strong>¡Envío exitoso!</strong> ${exitosos} empleados recibieron su ticket por email.
+      </div>
+    `;
+  }
+  
+  modalHtml += `
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remover modal anterior si existe
+  const existingModal = document.getElementById('modalResultadoEnvio');
+  if (existingModal) existingModal.remove();
+  
+  // Mostrar nuevo modal
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = new bootstrap.Modal(document.getElementById('modalResultadoEnvio'));
+  modal.show();
+  
+  // Mostrar notificación
+  const mensaje = `Envío completado: ${exitosos} exitosos, ${fallidos} fallidos`;
+  mostrarNotificacion(mensaje, fallidos === 0 ? 'success' : 'warning', 5000);
+}
+
+// ===== FUNCIÓN DE PRUEBA =====
+window.enviarEmailPrueba = async function() {
+  if (!window.validarConfiguracionEmail || !window.validarConfiguracionEmail()) {
+    console.error('❌ EmailJS no está configurado correctamente');
+    return;
+  }
+  
+  const emailPrueba = prompt('Ingresa un email para la prueba:');
+  if (!emailPrueba || !window.validarEmail(emailPrueba)) {
+    console.error('❌ Email inválido');
+    return;
+  }
+  
+  console.log('🧪 Iniciando prueba de email...');
+  
+  const empleadoData = {
+    email: emailPrueba,
+    nombre: 'Empleado de Prueba',
+    subject: 'Prueba de Ticket de Nómina - Cielito Home',
+    customMessage: 'Este es un email de prueba del sistema de nómina.',
+    periodo: 'Primera Quincena - 12/2024',
+    diasTrabajados: 10,
+    retardos: 2,
+    pagoFinal: '3,500'
+  };
+  
+  try {
+    const response = await window.enviarEmailIndividual(empleadoData);
+    
+    if (response.success) {
+      console.log('✅ Email de prueba enviado exitosamente a:', emailPrueba);
+      console.log('Respuesta:', response.response);
+    } else {
+      console.error('❌ Error enviando email de prueba:', response.error);
+    }
+  } catch (error) {
+    console.error('❌ Error en prueba de email:', error);
+  }
+};
+
+// ===== EXPORTAR FUNCIONES GLOBALMENTE =====
+window.mostrarModalEnvioEmail = window.mostrarModalEnvioEmail;
+window.confirmarEnvioEmails = window.confirmarEnvioEmails;
+window.enviarTodosLosEmails = window.enviarTodosLosEmails;
+window.enviarEmailIndividualEmpleado = window.enviarEmailIndividualEmpleado;
+window.enviarEmailPrueba = window.enviarEmailPrueba;
+
+console.log('📧 Funciones de Email para Nómina cargadas correctamente');
 // ===== EXPORTAR FUNCIONES GLOBALMENTE =====
 window.toggleSalaryManager = window.toggleSalaryManager || function() {
   if (!validarAccesoAutorizado()) return;

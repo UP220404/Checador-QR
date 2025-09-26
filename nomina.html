@@ -9,6 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="nomina.css">
   <link rel="icon" href="img/cielitohome.png" type="image/png">
+  
+  <!-- EmailJS CDN -->
+  <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <!-- Navbar -->
@@ -311,8 +316,8 @@
       </table>
     </div>
 
-    <!-- Botones de Acción -->
-    <div id="actionButtons" class="d-flex gap-2 mt-3" style="display: none;">
+    <!-- Botones de Acción MODIFICADOS -->
+    <div id="actionButtons" class="d-flex gap-2 mt-3 flex-wrap" style="display: none;">
       <button id="saveBtn" class="btn btn-success" onclick="guardarNominaCompleta()">
         <i class="bi bi-floppy me-2"></i>Guardar Nómina
       </button>
@@ -321,6 +326,13 @@
       </button>
       <button class="btn btn-info" onclick="generarTodosLosPDFs()">
         <i class="bi bi-file-earmark-pdf me-2"></i>Generar Todos los PDFs
+      </button>
+      <!-- NUEVOS BOTONES DE EMAIL -->
+      <button class="btn btn-warning" onclick="mostrarModalEnvioEmail()">
+        <i class="bi bi-envelope me-2"></i>Enviar Tickets por Email
+      </button>
+      <button class="btn btn-outline-success" onclick="enviarTodosLosEmails()">
+        <i class="bi bi-send me-2"></i>Envío Masivo
       </button>
     </div>
 
@@ -428,16 +440,85 @@
       </div>
     </div>
 
+    <!-- NUEVO: Modal para configuración de envío de emails -->
+    <div class="modal fade" id="modalEnvioEmail" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title">
+              <i class="bi bi-envelope me-2"></i>Envío de Tickets por Email
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Información:</strong> Se enviarán los tickets de nómina a los correos institucionales de cada empleado.
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <label class="form-label">Asunto del correo:</label>
+                <input type="text" id="emailSubject" class="form-control" 
+                       value="Ticket de Nómina - Cielito Home" placeholder="Asunto personalizado">
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <label class="form-label">Mensaje personalizado (opcional):</label>
+                <textarea id="emailMessage" class="form-control" rows="4" 
+                          placeholder="Agregar mensaje personalizado para los empleados..."></textarea>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="incluirPDF" checked>
+                  <label class="form-check-label" for="incluirPDF">
+                    Incluir PDF como adjunto
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="enviarHTML" checked>
+                  <label class="form-check-label" for="enviarHTML">
+                    Incluir ticket en formato HTML dentro del email
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">Vista previa de empleados</h6>
+              </div>
+              <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                <div id="listaEmpleadosEmail"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success" onclick="confirmarEnvioEmails()">
+              <i class="bi bi-send me-2"></i>Enviar Emails
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  
+  <!-- NUEVO: EmailJS Configuration -->
+  <script src="emailConfig.js"></script>
   
   <!-- JavaScript Principal -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script type="module" src="nomina.js"></script>
+  <script type="module" src="nomina.js"></script>
 </body>
 </html>
