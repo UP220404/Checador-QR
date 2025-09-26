@@ -304,6 +304,7 @@ function validarAccesoAutorizado() {
   return true;
 }
 
+
 // ===== GESTIÓN DE EMPLEADOS =====
 async function cargarEmpleados() {
   try {
@@ -318,7 +319,8 @@ async function cargarEmpleados() {
       const userData = doc.data();
       empleadosGlobales.push({
         uid: doc.id,
-        ...userData
+        ...userData,
+        email: userData.correo || 'sin-email@cielitohome.com' // ← AGREGAR ESTA LÍNEA
       });
       
       const option = document.createElement('option');
@@ -766,7 +768,7 @@ window.calcularNomina = async function() {
         todosLosEmpleados.push({
           uid: doc.id,
           nombre: userData.nombre,
-          email: userData.email || 'sin-email@cielitohome.com',
+          email: userData.correo || 'sin-email@cielitohome.com',
           tipo: userData.tipo || 'tiempo_completo',
           tipoNomina: userData.tipoNomina || 'quincenal',
           salarioQuincenal: userData.salarioQuincenal,
@@ -3444,6 +3446,13 @@ window.toggleCajaAhorro = window.toggleCajaAhorro || toggleCajaAhorro;
 
 console.log(`🏢 Sistema de Nómina Cielito Home - Funciones exportadas correctamente`);
 
+
+// ===== EXPONER VARIABLES AL SCOPE GLOBAL PARA DEBUG =====
+window.resultadosNomina = resultadosNomina;
+window.empleadosGlobales = empleadosGlobales;
+window.cambiosManuales = cambiosManuales;
+window.quinceActual = quinceActual;
+window.mesActual = mesActual;
 // ===== MENSAJES DE ESTADO =====
 console.log(`
 🏢 Sistema de Nómina Cielito Home
