@@ -3,13 +3,13 @@
 
 const EMAIL_CONFIG = {
   // Tu User ID de EmailJS (lo obtienes en Account -> API Keys)
-  USER_ID: 'YOUR_USER_ID', // ⚠️ CAMBIAR: Ve a Account > API Keys para obtenerlo
+  USER_ID: 'D6CcJTy6k_fYOuvp5', // ⚠️ CAMBIAR: Ve a Account > API Keys para obtenerlo
   
   // Tu Service ID (ya lo tienes configurado)
   SERVICE_ID: 'service_dr0t5od', // ✅ CONFIGURADO
   
   // Tu Template ID (lo vas a crear en el siguiente paso)
-  TEMPLATE_ID: 'YOUR_TEMPLATE_ID', // ⚠️ CAMBIAR: Crear template y poner el ID aquí
+  TEMPLATE_ID: 'template_gpspxm3', // ⚠️ CAMBIAR: Crear template y poner el ID aquí
   
   // Configuración de la plantilla
   TEMPLATE_PARAMS: {
@@ -167,9 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const inicializado = inicializarEmailJS();
     if (inicializado) {
       console.log('🎯 EmailJS listo para enviar desde: sistemas@cielitohome.com');
-      console.log('📊 Límite diario: 500 emails');
+      console.log('📊 Límite diario: 200 emails');
     }
-  }, 500);
+  }, 200);
 });
 
 console.log('📧 EmailJS Config cargado - Service ID: service_dr0t5od');
