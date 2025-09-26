@@ -3033,102 +3033,8 @@ window.addEventListener('beforeunload', function(e) {
   }
 });
 
-// ===== FUNCIONES DE EMAIL PARA NOMINA.JS =====
-// Agregar estas funciones al final de nomina.js (antes del console.log final)
-
-// ===== FUNCIÓN PRINCIPAL DE ENVÍO DE EMAIL =====
-window.enviarEmailIndividual = async function(empleadoData, ticketHTML = '', pdfBase64 = null) {
-  try {
-    // Verificar configuración de EmailJS
-    if (!window.EMAIL_CONFIG || !window.EMAIL_CONFIG.USER_ID) {
-      throw new Error('EmailJS no está configurado correctamente');
-    }
-
-    // Validar email del empleado
-    if (!empleadoData.email || !window.validarEmail(empleadoData.email)) {
-      throw new Error('Email del empleado inválido');
-    }
-
-    // Preparar el contenido del email (solo texto)
-    const emailContent = generarContenidoEmailTexto(empleadoData);
-    
-    // Preparar parámetros para EmailJS
-    const templateParams = {
-      to_email: empleadoData.email,
-      to_name: empleadoData.nombre,
-      subject: empleadoData.subject,
-      message: emailContent,
-      from_name: 'Recursos Humanos - Cielito Home',
-      from_email: 'sistemas@cielitohome.com'
-    };
-
-    console.log('Enviando email a:', empleadoData.email);
-    console.log('Parámetros:', templateParams);
-
-    // Enviar usando EmailJS
-    const response = await emailjs.send(
-      window.EMAIL_CONFIG.SERVICE_ID,
-      window.EMAIL_CONFIG.TEMPLATE_ID,
-      templateParams,
-      window.EMAIL_CONFIG.USER_ID
-    );
-
-    console.log('✅ Email enviado exitosamente:', response);
-    return { success: true, response };
-
-  } catch (error) {
-    console.error('❌ Error enviando email:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// ===== GENERAR CONTENIDO DE EMAIL EN TEXTO =====
-function generarContenidoEmailTexto(empleadoData) {
-  const fecha = new Date().toLocaleDateString('es-MX');
-  
-  let content = `Hola ${empleadoData.nombre},
-
-Adjunto encontrarás tu ticket de nómina correspondiente al período ${empleadoData.periodo}.
-
-═══════════════════════════════════════════════════════════
-                    RESUMEN DE TU NÓMINA
-═══════════════════════════════════════════════════════════
-
-👤 EMPLEADO: ${empleadoData.nombre}
-📅 PERÍODO: ${empleadoData.periodo}
-📊 DÍAS TRABAJADOS: ${empleadoData.diasTrabajados}
-⏰ RETARDOS: ${empleadoData.retardos}
-💰 PAGO FINAL: $${empleadoData.pagoFinal}
-
-═══════════════════════════════════════════════════════════`;
-
-  // Agregar mensaje personalizado si existe
-  if (empleadoData.customMessage && empleadoData.customMessage.trim() !== '') {
-    content += `
-
-📝 MENSAJE ESPECIAL:
-${empleadoData.customMessage}
-
-═══════════════════════════════════════════════════════════`;
-  }
-
-  content += `
-
-Este es tu comprobante oficial de pago generado automáticamente el ${fecha}.
-
-Si tienes alguna duda sobre tu nómina, por favor contacta al departamento de Recursos Humanos.
-
-Atentamente,
-Equipo de Recursos Humanos
-Cielito Home - Experiencias a la Carta
-
-═══════════════════════════════════════════════════════════
-Este es un mensaje automático, por favor no responder a este correo.
-Para consultas, contactar: sistemas@cielitohome.com
-═══════════════════════════════════════════════════════════`;
-
-  return content;
-}
+// ===== FUNCIONES DE EMAIL ACTUALIZADAS PARA NOMINA.JS =====
+// Reemplazar las funciones de email anteriores por estas versiones actualizadas
 
 // ===== ENVÍO INDIVIDUAL DESDE TARJETA DE EMPLEADO =====
 window.enviarEmailIndividualEmpleado = async function(empleadoId) {
@@ -3261,11 +3167,11 @@ window.mostrarModalEnvioEmail = function() {
   if (!window.validarConfiguracionEmail || !window.validarConfiguracionEmail()) {
     mostrarNotificacion(
       'EmailJS no está configurado correctamente.\n\n' +
-      'Por favor configura:\n' +
-      '1. USER_ID en emailConfig.js\n' +
-      '2. SERVICE_ID en emailConfig.js\n' +
-      '3. TEMPLATE_ID en emailConfig.js\n\n' +
-      'Ve a https://www.emailjs.com/ para obtener estos valores.',
+      'Por favor verifica:\n' +
+      '1. CDN de EmailJS actualizado\n' +
+      '2. Configuración en emailConfig.js\n' +
+      '3. Recarga la página\n\n' +
+      'Ve a https://www.emailjs.com/ para más información.',
       'error',
       8000
     );
@@ -3505,54 +3411,16 @@ function mostrarResultadoEnvioMasivo(exitosos, fallidos, errores) {
   mostrarNotificacion(mensaje, fallidos === 0 ? 'success' : 'warning', 5000);
 }
 
-// ===== FUNCIÓN DE PRUEBA =====
-window.enviarEmailPrueba = async function() {
-  if (!window.validarConfiguracionEmail || !window.validarConfiguracionEmail()) {
-    console.error('❌ EmailJS no está configurado correctamente');
-    return;
-  }
-  
-  const emailPrueba = prompt('Ingresa un email para la prueba:');
-  if (!emailPrueba || !window.validarEmail(emailPrueba)) {
-    console.error('❌ Email inválido');
-    return;
-  }
-  
-  console.log('🧪 Iniciando prueba de email...');
-  
-  const empleadoData = {
-    email: emailPrueba,
-    nombre: 'Empleado de Prueba',
-    subject: 'Prueba de Ticket de Nómina - Cielito Home',
-    customMessage: 'Este es un email de prueba del sistema de nómina.',
-    periodo: 'Primera Quincena - 12/2024',
-    diasTrabajados: 10,
-    retardos: 2,
-    pagoFinal: '3,500'
-  };
-  
-  try {
-    const response = await window.enviarEmailIndividual(empleadoData);
-    
-    if (response.success) {
-      console.log('✅ Email de prueba enviado exitosamente a:', emailPrueba);
-      console.log('Respuesta:', response.response);
-    } else {
-      console.error('❌ Error enviando email de prueba:', response.error);
-    }
-  } catch (error) {
-    console.error('❌ Error en prueba de email:', error);
-  }
-};
-
 // ===== EXPORTAR FUNCIONES GLOBALMENTE =====
 window.mostrarModalEnvioEmail = window.mostrarModalEnvioEmail;
 window.confirmarEnvioEmails = window.confirmarEnvioEmails;
 window.enviarTodosLosEmails = window.enviarTodosLosEmails;
 window.enviarEmailIndividualEmpleado = window.enviarEmailIndividualEmpleado;
-window.enviarEmailPrueba = window.enviarEmailPrueba;
 
-console.log('📧 Funciones de Email para Nómina cargadas correctamente');
+console.log('📧 Funciones de Email actualizadas para Nómina cargadas correctamente');
+
+
+
 // ===== EXPORTAR FUNCIONES GLOBALMENTE =====
 window.toggleSalaryManager = window.toggleSalaryManager || function() {
   if (!validarAccesoAutorizado()) return;

@@ -1,76 +1,75 @@
-// ===== CONFIGURACIÓN EMAILJS - CIELITO HOME =====
-// Archivo: emailConfig.js
-
+// ===== CONFIGURACIÓN EMAILJS ACTUALIZADA =====
 const EMAIL_CONFIG = {
-  // Tu User ID de EmailJS (lo obtienes en Account -> API Keys)
-  USER_ID: 'D6CcJTy6k_fYOuvp5', // ⚠️ CAMBIAR: Ve a Account > API Keys para obtenerlo
+  // Configuración de EmailJS (actualizada)
+  USER_ID: 'D6CcJTy6k_fYOuvp5',
+  SERVICE_ID: 'service_dr0t5od',
+  TEMPLATE_ID: 'template_gpspxm3',
   
-  // Tu Service ID (ya lo tienes configurado)
-  SERVICE_ID: 'service_dr0t5od', // ✅ CONFIGURADO
+  // Configuración del remitente
+  FROM_NAME: 'Recursos Humanos - Cielito Home',
+  FROM_EMAIL: 'sistemas@cielitohome.com',
   
-  // Tu Template ID (lo vas a crear en el siguiente paso)
-  TEMPLATE_ID: 'template_gpspxm3', // ⚠️ CAMBIAR: Crear template y poner el ID aquí
-  
-  // Configuración de la plantilla
-  TEMPLATE_PARAMS: {
-    // Estos son los nombres de variables que usarás en tu plantilla EmailJS
-    TO_EMAIL: 'to_email',
-    TO_NAME: 'to_name',
-    FROM_NAME: 'from_name',
-    SUBJECT: 'subject',
-    MESSAGE: 'message',
-    COMPANY_NAME: 'company_name',
-    PERIOD: 'period',
-    SALARY_AMOUNT: 'salary_amount',
-    WORK_DAYS: 'work_days',
-    RETARDS: 'retards',
-    FINAL_PAY: 'final_pay',
-    TICKET_HTML: 'ticket_html',
-    ATTACHMENT_PDF: 'attachment_pdf'
-  }
+  // Límites de servicio
+  DAILY_LIMIT: 200,
+  MONTHLY_LIMIT: 200
 };
 
-// ===== FUNCIONES DE INICIALIZACIÓN =====
+// ===== INICIALIZACIÓN DE EMAILJS =====
 function inicializarEmailJS() {
   try {
     // Verificar que EmailJS esté disponible
     if (typeof emailjs === 'undefined') {
-      console.error('EmailJS no está cargado. Verifica que el script esté incluido.');
+      console.error('❌ EmailJS no está cargado. Verifica que el CDN esté incluido correctamente.');
       return false;
     }
     
-    // Inicializar EmailJS con tu User ID
-    emailjs.init(EMAIL_CONFIG.USER_ID);
+    // Inicializar EmailJS con la nueva sintaxis
+    emailjs.init({
+      publicKey: EMAIL_CONFIG.USER_ID,
+      blockHeadless: true,
+      blockList: {
+        list: ['foo@emailjs.com', 'bar@emailjs.com'],
+        watchVariable: 'userEmail'
+      },
+      limitRate: {
+        id: 'app',
+        throttle: 10000,
+      }
+    });
     
     console.log('✅ EmailJS inicializado correctamente');
-    console.log('📧 Servicio configurado: sistemas@cielitohome.com');
+    console.log('🎯 EmailJS listo para enviar desde:', EMAIL_CONFIG.FROM_EMAIL);
+    console.log('📊 Límite diario:', EMAIL_CONFIG.DAILY_LIMIT, 'emails');
+    
     return true;
+    
   } catch (error) {
     console.error('❌ Error inicializando EmailJS:', error);
     return false;
   }
 }
 
-// ===== FUNCIÓN PARA VALIDAR CONFIGURACIÓN =====
+// ===== FUNCIÓN DE VALIDACIÓN =====
 function validarConfiguracionEmail() {
-  const errores = [];
-  
-  if (EMAIL_CONFIG.USER_ID === 'YOUR_USER_ID' || !EMAIL_CONFIG.USER_ID) {
-    errores.push('USER_ID no configurado - Ve a Account > API Keys');
+  // Verificar que EmailJS esté disponible
+  if (typeof emailjs === 'undefined') {
+    console.error('❌ EmailJS no está disponible globalmente');
+    return false;
   }
   
-  if (EMAIL_CONFIG.SERVICE_ID === 'YOUR_SERVICE_ID' || !EMAIL_CONFIG.SERVICE_ID) {
-    errores.push('SERVICE_ID no configurado');
-  } else if (EMAIL_CONFIG.SERVICE_ID === 'service_dr0t5od') {
-    console.log('✅ Service ID configurado correctamente');
+  // Verificar configuración
+  if (!EMAIL_CONFIG.USER_ID || EMAIL_CONFIG.USER_ID === 'TU_USER_ID') {
+    console.error('❌ USER_ID no configurado en EMAIL_CONFIG');
+    return false;
   }
   
-  if (EMAIL_CONFIG.TEMPLATE_ID === 'YOUR_TEMPLATE_ID' || !EMAIL_CONFIG.TEMPLATE_ID) {
-    errores.push('TEMPLATE_ID no configurado - Crea una plantilla en Email Templates');
+  if (!EMAIL_CONFIG.SERVICE_ID || EMAIL_CONFIG.SERVICE_ID === 'TU_SERVICE_ID') {
+    console.error('❌ SERVICE_ID no configurado en EMAIL_CONFIG');
+    return false;
   }
   
-  if (errores.length > 0) {
-    console.error('❌ Configuración de EmailJS incompleta:', errores);
+  if (!EMAIL_CONFIG.TEMPLATE_ID || EMAIL_CONFIG.TEMPLATE_ID === 'TU_TEMPLATE_ID') {
+    console.error('❌ TEMPLATE_ID no configurado en EMAIL_CONFIG');
     return false;
   }
   
@@ -78,98 +77,170 @@ function validarConfiguracionEmail() {
   return true;
 }
 
-// ===== FUNCIÓN PARA ENVIAR EMAIL INDIVIDUAL =====
-async function enviarEmailIndividual(empleadoData, ticketHTML, pdfBase64 = null) {
-  try {
-    if (!validarConfiguracionEmail()) {
-      throw new Error('Configuración de EmailJS incompleta');
-    }
-    
-    const templateParams = {
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.TO_EMAIL]: empleadoData.email,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.TO_NAME]: empleadoData.nombre,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.FROM_NAME]: 'Recursos Humanos - Cielito Home',
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.SUBJECT]: empleadoData.subject || 'Ticket de Nómina - Cielito Home',
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.MESSAGE]: empleadoData.customMessage || '',
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.COMPANY_NAME]: 'CIELITO HOME',
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.PERIOD]: empleadoData.periodo,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.WORK_DAYS]: empleadoData.diasTrabajados,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.RETARDS]: empleadoData.retardos,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.FINAL_PAY]: empleadoData.pagoFinal,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.TICKET_HTML]: ticketHTML,
-      [EMAIL_CONFIG.TEMPLATE_PARAMS.ATTACHMENT_PDF]: pdfBase64
-    };
-    
-    console.log('📤 Enviando email a:', empleadoData.email);
-    
-    const response = await emailjs.send(
-      EMAIL_CONFIG.SERVICE_ID,
-      EMAIL_CONFIG.TEMPLATE_ID,
-      templateParams
-    );
-    
-    console.log('✅ Email enviado exitosamente a:', empleadoData.email, response);
-    return { success: true, response };
-    
-  } catch (error) {
-    console.error('❌ Error enviando email a', empleadoData.email, ':', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// ===== FUNCIÓN PARA VALIDAR EMAIL =====
+// ===== FUNCIÓN DE VALIDACIÓN DE EMAIL =====
 function validarEmail(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regex.test(email);
 }
 
-// ===== FUNCIÓN DE PRUEBA =====
-async function enviarEmailPrueba() {
+// ===== FUNCIÓN PRINCIPAL DE ENVÍO (ACTUALIZADA) =====
+async function enviarEmailIndividual(empleadoData, ticketHTML = '', pdfBase64 = null) {
   try {
+    // Verificar configuración
+    if (!validarConfiguracionEmail()) {
+      throw new Error('EmailJS no está configurado correctamente');
+    }
+
+    // Validar email del empleado
+    if (!empleadoData.email || !validarEmail(empleadoData.email)) {
+      throw new Error('Email del empleado inválido');
+    }
+
+    // Preparar el contenido del email (solo texto)
+    const emailContent = generarContenidoEmailTexto(empleadoData);
+    
+    // Preparar parámetros para EmailJS
+    const templateParams = {
+      to_email: empleadoData.email,
+      to_name: empleadoData.nombre,
+      subject: empleadoData.subject,
+      message: emailContent,
+      from_name: EMAIL_CONFIG.FROM_NAME,
+      from_email: EMAIL_CONFIG.FROM_EMAIL
+    };
+
+    console.log('📧 Enviando email a:', empleadoData.email);
+    console.log('📝 Parámetros:', templateParams);
+
+    // Enviar usando EmailJS con la nueva sintaxis
     const response = await emailjs.send(
       EMAIL_CONFIG.SERVICE_ID,
       EMAIL_CONFIG.TEMPLATE_ID,
-      {
-        to_email: 'sistemas@cielitohome.com',
-        to_name: 'Administrador',
-        from_name: 'Sistema de Nómina',
-        subject: 'Prueba de configuración EmailJS',
-        message: 'Este es un email de prueba para verificar la configuración.',
-        company_name: 'CIELITO HOME',
-        period: 'Prueba',
-        work_days: '10',
-        retards: '0',
-        final_pay: '5000',
-        ticket_html: '<p>Email de prueba funcionando correctamente</p>'
-      }
+      templateParams
     );
-    
-    console.log('✅ Email de prueba enviado exitosamente:', response);
-    return true;
+
+    console.log('✅ Email enviado exitosamente:', response);
+    return { success: true, response };
+
   } catch (error) {
-    console.error('❌ Error enviando email de prueba:', error);
-    return false;
+    console.error('❌ Error enviando email:', error);
+    return { success: false, error: error.message || error.text || 'Error desconocido' };
   }
 }
 
-// ===== EXPORTAR CONFIGURACIÓN =====
+// ===== GENERAR CONTENIDO DE EMAIL EN TEXTO =====
+function generarContenidoEmailTexto(empleadoData) {
+  const fecha = new Date().toLocaleDateString('es-MX');
+  
+  let content = `Hola ${empleadoData.nombre},
+
+Adjunto encontrarás tu ticket de nómina correspondiente al período ${empleadoData.periodo}.
+
+═══════════════════════════════════════════════════════════
+                    RESUMEN DE TU NÓMINA
+═══════════════════════════════════════════════════════════
+
+👤 EMPLEADO: ${empleadoData.nombre}
+📅 PERÍODO: ${empleadoData.periodo}
+📊 DÍAS TRABAJADOS: ${empleadoData.diasTrabajados}
+⏰ RETARDOS: ${empleadoData.retardos}
+💰 PAGO FINAL: $${empleadoData.pagoFinal}
+
+═══════════════════════════════════════════════════════════`;
+
+  // Agregar mensaje personalizado si existe
+  if (empleadoData.customMessage && empleadoData.customMessage.trim() !== '') {
+    content += `
+
+📝 MENSAJE ESPECIAL:
+${empleadoData.customMessage}
+
+═══════════════════════════════════════════════════════════`;
+  }
+
+  content += `
+
+Este es tu comprobante oficial de pago generado automáticamente el ${fecha}.
+
+Si tienes alguna duda sobre tu nómina, por favor contacta al departamento de Recursos Humanos.
+
+Atentamente,
+Equipo de Recursos Humanos
+Cielito Home - Experiencias a la Carta
+
+═══════════════════════════════════════════════════════════
+Este es un mensaje automático, por favor no responder a este correo.
+Para consultas, contactar: sistemas@cielitohome.com
+═══════════════════════════════════════════════════════════`;
+
+  return content;
+}
+
+// ===== FUNCIÓN DE PRUEBA ACTUALIZADA =====
+async function enviarEmailPrueba() {
+  if (!validarConfiguracionEmail()) {
+    console.error('❌ EmailJS no está configurado correctamente');
+    return;
+  }
+  
+  const emailPrueba = prompt('Ingresa un email para la prueba:');
+  if (!emailPrueba || !validarEmail(emailPrueba)) {
+    console.error('❌ Email inválido');
+    return;
+  }
+  
+  console.log('🧪 Iniciando prueba de email con EmailJS actualizado...');
+  
+  const empleadoData = {
+    email: emailPrueba,
+    nombre: 'Empleado de Prueba',
+    subject: 'Prueba de Ticket de Nómina - Cielito Home',
+    customMessage: 'Este es un email de prueba del sistema de nómina.',
+    periodo: 'Primera Quincena - 12/2024',
+    diasTrabajados: 10,
+    retardos: 2,
+    pagoFinal: '3,500'
+  };
+  
+  try {
+    const response = await enviarEmailIndividual(empleadoData);
+    
+    if (response.success) {
+      console.log('✅ Email de prueba enviado exitosamente a:', emailPrueba);
+      console.log('📬 Respuesta:', response.response);
+      alert(`✅ Email enviado exitosamente a: ${emailPrueba}`);
+    } else {
+      console.error('❌ Error enviando email de prueba:', response.error);
+      alert(`❌ Error: ${response.error}`);
+    }
+  } catch (error) {
+    console.error('❌ Error en prueba de email:', error);
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+// ===== EXPORTAR FUNCIONES GLOBALMENTE =====
 window.EMAIL_CONFIG = EMAIL_CONFIG;
 window.inicializarEmailJS = inicializarEmailJS;
 window.validarConfiguracionEmail = validarConfiguracionEmail;
-window.enviarEmailIndividual = enviarEmailIndividual;
 window.validarEmail = validarEmail;
+window.enviarEmailIndividual = enviarEmailIndividual;
+window.generarContenidoEmailTexto = generarContenidoEmailTexto;
 window.enviarEmailPrueba = enviarEmailPrueba;
 
-// Inicializar automáticamente cuando se cargue el script
+// ===== AUTO-INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', function() {
-  // Pequeño delay para asegurar que EmailJS esté cargado
+  // Esperar un poco para asegurar que EmailJS esté cargado
   setTimeout(() => {
-    const inicializado = inicializarEmailJS();
-    if (inicializado) {
-      console.log('🎯 EmailJS listo para enviar desde: sistemas@cielitohome.com');
-      console.log('📊 Límite diario: 200 emails');
-    }
-  }, 200);
+    inicializarEmailJS();
+  }, 1000);
 });
 
-console.log('📧 EmailJS Config cargado - Service ID: service_dr0t5od');
+// ===== INICIALIZACIÓN INMEDIATA SI YA ESTÁ CARGADO =====
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(() => {
+    inicializarEmailJS();
+  }, 500);
+}
+
+console.log('📧 emailConfig.js cargado - Esperando inicialización de EmailJS...');
