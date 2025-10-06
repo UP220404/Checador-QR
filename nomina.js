@@ -143,20 +143,24 @@ function getTipoNombre(tipo) {
 function calcularDiasLaboralesPeriodo(año, mes, periodo) {
   const diasLaborales = [];
   const ultimoDia = new Date(año, mes, 0).getDate();
-  
+
+  // Calcular todos los días laborables del mes
   for (let dia = 1; dia <= ultimoDia; dia++) {
     const fecha = new Date(año, mes - 1, dia);
     const diaSemana = fecha.getDay();
-    
+
     if (diaSemana >= 1 && diaSemana <= 5) {
       diasLaborales.push(dia);
     }
   }
-  
+
   if (periodo === 'primera') {
+    // Primera catorcena: día 1 al 15 (primeros 10 días laborales máximo)
     return diasLaborales.slice(0, 10);
   } else {
-    return diasLaborales.slice(10, 20);
+    // Segunda catorcena: día 16 al fin de mes
+    // ✅ TOMA TODOS los días laborables restantes (pueden ser 10, 11 o 12)
+    return diasLaborales.slice(10);
   }
 }
 
@@ -882,9 +886,16 @@ window.calcularNomina = async function() {
           }
         });
 
-        const diasFaltantes = diasLaborales.filter(dia => !diasAsistidos.includes(dia));
+        // ✅ SISTEMA DE CATORCENA: Siempre se usan 10 días estándar como base
+        const DIAS_ESTANDAR_CATORCENA = 10;
+
+        // Calcular faltas SOLO sobre los primeros 10 días del período
+        // Si el período tiene 11 o 12 días, el día 11 y 12 son "días extra opcionales"
+        const diasLaboralesParaValidar = diasLaborales.slice(0, DIAS_ESTANDAR_CATORCENA);
+        const diasFaltantes = diasLaboralesParaValidar.filter(dia => !diasAsistidos.includes(dia));
+
         const diasDescuento = Math.floor(retardos / 4);
-        const diasEfectivos = diasTrabajados - diasDescuento;
+        const diasEfectivos = Math.min(diasTrabajados, DIAS_ESTANDAR_CATORCENA) - diasDescuento;
         const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
 
         // Descuentos ajustados por tipo de nómina
@@ -933,8 +944,9 @@ window.calcularNomina = async function() {
           empleado,
           salarioQuincenal: salarioBase,
           tipoNominaEmpleado: empleado.tipoNomina,
-          diasLaboralesEsperados: diasLaborales.length,
-          diasTrabajados,
+          diasLaboralesEsperados: DIAS_ESTANDAR_CATORCENA, // ✅ Siempre 10 días estándar
+          diasLaboralesReales: diasLaborales.length, // Días reales del período (puede ser 10, 11 o 12)
+          diasTrabajados: Math.min(diasTrabajados, DIAS_ESTANDAR_CATORCENA), // Máximo 10 días pagados
           diasFaltantes: diasFaltantes.length,
           retardos,
           diasDescuento,
@@ -965,6 +977,59 @@ window.calcularNomina = async function() {
     // Actualizar variables globales
     mesActual = `${mesNum}/${añoNum}`;
     resultadosNomina = resultados;
+
+    // ✅ CARGAR CAMBIOS MANUALES GUARDADOS EN FIREBASE
+    await cargarTodosCambiosDelPeriodo();
+
+    // ✅ APLICAR CAMBIOS MANUALES A LOS RESULTADOS
+    if (Object.keys(cambiosManuales).length > 0) {
+      console.log('🔄 Aplicando cambios manuales guardados...');
+
+      resultadosNomina.forEach((resultado, index) => {
+        const cambiosManual = cambiosManuales[resultado.empleado.uid];
+
+        if (cambiosManual) {
+          console.log(`✏️ Aplicando cambios a ${resultado.empleado.nombre}`);
+
+          // Recalcular con los datos editados
+          const diasDescuentoPorRetardos = Math.floor(cambiosManual.retardos / 4);
+          const diasEfectivos = Math.max(0, cambiosManual.diasTrabajados - diasDescuentoPorRetardos);
+          const diasTotalesAPagar = diasEfectivos + (cambiosManual.diasJustificados || 0) + (cambiosManual.diasExtra || 0);
+
+          const pagoBase = diasTotalesAPagar * resultado.pagoPorDia;
+          const pagoConBono = pagoBase + (cambiosManual.bonoExtra || 0);
+          const pagoFinal = Math.max(0, pagoConBono - resultado.totalDescuentos);
+
+          // Actualizar resultado
+          resultadosNomina[index] = {
+            ...resultado,
+            diasTrabajados: cambiosManual.diasTrabajados,
+            retardos: cambiosManual.retardos,
+            diasDescuento: diasDescuentoPorRetardos,
+            diasEfectivos: diasEfectivos,
+            diasExtra: cambiosManual.diasExtra || 0,
+            bonoExtra: cambiosManual.bonoExtra || 0,
+            diasJustificados: cambiosManual.diasJustificados || 0,
+            pagoTotal: Math.round(pagoBase),
+            pagoFinal: Math.round(pagoFinal),
+            editadoManualmente: true,
+            comentariosEdicion: cambiosManual.comentarios,
+            justificacionesDetalle: cambiosManual.justificacionesDetalle || []
+          };
+        }
+      });
+
+      // Recalcular totales
+      totalNominaFinal = resultadosNomina.reduce((sum, r) => sum + r.pagoFinal, 0);
+      totalRetardos = resultadosNomina.reduce((sum, r) => sum + r.retardos, 0);
+      empleadosConDescuento = resultadosNomina.filter(r => r.diasDescuento > 0 || r.totalDescuentos > 0).length;
+
+      mostrarNotificacion(
+        `✅ Se aplicaron ${Object.keys(cambiosManuales).length} cambio(s) manual(es) guardado(s)`,
+        'success',
+        4000
+      );
+    }
 
     // Mostrar resultados
     const tipoTexto = tipoNominaCalculo === 'semanal' ? 'Semanal' : 'Quincenal';
@@ -1296,17 +1361,17 @@ function calcularPreviaEdicion() {
   }
 }
 
-function guardarEdicionManual() {
+async function guardarEdicionManual() {
   try {
     const empleadoId = document.getElementById('editEmpleadoId').value;
     const diasTrabajados = parseInt(document.getElementById('editDiasTrabajados').value) || 0;
     const retardos = parseInt(document.getElementById('editRetardos').value) || 0;
     const diasExtra = parseInt(document.getElementById('editDiasExtra').value) || 0;
     const bonoExtra = parseFloat(document.getElementById('editBonoExtra').value) || 0;
-    
+
     let diasJustificados = 0;
     let justificacionesDetalle = [];
-    
+
     if (document.getElementById('tieneVacaciones').checked) {
       const dias = parseInt(document.getElementById('diasVacaciones').value) || 0;
       diasJustificados += dias;
@@ -1322,10 +1387,10 @@ function guardarEdicionManual() {
       diasJustificados += dias;
       justificacionesDetalle.push(`Viaje de negocios: ${dias} días`);
     }
-    
+
     const comentarios = document.getElementById('editComentarios').value;
-    
-    cambiosManuales[empleadoId] = {
+
+    const datosEdicion = {
       diasTrabajados,
       retardos,
       diasExtra,
@@ -1336,26 +1401,119 @@ function guardarEdicionManual() {
       editadoManualmente: true,
       fechaEdicion: new Date().toISOString()
     };
-    
+
+    // Guardar en memoria
+    cambiosManuales[empleadoId] = datosEdicion;
+
     historialCambios.push({
       empleadoId,
       tipo: 'edicion_manual',
-      cambios: cambiosManuales[empleadoId],
+      cambios: datosEdicion,
       timestamp: new Date().toISOString()
     });
-    
+
+    // ✅ GUARDAR EN FIREBASE AUTOMÁTICAMENTE
+    await guardarCambiosEnFirebase(empleadoId, datosEdicion);
+
     actualizarTarjetaEmpleado(empleadoId);
-    
+
     mostrarNotificacion(`Cambios guardados para ${window.datosOriginales.empleado.nombre}`, 'success');
-    
+
     const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarNomina'));
     modal.hide();
-    
+
     recalcularResumenGeneral();
-    
+
   } catch (error) {
     console.error('Error guardando edición manual:', error);
-    mostrarNotificacion('Error al guardar los cambios', 'error');
+    mostrarNotificacion('Error al guardar los cambios: ' + error.message, 'error');
+  }
+}
+
+// ===== GUARDAR CAMBIOS EN FIREBASE =====
+async function guardarCambiosEnFirebase(empleadoId, datosEdicion) {
+  try {
+    // Crear identificador único del período
+    const periodoId = `${añoActualNum}_${String(mesActualNum).padStart(2, '0')}_${quinceActual.replace(/\s+/g, '_')}`;
+
+    // Referencia al documento en Firestore
+    const docRef = doc(db, 'nominas_cambios_manuales', `${empleadoId}_${periodoId}`);
+
+    // Datos a guardar
+    const datosGuardar = {
+      empleadoId,
+      periodo: {
+        quincena: quinceActual,
+        mes: mesActual,
+        mesNum: mesActualNum,
+        año: añoActualNum,
+        periodoId
+      },
+      cambios: datosEdicion,
+      fechaCreacion: new Date(),
+      fechaActualizacion: new Date()
+    };
+
+    // Guardar en Firebase
+    await setDoc(docRef, datosGuardar, { merge: true });
+
+    console.log('✅ Cambios guardados en Firebase:', periodoId);
+
+  } catch (error) {
+    console.error('❌ Error guardando en Firebase:', error);
+    throw error;
+  }
+}
+
+// ===== CARGAR CAMBIOS DESDE FIREBASE =====
+async function cargarCambiosDesdeFirebase(empleadoId, periodoId) {
+  try {
+    const docRef = doc(db, 'nominas_cambios_manuales', `${empleadoId}_${periodoId}`);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const datos = docSnap.data();
+      console.log('✅ Cambios cargados desde Firebase para:', empleadoId);
+      return datos.cambios;
+    } else {
+      console.log('ℹ️ No hay cambios guardados para:', empleadoId);
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Error cargando cambios desde Firebase:', error);
+    return null;
+  }
+}
+
+// ===== CARGAR TODOS LOS CAMBIOS DEL PERÍODO =====
+async function cargarTodosCambiosDelPeriodo() {
+  try {
+    const periodoId = `${añoActualNum}_${String(mesActualNum).padStart(2, '0')}_${quinceActual.replace(/\s+/g, '_')}`;
+
+    console.log('🔄 Cargando cambios manuales del período:', periodoId);
+
+    // Consultar todos los documentos de este período
+    const q = query(
+      collection(db, 'nominas_cambios_manuales'),
+      where('periodo.periodoId', '==', periodoId)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    cambiosManuales = {};
+
+    querySnapshot.forEach((doc) => {
+      const datos = doc.data();
+      cambiosManuales[datos.empleadoId] = datos.cambios;
+    });
+
+    console.log(`✅ ${Object.keys(cambiosManuales).length} cambios manuales cargados desde Firebase`);
+
+    return cambiosManuales;
+
+  } catch (error) {
+    console.error('❌ Error cargando cambios del período:', error);
+    return {};
   }
 }
 
@@ -3192,93 +3350,117 @@ window.mostrarModalEnvioEmail = function() {
 function actualizarListaEmpleadosEmail() {
   const container = document.getElementById('listaEmpleadosEmail');
   if (!container) return;
-  
+
   let html = '';
   let empleadosConEmail = 0;
   let empleadosSinEmail = 0;
-  
-  resultadosNomina.forEach(resultado => {
+
+  resultadosNomina.forEach((resultado, index) => {
     const email = resultado.empleado.email;
     const tieneEmail = email && email !== 'sin-email@cielitohome.com' && window.validarEmail(email);
-    
+
     if (tieneEmail) {
       empleadosConEmail++;
     } else {
       empleadosSinEmail++;
     }
-    
+
+    // Crear item con checkbox
     html += `
-      <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-        <div>
-          <strong>${resultado.empleado.nombre}</strong>
-          <br>
-          <small class="text-muted">${email || 'Sin email'}</small>
+      <label class="list-group-item d-flex align-items-center gap-3 ${!tieneEmail ? 'disabled' : ''}" style="cursor: ${tieneEmail ? 'pointer' : 'not-allowed'};">
+        <input
+          type="checkbox"
+          class="form-check-input flex-shrink-0 empleado-email-checkbox"
+          value="${resultado.empleado.uid}"
+          data-email="${email || ''}"
+          ${tieneEmail ? 'checked' : 'disabled'}
+          onchange="actualizarContadorSeleccionados()"
+          style="width: 1.2rem; height: 1.2rem;">
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <strong class="${!tieneEmail ? 'text-muted' : ''}">${resultado.empleado.nombre}</strong>
+              <br>
+              <small class="text-muted">
+                <i class="bi bi-envelope me-1"></i>${email || 'Sin email registrado'}
+              </small>
+            </div>
+            <div class="text-end">
+              <span class="badge ${tieneEmail ? 'bg-success' : 'bg-danger'} mb-1">
+                ${tieneEmail ? '✓ Válido' : '✗ Sin email'}
+              </span>
+              <br>
+              <span class="badge bg-info">
+                <i class="bi bi-cash me-1"></i>$${formatearNumero(resultado.pagoFinal)}
+              </span>
+            </div>
+          </div>
         </div>
-        <div>
-          <span class="badge ${tieneEmail ? 'bg-success' : 'bg-danger'}">
-            ${tieneEmail ? 'Válido' : 'Sin email'}
-          </span>
-          <span class="badge bg-info ms-1">
-            $${formatearNumero(resultado.pagoFinal)}
-          </span>
-        </div>
-      </div>
+      </label>
     `;
   });
-  
-  // Agregar resumen
-  const resumen = `
-    <div class="alert alert-info mb-3">
-      <h6 class="mb-2">Resumen de envío:</h6>
-      <div class="row">
-        <div class="col-6">
-          <span class="badge bg-success">${empleadosConEmail}</span> Con email válido
-        </div>
-        <div class="col-6">
-          <span class="badge bg-danger">${empleadosSinEmail}</span> Sin email
-        </div>
-      </div>
-    </div>
-  `;
-  
-  container.innerHTML = resumen + html;
+
+  container.innerHTML = html;
+
+  // Actualizar contador inicial
+  actualizarContadorSeleccionados();
 }
 
-// ===== CONFIRMAR ENVÍO DE EMAILS =====
+// ===== FUNCIONES AUXILIARES PARA CHECKBOXES =====
+window.seleccionarTodosEmails = function(seleccionar) {
+  const checkboxes = document.querySelectorAll('.empleado-email-checkbox:not(:disabled)');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = seleccionar;
+  });
+  actualizarContadorSeleccionados();
+};
+
+window.actualizarContadorSeleccionados = function() {
+  const checkboxes = document.querySelectorAll('.empleado-email-checkbox:checked');
+  const contador = document.getElementById('contadorSeleccionados');
+  if (contador) {
+    contador.textContent = checkboxes.length;
+  }
+};
+
+// ===== CONFIRMAR ENVÍO DE EMAILS (ACTUALIZADO) =====
 window.confirmarEnvioEmails = async function() {
   const subject = document.getElementById('emailSubject').value.trim();
   const customMessage = document.getElementById('emailMessage').value.trim();
-  
+
   if (!subject) {
     mostrarNotificacion('Por favor ingresa un asunto para el email', 'warning');
     return;
   }
-  
-  // Filtrar empleados con email válido
-  const empleadosConEmail = resultadosNomina.filter(resultado => {
-    const email = resultado.empleado.email;
-    return email && email !== 'sin-email@cielitohome.com' && window.validarEmail(email);
-  });
-  
-  if (empleadosConEmail.length === 0) {
-    mostrarNotificacion('No hay empleados con emails válidos para enviar', 'error');
+
+  // Obtener empleados seleccionados
+  const checkboxesSeleccionados = document.querySelectorAll('.empleado-email-checkbox:checked');
+  const uidsSeleccionados = Array.from(checkboxesSeleccionados).map(cb => cb.value);
+
+  if (uidsSeleccionados.length === 0) {
+    mostrarNotificacion('No has seleccionado ningún empleado para enviar', 'warning');
     return;
   }
-  
+
+  // Filtrar empleados seleccionados de resultadosNomina
+  const empleadosSeleccionados = resultadosNomina.filter(resultado => {
+    return uidsSeleccionados.includes(resultado.empleado.uid);
+  });
+
   const confirmar = confirm(
-    `¿Enviar tickets por email a ${empleadosConEmail.length} empleados?\n\n` +
+    `¿Enviar tickets por email a ${empleadosSeleccionados.length} empleado(s) seleccionado(s)?\n\n` +
     `Asunto: ${subject}\n` +
     `Mensaje personalizado: ${customMessage ? 'Sí' : 'No'}\n\n` +
     'Esta operación puede tomar varios minutos.'
   );
-  
+
   if (!confirmar) return;
-  
+
   // Cerrar modal
   bootstrap.Modal.getInstance(document.getElementById('modalEnvioEmail')).hide();
-  
+
   // Iniciar proceso de envío
-  await procesarEnvioMasivo(empleadosConEmail, {
+  await procesarEnvioMasivo(empleadosSeleccionados, {
     subject,
     customMessage
   });

@@ -784,3 +784,59 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--gray-400);
 }
+
+/* ===== ESTILOS PARA CHECKLIST DE EMAILS ===== */
+#listaEmpleadosEmail .list-group-item {
+  border: 1px solid var(--border);
+  transition: var(--transition);
+  margin-bottom: 0.5rem;
+  border-radius: var(--rounded);
+}
+
+#listaEmpleadosEmail .list-group-item:hover:not(.disabled) {
+  background-color: var(--gray-50);
+  border-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+#listaEmpleadosEmail .list-group-item.disabled {
+  background-color: var(--gray-100);
+  opacity: 0.6;
+}
+
+#listaEmpleadosEmail .form-check-input {
+  cursor: pointer;
+  border: 2px solid var(--gray-300);
+  transition: var(--transition);
+}
+
+#listaEmpleadosEmail .form-check-input:checked {
+  background-color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+#listaEmpleadosEmail .form-check-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+#contadorSeleccionados {
+  font-weight: 700;
+  color: var(--secondary);
+  font-size: 1.1rem;
+}
+
+/* Animación de actualización */
+.updating {
+  animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
