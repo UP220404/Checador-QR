@@ -898,6 +898,21 @@ window.calcularNomina = async function() {
         const cantidadFaltas = DIAS_ESTANDAR_CATORCENA - diasTrabajadosEfectivos;
         const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
 
+        // 🔍 DEBUG: Log para ver qué está pasando
+        if (empleado.nombre.includes('Lenin') || empleado.nombre.includes('lenin')) {
+          console.log('🔍 DEBUG DETALLADO:', {
+            empleado: empleado.nombre,
+            diasLaboralesDelPeriodo: diasLaborales,
+            totalDiasDelPeriodo: diasLaborales.length,
+            diasLaboralesEstandar: diasLaboralesEstandar,
+            diasQueAsistio: diasAsistidos,
+            diasAsistidosValidos: diasAsistidosValidos,
+            diasTrabajadosEfectivos: diasTrabajadosEfectivos,
+            diasQueFalto: diasFaltantes,
+            cantidadFaltas: cantidadFaltas
+          });
+        }
+
         // Descuento por retardos (cada 4 retardos = 1 día)
         const diasDescuentoPorRetardos = Math.floor(retardos / 4);
 
