@@ -2166,39 +2166,52 @@ window.generarTicketPDF = async function(empleadoId) {
     tempDiv.style.backgroundColor = 'white';
     document.body.appendChild(tempDiv);
     
-    // Generar con html2canvas - dejamos que calcule la altura automáticamente
+    // Generar con html2canvas con escala optimizada
     const canvas = await html2canvas(tempDiv.firstElementChild, {
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       backgroundColor: '#ffffff',
-      width: 794, // A4 width in pixels at 96 DPI
+      width: 794,
       logging: false
     });
-    
+
     // Crear PDF
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('portrait', 'mm', 'a4');
-    
-    // Calcular dimensiones
-    const imgWidth = 210;
-    const pageHeight = 295;
+
+    // Calcular dimensiones para ajustar a una página
+    const imgWidth = 210; // Ancho A4 en mm
+    const pageHeight = 297; // Alto A4 en mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    
-    let position = 0;
-    
-    // Agregar imagen al PDF
-    const imgData = canvas.toDataURL('image/png');
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    
-    // Si necesita más páginas
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+
+    // Si la imagen es más alta que la página, comprimir para que quepa
+    let finalWidth = imgWidth;
+    let finalHeight = imgHeight;
+
+    if (imgHeight > pageHeight) {
+      // Comprimir proporcionalmente para que quepa en una página
+      finalHeight = pageHeight;
+      finalWidth = (canvas.width * pageHeight) / canvas.height;
+
+      // Si el ancho también se sale, ajustar
+      if (finalWidth > imgWidth) {
+        finalWidth = imgWidth;
+        finalHeight = (canvas.height * imgWidth) / canvas.width;
+        // Si aún no cabe, forzar a tamaño de página con margen
+        if (finalHeight > pageHeight) {
+          finalHeight = pageHeight - 10; // Margen de seguridad
+          finalWidth = imgWidth - 10;
+        }
+      }
     }
+
+    // Centrar la imagen
+    const xOffset = (imgWidth - finalWidth) / 2;
+    const yOffset = (pageHeight - finalHeight) / 2;
+
+    // Agregar imagen al PDF
+    const imgData = canvas.toDataURL('image/png', 0.95);
+    pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
     
     // Limpiar elemento temporal
     document.body.removeChild(tempDiv);
@@ -2238,7 +2251,7 @@ function crearTicketHTML(resultado) {
       <!-- HEADER CORPORATIVO -->
       <div style="
         background: linear-gradient(135deg, #0f5132 0%, #198754 100%);
-        padding: 20px 30px;
+        padding: 15px 25px;
         color: white;
         display: flex;
         justify-content: space-between;
@@ -2246,19 +2259,19 @@ function crearTicketHTML(resultado) {
       ">
         <div style="display: flex; align-items: center;">
           <div style="
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 18px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin-right: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
           ">
             <div style="
-              width: 45px;
-              height: 45px;
+              width: 38px;
+              height: 38px;
               background: #0f5132;
               border-radius: 50%;
               display: flex;
@@ -2266,29 +2279,29 @@ function crearTicketHTML(resultado) {
               justify-content: center;
               color: white;
               font-weight: bold;
-              font-size: 18px;
+              font-size: 15px;
             ">CH</div>
           </div>
           <div>
             <h1 style="
               margin: 0;
-              font-size: 26px;
+              font-size: 22px;
               font-weight: 900;
-              letter-spacing: 1.5px;
+              letter-spacing: 1px;
             ">CIELITO HOME</h1>
             <p style="
               margin: 0;
-              font-size: 12px;
+              font-size: 10px;
               opacity: 0.9;
               font-weight: 300;
-              letter-spacing: 0.8px;
+              letter-spacing: 0.5px;
             ">EXPERIENCIAS A LA CARTA</p>
           </div>
         </div>
 
         <div style="text-align: right;">
-          <div style="font-size: 10px; opacity: 0.9; margin-bottom: 5px; font-weight: 600;">FECHA DE EMISIÓN</div>
-          <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">
+          <div style="font-size: 9px; opacity: 0.9; margin-bottom: 3px; font-weight: 600;">FECHA</div>
+          <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px;">
             ${fecha.toLocaleDateString('es-MX', {
               year: 'numeric',
               month: 'short',
@@ -2296,14 +2309,13 @@ function crearTicketHTML(resultado) {
             })}
           </div>
 
-          <div style="font-size: 10px; opacity: 0.9; margin-bottom: 5px; font-weight: 600;">FOLIO</div>
+          <div style="font-size: 9px; opacity: 0.9; margin-bottom: 3px; font-weight: 600;">FOLIO</div>
           <div style="
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
-            padding: 6px 12px;
+            padding: 4px 10px;
             background: rgba(255,255,255,0.2);
-            border-radius: 6px;
-            backdrop-filter: blur(10px);
+            border-radius: 4px;
           ">
             ${folio}
           </div>
@@ -2313,16 +2325,16 @@ function crearTicketHTML(resultado) {
       <!-- TÍTULO DEL RECIBO -->
       <div style="
         background: #f8f9fa;
-        border-bottom: 3px solid #0f5132;
-        padding: 12px 30px;
+        border-bottom: 2px solid #0f5132;
+        padding: 8px 25px;
         text-align: center;
       ">
         <h2 style="
           margin: 0;
-          font-size: 18px;
+          font-size: 15px;
           font-weight: 700;
           color: #0f5132;
-          letter-spacing: 1px;
+          letter-spacing: 0.8px;
         ">
           RECIBO DE PAGO
         </h2>
@@ -2330,55 +2342,55 @@ function crearTicketHTML(resultado) {
 
       <!-- INFORMACIÓN DEL EMPLEADO -->
       <div style="
-        padding: 20px 30px;
+        padding: 15px 25px;
         border-bottom: 1px solid #e9ecef;
         display: flex;
         justify-content: space-between;
       ">
-        <div style="flex: 1; margin-right: 30px;">
+        <div style="flex: 1; margin-right: 25px;">
           <h3 style="
-            margin: 0 0 12px 0;
-            font-size: 16px;
+            margin: 0 0 8px 0;
+            font-size: 13px;
             color: #0f5132;
             border-bottom: 2px solid #0f5132;
-            padding-bottom: 5px;
+            padding-bottom: 3px;
             display: inline-block;
           ">DATOS DEL EMPLEADO</h3>
 
-          <div style="margin-bottom: 10px;">
-            <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">NOMBRE:</span>
-            <div style="font-size: 14px; font-weight: 600; color: #333;">
+          <div style="margin-bottom: 7px;">
+            <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">NOMBRE:</span>
+            <div style="font-size: 12px; font-weight: 600; color: #333;">
               ${resultado.empleado.nombre}
             </div>
           </div>
 
           ${emailEmpleado ? `
-            <div style="margin-bottom: 10px;">
-              <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">EMAIL:</span>
-              <div style="font-size: 12px; color: #666;">
+            <div style="margin-bottom: 7px;">
+              <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">EMAIL:</span>
+              <div style="font-size: 10px; color: #666;">
                 ${emailEmpleado}
               </div>
             </div>
           ` : ''}
 
-          <div style="margin-bottom: 10px;">
-            <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">TIPO DE EMPLEADO:</span>
-            <div style="font-size: 12px; color: #666;">
+          <div style="margin-bottom: 7px;">
+            <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">TIPO:</span>
+            <div style="font-size: 10px; color: #666;">
               ${getTipoNombre(resultado.empleado.tipo)}
             </div>
           </div>
 
-          <div style="margin-bottom: 10px;">
-            <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">PERÍODO:</span>
-            <div style="font-size: 12px; color: #666;">
+          <div style="margin-bottom: 7px;">
+            <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">PERÍODO:</span>
+            <div style="font-size: 10px; color: #666;">
               ${quinceActual} - ${mesActual}
             </div>
           </div>
 
           ${resultado.empleado.cuentaBancaria ? `
             <div>
-              <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">DATOS BANCARIOS:</span>
-              <div style="font-size: 12px; color: #666;">
+              <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">BANCO:</span>
+              <div style="font-size: 10px; color: #666;">
                 ${resultado.empleado.nombreBanco} - ${resultado.empleado.cuentaBancaria}
               </div>
             </div>
@@ -2386,27 +2398,27 @@ function crearTicketHTML(resultado) {
         </div>
 
         <div style="
-          border-left: 3px solid #0f5132;
-          padding-left: 20px;
-          min-width: 180px;
+          border-left: 2px solid #0f5132;
+          padding-left: 15px;
+          min-width: 150px;
         ">
-          <div style="margin-bottom: 10px;">
-            <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">SALARIO BASE</span>
-            <div style="font-size: 18px; font-weight: 700; color: #0f5132;">
+          <div style="margin-bottom: 7px;">
+            <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">SALARIO BASE</span>
+            <div style="font-size: 15px; font-weight: 700; color: #0f5132;">
               $${formatearNumero(resultado.salarioQuincenal)}
             </div>
           </div>
 
-          <div style="margin-bottom: 10px;">
-            <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">PAGO POR DÍA</span>
-            <div style="font-size: 15px; color: #666; font-weight: 600;">
+          <div style="margin-bottom: 7px;">
+            <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">PAGO/DÍA</span>
+            <div style="font-size: 13px; color: #666; font-weight: 600;">
               $${formatearNumero(resultado.pagoPorDia)}
             </div>
           </div>
 
           <div>
-            <span style="font-weight: bold; color: #666; font-size: 11px; display: block; margin-bottom: 3px;">FOLIO INTERNO</span>
-            <div style="font-size: 12px; color: #999; font-family: monospace;">
+            <span style="font-weight: bold; color: #666; font-size: 9px; display: block; margin-bottom: 2px;">FOLIO</span>
+            <div style="font-size: 10px; color: #999; font-family: monospace;">
               ${folio}
             </div>
           </div>
@@ -2415,85 +2427,85 @@ function crearTicketHTML(resultado) {
 
       <!-- REGISTRO DE ASISTENCIA -->
       <div style="
-        padding: 20px 30px;
+        padding: 12px 25px;
         border-bottom: 1px solid #e9ecef;
       ">
         <h3 style="
-          margin: 0 0 15px 0;
-          font-size: 16px;
+          margin: 0 0 10px 0;
+          font-size: 13px;
           color: #0f5132;
           border-bottom: 2px solid #0f5132;
-          padding-bottom: 5px;
+          padding-bottom: 3px;
           display: inline-block;
-        ">REGISTRO DE ASISTENCIA</h3>
+        ">ASISTENCIA</h3>
 
         <div style="
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 15px;
+          gap: 10px;
         ">
-          <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
-            <div style="font-size: 22px; font-weight: 700; color: #0f5132; margin-bottom: 4px;">
+          <div style="text-align: center; padding: 10px; background: #e8f5e8; border-radius: 6px;">
+            <div style="font-size: 18px; font-weight: 700; color: #0f5132; margin-bottom: 3px;">
               ${resultado.diasLaboralesEsperados}
             </div>
-            <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">
-              DÍAS ESPERADOS
+            <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
+              ESPERADOS
             </div>
           </div>
 
           <div style="
             text-align: center;
-            padding: 15px;
+            padding: 10px;
             background: ${resultado.diasTrabajados >= resultado.diasLaboralesEsperados ? '#e8f5e8' : '#fff3cd'};
-            border-radius: 8px;
+            border-radius: 6px;
           ">
             <div style="
-              font-size: 22px;
+              font-size: 18px;
               font-weight: 700;
               color: ${resultado.diasTrabajados >= resultado.diasLaboralesEsperados ? '#0f5132' : '#856404'};
-              margin-bottom: 4px;
+              margin-bottom: 3px;
             ">
               ${resultado.diasTrabajados}
             </div>
-            <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">
-              DÍAS TRABAJADOS
+            <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
+              TRABAJADOS
             </div>
           </div>
 
           <div style="
             text-align: center;
-            padding: 15px;
+            padding: 10px;
             background: ${resultado.retardos > 0 ? '#fff3cd' : '#e8f5e8'};
-            border-radius: 8px;
+            border-radius: 6px;
           ">
             <div style="
-              font-size: 22px;
+              font-size: 18px;
               font-weight: 700;
               color: ${resultado.retardos > 0 ? '#856404' : '#0f5132'};
-              margin-bottom: 4px;
+              margin-bottom: 3px;
             ">
               ${resultado.retardos}
             </div>
-            <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">
+            <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
               RETARDOS
             </div>
           </div>
 
           <div style="
             text-align: center;
-            padding: 15px;
+            padding: 10px;
             background: ${resultado.diasFaltantes > 0 ? '#f8d7da' : '#e8f5e8'};
-            border-radius: 8px;
+            border-radius: 6px;
           ">
             <div style="
-              font-size: 22px;
+              font-size: 18px;
               font-weight: 700;
               color: ${resultado.diasFaltantes > 0 ? '#721c24' : '#0f5132'};
-              margin-bottom: 4px;
+              margin-bottom: 3px;
             ">
               ${resultado.diasFaltantes}
             </div>
-            <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">
+            <div style="font-size: 8px; color: #666; font-weight: 600; text-transform: uppercase;">
               FALTAS
             </div>
           </div>
@@ -2501,56 +2513,56 @@ function crearTicketHTML(resultado) {
       </div>
 
       <!-- DESGLOSE FINANCIERO -->
-      <div style="padding: 20px 30px;">
+      <div style="padding: 12px 25px;">
         <h3 style="
-          margin: 0 0 15px 0;
-          font-size: 16px;
+          margin: 0 0 10px 0;
+          font-size: 13px;
           color: #0f5132;
           border-bottom: 2px solid #0f5132;
-          padding-bottom: 5px;
+          padding-bottom: 3px;
           display: inline-block;
-        ">DESGLOSE DE PAGO</h3>
+        ">DESGLOSE</h3>
 
         <div style="
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 30px;
+          gap: 20px;
         ">
           <div>
             <div style="
               display: flex;
               justify-content: space-between;
-              padding: 10px 0;
+              padding: 6px 0;
               border-bottom: 1px solid #eee;
               align-items: center;
             ">
-              <span style="font-size: 12px; color: #666;">Días efectivos trabajados:</span>
-              <span style="font-weight: 600; font-size: 13px;">${resultado.diasEfectivos} días</span>
+              <span style="font-size: 10px; color: #666;">Días efectivos:</span>
+              <span style="font-weight: 600; font-size: 11px;">${resultado.diasEfectivos} días</span>
             </div>
 
             ${resultado.diasDescuento > 0 ? `
               <div style="
                 display: flex;
                 justify-content: space-between;
-                padding: 10px 0;
+                padding: 6px 0;
                 border-bottom: 1px solid #eee;
                 color: #dc3545;
                 align-items: center;
               ">
-                <span style="font-size: 12px;">Descuento por retardos:</span>
-                <span style="font-weight: 600; font-size: 13px;">-${resultado.diasDescuento} días</span>
+                <span style="font-size: 10px;">Desc. retardos:</span>
+                <span style="font-weight: 600; font-size: 11px;">-${resultado.diasDescuento} días</span>
               </div>
             ` : ''}
 
             <div style="
               display: flex;
               justify-content: space-between;
-              padding: 10px 0;
+              padding: 6px 0;
               border-bottom: 1px solid #eee;
               align-items: center;
             ">
-              <span style="font-size: 12px; color: #666;">Subtotal bruto:</span>
-              <span style="font-weight: 600; font-size: 13px;">$${formatearNumero(resultado.pagoTotal)}</span>
+              <span style="font-size: 10px; color: #666;">Subtotal:</span>
+              <span style="font-weight: 600; font-size: 11px;">$${formatearNumero(resultado.pagoTotal)}</span>
             </div>
           </div>
 
@@ -2559,13 +2571,13 @@ function crearTicketHTML(resultado) {
               <div style="
                 display: flex;
                 justify-content: space-between;
-                padding: 10px 0;
+                padding: 6px 0;
                 border-bottom: 1px solid #eee;
                 color: #dc3545;
                 align-items: center;
               ">
-                <span style="font-size: 12px;">Descuento IMSS:</span>
-                <span style="font-weight: 600; font-size: 13px;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
+                <span style="font-size: 10px;">IMSS:</span>
+                <span style="font-weight: 600; font-size: 11px;">-$${formatearNumero(resultado.descuentoIMSS)}</span>
               </div>
             ` : ''}
 
@@ -2573,42 +2585,42 @@ function crearTicketHTML(resultado) {
               <div style="
                 display: flex;
                 justify-content: space-between;
-                padding: 10px 0;
+                padding: 6px 0;
                 border-bottom: 1px solid #eee;
                 color: #dc3545;
                 align-items: center;
               ">
-                <span style="font-size: 12px;">Caja de ahorro:</span>
-                <span style="font-weight: 600; font-size: 13px;">-${formatearNumero(resultado.descuentoCaja)}</span>
+                <span style="font-size: 10px;">Caja ahorro:</span>
+                <span style="font-weight: 600; font-size: 11px;">-${formatearNumero(resultado.descuentoCaja)}</span>
               </div>
             ` : ''}
 
             <div style="
               display: flex;
               justify-content: space-between;
-              padding: 10px 0;
+              padding: 6px 0;
               border-bottom: 2px solid #0f5132;
-              margin-top: 10px;
+              margin-top: 6px;
               align-items: center;
             ">
-              <span style="font-size: 13px; font-weight: 600; color: #0f5132;">TOTAL DESCUENTOS:</span>
-              <span style="font-weight: 700; color: #dc3545; font-size: 13px;">-${formatearNumero(resultado.totalDescuentos)}</span>
+              <span style="font-size: 11px; font-weight: 600; color: #0f5132;">DESCUENTOS:</span>
+              <span style="font-weight: 700; color: #dc3545; font-size: 11px;">-$${formatearNumero(resultado.totalDescuentos)}</span>
             </div>
           </div>
         </div>
 
         ${resultado.editadoManualmente && resultado.comentariosEdicion ? `
           <div style="
-            margin-top: 20px;
-            padding: 15px;
+            margin-top: 12px;
+            padding: 10px;
             background: #f8f9fa;
-            border-left: 3px solid #17a2b8;
-            border-radius: 6px;
+            border-left: 2px solid #17a2b8;
+            border-radius: 4px;
           ">
-            <div style="font-weight: 600; color: #17a2b8; margin-bottom: 8px; font-size: 13px;">
+            <div style="font-weight: 600; color: #17a2b8; margin-bottom: 5px; font-size: 10px;">
               📝 OBSERVACIONES:
             </div>
-            <p style="margin: 0; color: #495057; font-size: 12px; line-height: 1.4;">
+            <p style="margin: 0; color: #495057; font-size: 9px; line-height: 1.3;">
               ${resultado.comentariosEdicion}
             </p>
           </div>
@@ -2619,30 +2631,30 @@ function crearTicketHTML(resultado) {
       <div style="
         background: linear-gradient(135deg, #0f5132 0%, #198754 100%);
         color: white;
-        padding: 25px 30px;
+        padding: 18px 25px;
         text-align: center;
-        margin-top: 15px;
+        margin-top: 10px;
       ">
-        <div style="margin-bottom: 10px;">
+        <div style="margin-bottom: 8px;">
           <span style="
-            font-size: 14px;
+            font-size: 12px;
             opacity: 0.9;
             font-weight: 300;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             text-transform: uppercase;
           ">TOTAL A PAGAR</span>
         </div>
         <div style="
-          font-size: 38px;
+          font-size: 32px;
           font-weight: 900;
-          letter-spacing: 1.5px;
+          letter-spacing: 1px;
           text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-          margin-bottom: 10px;
+          margin-bottom: 8px;
         ">
           ${formatearNumero(pagoFinal)}
         </div>
         <div style="
-          font-size: 12px;
+          font-size: 10px;
           opacity: 0.8;
           font-style: italic;
         ">
@@ -2654,31 +2666,30 @@ function crearTicketHTML(resultado) {
       <div style="
         background: #2c3e50;
         color: white;
-        padding: 18px 30px;
+        padding: 12px 25px;
         text-align: center;
-        font-size: 10px;
+        font-size: 8px;
       ">
         <div style="
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
         ">
           <div style="opacity: 0.7;">
             <strong>CIELITO HOME</strong><br>
             Experiencias a la Carta
           </div>
           <div style="opacity: 0.7;">
-            Generado: ${fecha.toLocaleDateString('es-MX')}<br>
-            ${fecha.toLocaleTimeString('es-MX')}
+            ${fecha.toLocaleDateString('es-MX')} ${fecha.toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}
           </div>
         </div>
         <div style="
           border-top: 1px solid rgba(255,255,255,0.2);
-          padding-top: 12px;
+          padding-top: 8px;
           opacity: 0.6;
         ">
-          Este documento es un comprobante oficial de pago • ${fecha.getFullYear()} Cielito Home - Todos los derechos reservados
+          Comprobante oficial de pago • ${fecha.getFullYear()} Cielito Home
         </div>
       </div>
     </div>
