@@ -938,16 +938,16 @@ window.calcularNomina = async function() {
           }
         });
 
-        // ✅ SISTEMA DE CATORCENA: Siempre se usan 10 días estándar como base
-        const DIAS_ESTANDAR_CATORCENA = 10;
+        // ✅ Determinar días estándar según el tipo de nómina
+        const DIAS_ESTANDAR = tipoNominaCalculo === 'semanal' ? 5 : 10;
 
-        // Contar SOLO los días asistidos que están dentro del período estándar (primeros 10 días laborables)
-        const diasLaboralesEstandar = diasLaborales.slice(0, DIAS_ESTANDAR_CATORCENA);
+        // Contar SOLO los días asistidos que están dentro del período estándar
+        const diasLaboralesEstandar = diasLaborales.slice(0, DIAS_ESTANDAR);
         const diasAsistidosValidos = diasAsistidos.filter(dia => diasLaboralesEstandar.includes(dia));
         const diasTrabajadosEfectivos = diasAsistidosValidos.length;
 
-        // Calcular faltas sobre los 10 días estándar
-        const cantidadFaltas = DIAS_ESTANDAR_CATORCENA - diasTrabajadosEfectivos;
+        // Calcular faltas sobre los días estándar
+        const cantidadFaltas = DIAS_ESTANDAR - diasTrabajadosEfectivos;
         const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
 
         // 🔍 DEBUG: Log para ver qué está pasando
@@ -968,8 +968,8 @@ window.calcularNomina = async function() {
         // Descuento por retardos (cada 4 retardos = 1 día)
         const diasDescuentoPorRetardos = Math.floor(retardos / 4);
 
-        // Días efectivos pagados = 10 días base - faltas - descuento por retardos
-        const diasEfectivos = DIAS_ESTANDAR_CATORCENA - cantidadFaltas - diasDescuentoPorRetardos;
+        // Días efectivos pagados = días estándar - faltas - descuento por retardos
+        const diasEfectivos = DIAS_ESTANDAR - cantidadFaltas - diasDescuentoPorRetardos;
         const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
 
         // Descuentos ajustados por tipo de nómina
@@ -1018,9 +1018,9 @@ window.calcularNomina = async function() {
           empleado,
           salarioQuincenal: salarioBase,
           tipoNominaEmpleado: empleado.tipoNomina,
-          diasLaboralesEsperados: DIAS_ESTANDAR_CATORCENA, // ✅ Siempre 10 días estándar
-          diasLaboralesReales: diasLaborales.length, // Días reales del período (puede ser 10, 11 o 12)
-          diasTrabajados: diasTrabajadosEfectivos, // Días trabajados válidos (dentro de los 10 estándar)
+          diasLaboralesEsperados: DIAS_ESTANDAR, // 5 días para semanal, 10 para quincenal
+          diasLaboralesReales: diasLaborales.length, // Días reales del período
+          diasTrabajados: diasTrabajadosEfectivos, // Días trabajados válidos (dentro de los días estándar)
           diasFaltantes: cantidadFaltas, // Número de faltas
           retardos,
           diasDescuento: diasDescuentoPorRetardos, // Días descontados por retardos
@@ -1115,8 +1115,8 @@ window.calcularNomina = async function() {
         `✅ Nómina semanal calculada exitosamente\n\n` +
         `📅 Período: ${periodoTexto}\n` +
         `👥 Empleados: ${empleados.length}\n` +
-        `📊 Días laborales: ${diasLaborales.length} días\n` +
-        `📋 Días específicos: ${diasLaborales.join(', ')}\n` +
+        `📊 Días laborales considerados: 5 días (L-V)\n` +
+        `📋 Días específicos: ${diasLaborales.slice(0, 5).join(', ')}\n` +
         `💰 Total a pagar: $${formatearNumero(totalNominaFinal)}`,
         'success',
         8000
