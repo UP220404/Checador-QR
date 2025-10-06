@@ -927,17 +927,17 @@ window.calcularNomina = async function() {
         
         const totalDescuentos = descuentoIMSS + descuentoCaja;
         const pagoFinal = Math.max(0, pagoTotal - totalDescuentos);
-        
-        if (diasDescuento > 0 || totalDescuentos > 0) empleadosConDescuento++;
+
+        if (diasDescuentoPorRetardos > 0 || totalDescuentos > 0) empleadosConDescuento++;
         totalRetardos += retardos;
 
         // Estado
         let status, statusClass;
-        if (diasFaltantes.length > 0) {
-          status = `${diasFaltantes.length} falta${diasFaltantes.length > 1 ? 's' : ''} • ${retardos} retardo${retardos !== 1 ? 's' : ''}`;
+        if (cantidadFaltas > 0) {
+          status = `${cantidadFaltas} falta${cantidadFaltas > 1 ? 's' : ''} • ${retardos} retardo${retardos !== 1 ? 's' : ''}`;
           statusClass = 'status-penalty';
-        } else if (diasDescuento > 0) {
-          status = `Descuento: ${diasDescuento} día${diasDescuento > 1 ? 's' : ''}`;
+        } else if (diasDescuentoPorRetardos > 0) {
+          status = `Descuento: ${diasDescuentoPorRetardos} día${diasDescuentoPorRetardos > 1 ? 's' : ''}`;
           statusClass = 'status-penalty';
         } else if (retardos >= 3) {
           status = 'En límite de retardos';
