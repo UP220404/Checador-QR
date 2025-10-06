@@ -1662,39 +1662,112 @@ async function eliminarDiaFestivo(festivoId) {
   }
 }
 
-// ===== FUNCIÓN RÁPIDA PARA AGREGAR FESTIVO =====
-window.agregarFestivoRapido = async function() {
-  const fecha = prompt('Ingresa la fecha del festivo (formato: YYYY-MM-DD)\nEjemplo: 2025-09-16');
+// ===== GESTIÓN DE FESTIVOS CON MODAL =====
 
-  if (!fecha) return;
+// Abrir modal de gestión de festivos
+window.abrirModalFestivos = async function() {
+  const modal = new bootstrap.Modal(document.getElementById('modalGestionFestivos'));
 
-  // Validar formato
-  const regex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!regex.test(fecha)) {
-    mostrarNotificacion('Formato de fecha inválido. Use: YYYY-MM-DD', 'error');
-    return;
-  }
+  // Establecer año actual por defecto
+  const añoActual = new Date().getFullYear();
+  document.getElementById('festivoAñoFiltro').value = añoActual;
 
-  const nombre = prompt(`Nombre del festivo (${fecha}):`);
+  // Cargar festivos existentes
+  await cargarFestivosEnModal();
 
-  if (!nombre) {
-    mostrarNotificacion('Debe ingresar un nombre para el festivo', 'warning');
-    return;
-  }
+  modal.show();
+};
 
-  const tipo = confirm('¿Es festivo federal/oficial?\n\nOK = Federal\nCancelar = Interno/Empresa') ? 'federal' : 'empresa';
-
+// Cargar festivos en la tabla del modal
+window.cargarFestivosEnModal = async function() {
   try {
-    const exito = await guardarDiaFestivo(fecha, nombre, tipo);
+    const añoSeleccionado = parseInt(document.getElementById('festivoAñoFiltro').value);
+    const festivos = await cargarDiasFestivos(añoSeleccionado);
+
+    const tbody = document.getElementById('tablaFestivos');
+
+    if (Object.keys(festivos).length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4">
+            <i class="bi bi-calendar3 fs-3"></i>
+            <p class="mb-0">No hay festivos configurados para ${añoSeleccionado}</p>
+            <small>Agrega el primer festivo usando el formulario arriba</small>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Ordenar por fecha
+    const festivosArray = Object.values(festivos).sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    tbody.innerHTML = festivosArray.map(festivo => {
+      const fecha = new Date(festivo.fecha + 'T00:00:00');
+      const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const tipoBadge = festivo.tipo === 'federal' ? 'bg-primary' : 'bg-info';
+
+      return `
+        <tr>
+          <td>${fechaFormateada}</td>
+          <td>${festivo.nombre}</td>
+          <td><span class="badge ${tipoBadge}">${festivo.tipo}</span></td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-danger" onclick="eliminarFestivoDesdeModal('${festivo.id}')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Error cargando festivos en modal:', error);
+    document.getElementById('tablaFestivos').innerHTML = `
+      <tr>
+        <td colspan="4" class="text-center text-danger py-4">
+          Error al cargar festivos
+        </td>
+      </tr>
+    `;
+  }
+};
+
+// Guardar festivo desde el modal
+window.guardarFestivoDesdeModal = async function() {
+  try {
+    const fecha = document.getElementById('festivoFecha').value;
+    const nombre = document.getElementById('festivoNombre').value;
+    const tipo = document.getElementById('festivoTipo').value;
+
+    if (!fecha) {
+      mostrarNotificacion('Selecciona una fecha', 'warning');
+      return;
+    }
+
+    if (!nombre || nombre.trim() === '') {
+      mostrarNotificacion('Ingresa el nombre del festivo', 'warning');
+      return;
+    }
+
+    const exito = await guardarDiaFestivo(fecha, nombre.trim(), tipo);
 
     if (exito) {
-      mostrarNotificacion(`✅ Festivo agregado: ${fecha} - ${nombre}`, 'success', 5000);
+      mostrarNotificacion(`✅ Festivo agregado: ${nombre}`, 'success');
 
-      // Preguntar si quiere recalcular la nómina
-      if (confirm('¿Deseas recalcular la nómina con este festivo?')) {
-        // Recalcular automáticamente
-        await window.calcularNomina();
-      }
+      // Limpiar formulario
+      document.getElementById('festivoFecha').value = '';
+      document.getElementById('festivoNombre').value = '';
+      document.getElementById('festivoTipo').value = 'federal';
+
+      // Recargar tabla
+      await cargarFestivosEnModal();
     } else {
       mostrarNotificacion('Error al guardar el festivo', 'error');
     }
@@ -1702,6 +1775,26 @@ window.agregarFestivoRapido = async function() {
   } catch (error) {
     console.error('Error:', error);
     mostrarNotificacion('Error al agregar festivo: ' + error.message, 'error');
+  }
+};
+
+// Eliminar festivo desde el modal
+window.eliminarFestivoDesdeModal = async function(festivoId) {
+  if (!confirm('¿Estás seguro de eliminar este festivo?')) return;
+
+  try {
+    const exito = await eliminarDiaFestivo(festivoId);
+
+    if (exito) {
+      mostrarNotificacion('Festivo eliminado correctamente', 'success');
+      await cargarFestivosEnModal();
+    } else {
+      mostrarNotificacion('Error al eliminar el festivo', 'error');
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarNotificacion('Error al eliminar festivo: ' + error.message, 'error');
   }
 };
 
