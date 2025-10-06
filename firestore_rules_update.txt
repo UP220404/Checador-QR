@@ -1,0 +1,52 @@
+// ============================================
+// REGLAS DE FIRESTORE - AGREGAR ESTAS LÍNEAS
+// ============================================
+
+// DENTRO de la sección: match /databases/{database}/documents {
+// Agregar esta nueva regla:
+
+    // Regla para cambios manuales de nómina
+    match /nominas_cambios_manuales/{document=**} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email in [
+          'sistemas16ch@gmail.com',
+          'sistemas16cielitohome@gmail.com',
+          'leticia@cielitohome.com',
+          'sistemas@cielitohome.com',
+          'direcciongeneral@cielitohome.com'
+        ];
+    }
+
+// ============================================
+// EJEMPLO DE CÓMO DEBERÍA QUEDAR:
+// ============================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regla existente para usuarios
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Regla existente para registros
+    match /registros/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // ✅ AGREGAR ESTA REGLA NUEVA
+    match /nominas_cambios_manuales/{document=**} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email in [
+          'sistemas16ch@gmail.com',
+          'sistemas16cielitohome@gmail.com',
+          'leticia@cielitohome.com',
+          'sistemas@cielitohome.com',
+          'direcciongeneral@cielitohome.com'
+        ];
+    }
+    
+    // Otras reglas existentes...
+  }
+}

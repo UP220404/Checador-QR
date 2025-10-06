@@ -889,13 +889,20 @@ window.calcularNomina = async function() {
         // ✅ SISTEMA DE CATORCENA: Siempre se usan 10 días estándar como base
         const DIAS_ESTANDAR_CATORCENA = 10;
 
-        // Calcular faltas SOLO sobre los primeros 10 días del período
-        // Si el período tiene 11 o 12 días, el día 11 y 12 son "días extra opcionales"
-        const diasLaboralesParaValidar = diasLaborales.slice(0, DIAS_ESTANDAR_CATORCENA);
-        const diasFaltantes = diasLaboralesParaValidar.filter(dia => !diasAsistidos.includes(dia));
+        // Contar SOLO los días asistidos que están dentro del período estándar (primeros 10 días laborables)
+        const diasLaboralesEstandar = diasLaborales.slice(0, DIAS_ESTANDAR_CATORCENA);
+        const diasAsistidosValidos = diasAsistidos.filter(dia => diasLaboralesEstandar.includes(dia));
+        const diasTrabajadosEfectivos = diasAsistidosValidos.length;
 
-        const diasDescuento = Math.floor(retardos / 4);
-        const diasEfectivos = Math.min(diasTrabajados, DIAS_ESTANDAR_CATORCENA) - diasDescuento;
+        // Calcular faltas sobre los 10 días estándar
+        const cantidadFaltas = DIAS_ESTANDAR_CATORCENA - diasTrabajadosEfectivos;
+        const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
+
+        // Descuento por retardos (cada 4 retardos = 1 día)
+        const diasDescuentoPorRetardos = Math.floor(retardos / 4);
+
+        // Días efectivos pagados = 10 días base - faltas - descuento por retardos
+        const diasEfectivos = DIAS_ESTANDAR_CATORCENA - cantidadFaltas - diasDescuentoPorRetardos;
         const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
 
         // Descuentos ajustados por tipo de nómina
@@ -946,10 +953,10 @@ window.calcularNomina = async function() {
           tipoNominaEmpleado: empleado.tipoNomina,
           diasLaboralesEsperados: DIAS_ESTANDAR_CATORCENA, // ✅ Siempre 10 días estándar
           diasLaboralesReales: diasLaborales.length, // Días reales del período (puede ser 10, 11 o 12)
-          diasTrabajados: Math.min(diasTrabajados, DIAS_ESTANDAR_CATORCENA), // Máximo 10 días pagados
-          diasFaltantes: diasFaltantes.length,
+          diasTrabajados: diasTrabajadosEfectivos, // Días trabajados válidos (dentro de los 10 estándar)
+          diasFaltantes: cantidadFaltas, // Número de faltas
           retardos,
-          diasDescuento,
+          diasDescuento: diasDescuentoPorRetardos, // Días descontados por retardos
           diasEfectivos,
           pagoPorDia: Math.round(pagoPorDia),
           pagoTotal: Math.round(pagoTotal),
