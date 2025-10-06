@@ -21,6 +21,7 @@ let empleadosGlobales = [];
 let resultadosNomina = [];
 let cambiosManuales = {};
 let historialCambios = [];
+let diasFestivosCache = {}; // Cache de días festivos
 
 // Variables del período actual
 let quinceActual = '';
@@ -140,7 +141,7 @@ function getTipoNombre(tipo) {
   }
 }
 
-function calcularDiasLaboralesPeriodo(año, mes, periodo) {
+function calcularDiasLaborablesPeriodo(año, mes, periodo, festivosDelAño = {}) {
   const diasLaborales = [];
   const ultimoDia = new Date(año, mes, 0).getDate();
 
@@ -150,7 +151,8 @@ function calcularDiasLaboralesPeriodo(año, mes, periodo) {
       const fecha = new Date(año, mes - 1, dia);
       const diaSemana = fecha.getDay();
 
-      if (diaSemana >= 1 && diaSemana <= 5) {
+      // ✅ Excluir fines de semana Y días festivos
+      if (diaSemana >= 1 && diaSemana <= 5 && !esDiaFestivo(año, mes, dia, festivosDelAño)) {
         diasLaborales.push(dia);
       }
     }
@@ -162,11 +164,12 @@ function calcularDiasLaboralesPeriodo(año, mes, periodo) {
       const fecha = new Date(año, mes - 1, dia);
       const diaSemana = fecha.getDay();
 
-      if (diaSemana >= 1 && diaSemana <= 5) {
+      // ✅ Excluir fines de semana Y días festivos
+      if (diaSemana >= 1 && diaSemana <= 5 && !esDiaFestivo(año, mes, dia, festivosDelAño)) {
         diasLaborales.push(dia);
       }
     }
-    // ✅ Retornar TODOS los días laborables del 16 al fin de mes
+    // ✅ Retornar TODOS los días laborables del 16 al fin de mes (excluyendo festivos)
     return diasLaborales;
   }
 }
@@ -733,15 +736,18 @@ window.calcularNomina = async function() {
   try {
     console.log(`Calculando nómina ${tipoNominaCalculo}: ${quinceSelect} de ${mesNum}/${añoNum}`);
 
+    // ✅ CARGAR DÍAS FESTIVOS DEL AÑO
+    const festivosDelAño = await cargarDiasFestivos(añoNum);
+
     // Determinar días laborales según el tipo de nómina
     let diasLaborales = [];
     let periodoTexto = '';
-    
+
     if (tipoNominaCalculo === 'semanal') {
       if (quinceSelect.startsWith('semana_')) {
         const numeroSemana = parseInt(quinceSelect.split('_')[1]);
         diasLaborales = obtenerDiasLaboralesSemana(añoNum, mesNum, numeroSemana);
-        
+
         const semanas = obtenerSemanasDelMes(añoNum, mesNum);
         const semanaInfo = semanas.find(s => s.numero === numeroSemana);
         periodoTexto = semanaInfo ? semanaInfo.label : `Semana ${numeroSemana}`;
@@ -752,12 +758,25 @@ window.calcularNomina = async function() {
         return;
       }
     } else {
-      diasLaborales = calcularDiasLaboralesPeriodo(añoNum, mesNum, quinceSelect);
+      // ✅ Pasar festivos a la función
+      diasLaborales = calcularDiasLaborablesPeriodo(añoNum, mesNum, quinceSelect, festivosDelAño);
       quinceActual = quinceSelect === 'primera' ? 'Período 1' : 'Período 2';
       periodoTexto = quinceActual;
     }
 
     console.log(`Días laborales del período (${periodoTexto}):`, diasLaborales);
+
+    // ✅ Mostrar festivos detectados en el período
+    const festivosEnPeriodo = diasLaborales.length > 0
+      ? Object.values(festivosDelAño).filter(f => {
+          const [fAño, fMes, fDia] = f.fecha.split('-').map(Number);
+          return fAño === añoNum && fMes === mesNum;
+        })
+      : [];
+
+    if (festivosEnPeriodo.length > 0) {
+      console.log(`🎉 ${festivosEnPeriodo.length} día(s) festivo(s) excluido(s):`, festivosEnPeriodo.map(f => `${f.fecha} - ${f.nombre}`));
+    }
 
     if (diasLaborales.length === 0) {
       mostrarNotificacion('No se encontraron días laborales para el período seleccionado', 'error');
@@ -1545,6 +1564,146 @@ async function cargarTodosCambiosDelPeriodo() {
     return {};
   }
 }
+
+// ===== SISTEMA DE DÍAS FESTIVOS =====
+
+// Cargar días festivos del año desde Firebase
+async function cargarDiasFestivos(año) {
+  try {
+    if (diasFestivosCache[año]) {
+      console.log(`✅ Días festivos ${año} cargados desde cache`);
+      return diasFestivosCache[año];
+    }
+
+    console.log(`🔄 Cargando días festivos de ${año} desde Firebase...`);
+
+    const q = query(
+      collection(db, 'dias_festivos'),
+      where('año', '==', año),
+      where('activo', '==', true)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const festivos = {};
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const fecha = data.fecha; // Formato: "2025-09-16"
+      festivos[fecha] = {
+        id: doc.id,
+        nombre: data.nombre,
+        tipo: data.tipo || 'federal',
+        fecha: fecha
+      };
+    });
+
+    diasFestivosCache[año] = festivos;
+    console.log(`✅ ${Object.keys(festivos).length} días festivos cargados para ${año}`);
+
+    return festivos;
+
+  } catch (error) {
+    console.error('❌ Error cargando días festivos:', error);
+    return {};
+  }
+}
+
+// Verificar si una fecha es festivo
+function esDiaFestivo(año, mes, dia, festivosDelAño) {
+  const fechaStr = `${año}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  return festivosDelAño.hasOwnProperty(fechaStr);
+}
+
+// Guardar día festivo en Firebase
+async function guardarDiaFestivo(fecha, nombre, tipo = 'federal') {
+  try {
+    const [año, mes, dia] = fecha.split('-').map(Number);
+
+    const festivo = {
+      fecha: fecha,
+      año: año,
+      mes: mes,
+      dia: dia,
+      nombre: nombre,
+      tipo: tipo,
+      activo: true,
+      fechaCreacion: new Date(),
+      creadoPor: auth.currentUser?.email || 'sistema'
+    };
+
+    await addDoc(collection(db, 'dias_festivos'), festivo);
+
+    // Limpiar cache
+    delete diasFestivosCache[año];
+
+    console.log('✅ Día festivo guardado:', fecha, nombre);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error guardando día festivo:', error);
+    return false;
+  }
+}
+
+// Eliminar día festivo
+async function eliminarDiaFestivo(festivoId) {
+  try {
+    await deleteDoc(doc(db, 'dias_festivos', festivoId));
+
+    // Limpiar cache
+    diasFestivosCache = {};
+
+    console.log('✅ Día festivo eliminado:', festivoId);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error eliminando día festivo:', error);
+    return false;
+  }
+}
+
+// ===== FUNCIÓN RÁPIDA PARA AGREGAR FESTIVO =====
+window.agregarFestivoRapido = async function() {
+  const fecha = prompt('Ingresa la fecha del festivo (formato: YYYY-MM-DD)\nEjemplo: 2025-09-16');
+
+  if (!fecha) return;
+
+  // Validar formato
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!regex.test(fecha)) {
+    mostrarNotificacion('Formato de fecha inválido. Use: YYYY-MM-DD', 'error');
+    return;
+  }
+
+  const nombre = prompt(`Nombre del festivo (${fecha}):`);
+
+  if (!nombre) {
+    mostrarNotificacion('Debe ingresar un nombre para el festivo', 'warning');
+    return;
+  }
+
+  const tipo = confirm('¿Es festivo federal/oficial?\n\nOK = Federal\nCancelar = Interno/Empresa') ? 'federal' : 'empresa';
+
+  try {
+    const exito = await guardarDiaFestivo(fecha, nombre, tipo);
+
+    if (exito) {
+      mostrarNotificacion(`✅ Festivo agregado: ${fecha} - ${nombre}`, 'success', 5000);
+
+      // Preguntar si quiere recalcular la nómina
+      if (confirm('¿Deseas recalcular la nómina con este festivo?')) {
+        // Recalcular automáticamente
+        await window.calcularNomina();
+      }
+    } else {
+      mostrarNotificacion('Error al guardar el festivo', 'error');
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarNotificacion('Error al agregar festivo: ' + error.message, 'error');
+  }
+};
 
 function actualizarTarjetaEmpleado(empleadoId) {
   const resultadoIndex = resultadosNomina.findIndex(r => r.empleado.uid === empleadoId);
