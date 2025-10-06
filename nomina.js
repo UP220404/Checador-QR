@@ -144,23 +144,30 @@ function calcularDiasLaboralesPeriodo(año, mes, periodo) {
   const diasLaborales = [];
   const ultimoDia = new Date(año, mes, 0).getDate();
 
-  // Calcular todos los días laborables del mes
-  for (let dia = 1; dia <= ultimoDia; dia++) {
-    const fecha = new Date(año, mes - 1, dia);
-    const diaSemana = fecha.getDay();
-
-    if (diaSemana >= 1 && diaSemana <= 5) {
-      diasLaborales.push(dia);
-    }
-  }
-
   if (periodo === 'primera') {
-    // Primera catorcena: día 1 al 15 (primeros 10 días laborales máximo)
+    // Primera catorcena: día 1 al 15
+    for (let dia = 1; dia <= 15; dia++) {
+      const fecha = new Date(año, mes - 1, dia);
+      const diaSemana = fecha.getDay();
+
+      if (diaSemana >= 1 && diaSemana <= 5) {
+        diasLaborales.push(dia);
+      }
+    }
+    // ✅ Limitar a máximo 10 días laborables
     return diasLaborales.slice(0, 10);
   } else {
     // Segunda catorcena: día 16 al fin de mes
-    // ✅ TOMA TODOS los días laborables restantes (pueden ser 10, 11 o 12)
-    return diasLaborales.slice(10);
+    for (let dia = 16; dia <= ultimoDia; dia++) {
+      const fecha = new Date(año, mes - 1, dia);
+      const diaSemana = fecha.getDay();
+
+      if (diaSemana >= 1 && diaSemana <= 5) {
+        diasLaborales.push(dia);
+      }
+    }
+    // ✅ Retornar TODOS los días laborables del 16 al fin de mes
+    return diasLaborales;
   }
 }
 
