@@ -63,10 +63,15 @@
             <strong>Área de Alta Seguridad</strong>
           </div>
           <p class="mb-4">Esta sección contiene información financiera confidencial de empleados.</p>
-          
+                    
           <div class="mb-3">
             <label class="form-label">Contraseña de Acceso:</label>
-            <input type="password" id="passwordNomina" class="form-control text-center" placeholder=" " maxlength="20" autocomplete="off">
+            <div class="input-group">
+              <input type="password" id="passwordNomina" class="form-control text-center" placeholder="••••••••" maxlength="20" autocomplete="off">
+              <button class="btn btn-outline-secondary" type="button" id="togglePassword" onclick="togglePasswordVisibility()">
+                <i class="bi bi-eye" id="eyeIcon"></i>
+              </button>
+            </div>
           </div>
           
           <div class="text-muted small">
@@ -533,7 +538,7 @@
   <div class="modal fade" id="modalGestionFestivos" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
+        <div class="modal-header bg-success text-white">
           <h5 class="modal-title">
             <i class="bi bi-calendar-x me-2"></i>Gestión de Días Festivos
           </h5>

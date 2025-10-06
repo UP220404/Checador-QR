@@ -291,19 +291,32 @@ function inicializarValidacionAcceso() {
 window.validarAccesoNomina = function() {
   const password = document.getElementById('passwordNomina').value;
   const modal = document.getElementById('modalValidacionAcceso');
+  const button = modal.querySelector('.btn-success');
   
-  if (password === PASSWORD_NOMINA) {
-    accesoAutorizado = true;
-    bootstrap.Modal.getInstance(modal).hide();
-    cargarEmpleados();
-    mostrarNotificacion('Acceso autorizado al Sistema de Nómina', 'success');
-  } else {
-    modal.classList.add('acceso-denegado');
-    document.getElementById('passwordNomina').value = '';
-    document.getElementById('passwordNomina').focus();
-    setTimeout(() => modal.classList.remove('acceso-denegado'), 500);
-    mostrarNotificacion('Contraseña incorrecta', 'error');
-  }
+  // Mostrar loading en el botón
+  button.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Validando...';
+  button.disabled = true;
+  
+  setTimeout(() => {
+    if (password === PASSWORD_NOMINA) {
+      accesoAutorizado = true;
+      bootstrap.Modal.getInstance(modal).hide();
+      cargarEmpleados();
+      mostrarNotificacion('✅ Acceso autorizado correctamente', 'success');
+    } else {
+      // Restaurar botón
+      button.innerHTML = '<i class="bi bi-unlock me-2"></i>Validar Acceso';
+      button.disabled = false;
+      
+      // Animación de error
+      modal.classList.add('acceso-denegado');
+      document.getElementById('passwordNomina').value = '';
+      document.getElementById('passwordNomina').focus();
+      
+      setTimeout(() => modal.classList.remove('acceso-denegado'), 500);
+      mostrarNotificacion('❌ Contraseña incorrecta', 'error');
+    }
+  }, 800); // Simular procesamiento
 };
 
 window.regresarAdmin = function() {
@@ -318,6 +331,19 @@ function validarAccesoAutorizado() {
   return true;
 }
 
+// Agregar después de window.regresarAdmin
+window.togglePasswordVisibility = function() {
+  const passwordInput = document.getElementById('passwordNomina');
+  const eyeIcon = document.getElementById('eyeIcon');
+  
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';
+    eyeIcon.className = 'bi bi-eye-slash';
+  } else {
+    passwordInput.type = 'password';
+    eyeIcon.className = 'bi bi-eye';
+  }
+};
 
 // ===== GESTIÓN DE EMPLEADOS =====
 async function cargarEmpleados() {

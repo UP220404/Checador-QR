@@ -840,3 +840,53 @@ body {
   }
 }
 
+/* ===== ESTILOS PARA BOTÓN DE CONTRASEÑA ===== */
+#togglePassword {
+  border-left: none;
+  background: var(--gray-50);
+  border-color: var(--border);
+  color: var(--gray-600);
+  padding: 8px 12px;
+  transition: var(--transition);
+}
+
+#togglePassword:hover {
+  background: var(--white);
+  color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+#togglePassword:focus {
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+  border-color: var(--secondary);
+}
+
+.input-group .form-control:focus + #togglePassword {
+  border-color: var(--secondary);
+}
+
+/* Mejorar el input de contraseña */
+#passwordNomina {
+  border-right: none;
+}
+
+#passwordNomina:focus {
+  box-shadow: none;
+  border-color: var(--secondary);
+}
+
+/* ===== ANIMACIÓN DE ERROR DE ACCESO ===== */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.acceso-denegado .modal-dialog {
+  animation: shake 0.5s ease-in-out;
+}
+
+.acceso-denegado .form-control {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
