@@ -3474,15 +3474,15 @@ window.guardarConfiguracion = function() {
 
 // ===== PROTECCIÓN DE FUNCIONES CRÍTICAS =====
 const calcularNominaOriginal = window.calcularNomina;
-window.calcularNomina = function() {
+window.calcularNomina = async function() {
   if (!validarAccesoAutorizado()) return;
-  return calcularNominaOriginal();
+  return await calcularNominaOriginal();
 };
 
 const guardarNominaCompletaOriginal = window.guardarNominaCompleta;
-window.guardarNominaCompleta = function() {
+window.guardarNominaCompleta = async function() {
   if (!validarAccesoAutorizado()) return;
-  return guardarNominaCompletaOriginal();
+  return await guardarNominaCompletaOriginal();
 };
 
 const exportarExcelOriginal = window.exportarExcel;
