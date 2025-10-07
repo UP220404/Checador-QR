@@ -1,6 +1,9 @@
+// ===== MÓDULOS OPTIMIZADOS =====
+import './modules/init.js'; // Carga funciones optimizadas automáticamente
+
 // ===== CONFIGURACIÓN FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -15,6 +18,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// ===== HABILITAR PERSISTENCIA OFFLINE =====
+// Nota: La persistencia se habilita automáticamente con la configuración del SDK
+// El warning de deprecación es solo informativo, la funcionalidad sigue funcionando
+enableIndexedDbPersistence(db)
+  .then(() => {
+    console.log('✅ Persistencia offline habilitada');
+  })
+  .catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('⚠️ Múltiples pestañas abiertas, persistencia deshabilitada');
+    } else if (err.code === 'unimplemented') {
+      console.warn('⚠️ Navegador no soporta persistencia');
+    }
+  });
 
 // ===== VARIABLES GLOBALES =====
 let empleadosGlobales = [];
@@ -39,6 +57,18 @@ const EMAILS_NOMINA_AUTORIZADOS = [
   'sistemas@cielitohome.com',
   'direcciongeneral@cielitohome.com'
 ];
+
+enableIndexedDbPersistence(db)
+  .then(() => {
+    console.log('✅ Persistencia offline habilitada');
+  })
+  .catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('⚠️ Múltiples pestañas abiertas, persistencia deshabilitada');
+    } else if (err.code === 'unimplemented') {
+      console.warn('⚠️ Navegador no soporta persistencia');
+    }
+  });
 
 // ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', function() {
@@ -3933,19 +3963,26 @@ window.toggleSalaryManager = window.toggleSalaryManager || function() {
   manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
 };
 
-window.loadEmployeeSalary = window.loadEmployeeSalary || loadEmployeeSalary;
-window.saveEmployeeSalary = window.saveEmployeeSalary || saveEmployeeSalary;
-window.clearEmployeeSalary = window.clearEmployeeSalary || clearEmployeeSalary;
-window.calcularNomina = window.calcularNomina || calcularNomina;
-window.cambiarVista = window.cambiarVista || cambiarVista;
-window.abrirEdicionNomina = window.abrirEdicionNomina || abrirEdicionNomina;
-window.exportarExcel = window.exportarExcel || exportarExcel;
-window.guardarNominaCompleta = window.guardarNominaCompleta || guardarNominaCompleta;
-window.generarTicketPDF = window.generarTicketPDF || generarTicketPDF;
-window.generarTodosLosPDFs = window.generarTodosLosPDFs || generarTodosLosPDFs;
-window.validarAccesoNomina = window.validarAccesoNomina || validarAccesoNomina;
-window.regresarAdmin = window.regresarAdmin || regresarAdmin;
-window.toggleCajaAhorro = window.toggleCajaAhorro || toggleCajaAhorro;
+// ===== VERIFICAR FUNCIONES EXPORTADAS =====
+console.log('🔍 Verificando funciones globales...');
+const funcionesRequeridas = [
+  'calcularNomina',
+  'exportarExcel',
+  'guardarNominaCompleta',
+  'generarTodosLosPDFs',
+  'mostrarModalEnvioEmail',
+  'enviarTodosLosEmails',
+  'abrirModalFestivos',
+  'generarTicketPDF'
+];
+
+funcionesRequeridas.forEach(fn => {
+  if (typeof window[fn] === 'function') {
+    console.log(`✅ ${fn} disponible`);
+  } else {
+    console.warn(`⚠️ ${fn} NO encontrada`);
+  }
+});
 
 console.log(`🏢 Sistema de Nómina Cielito Home - Funciones exportadas correctamente`);
 
