@@ -2156,55 +2156,67 @@ window.generarTicketPDF = async function(empleadoId) {
     // Crear contenido HTML del ticket
     const ticketHTML = crearTicketHTML(resultado);
     
-    // Crear elemento temporal
+    // Crear elemento temporal con tamaño exacto
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = ticketHTML;
     tempDiv.style.position = 'absolute';
     tempDiv.style.left = '-9999px';
     tempDiv.style.top = '0';
-    tempDiv.style.width = '210mm'; // Tamaño A4
+    tempDiv.style.width = '794px';
     tempDiv.style.backgroundColor = 'white';
+    tempDiv.style.padding = '0';
+    tempDiv.style.margin = '0';
     document.body.appendChild(tempDiv);
-    
-    // Generar con html2canvas con escala optimizada
+
+    // Esperar a que se renderice
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Generar con html2canvas con configuración optimizada
     const canvas = await html2canvas(tempDiv.firstElementChild, {
-      scale: 1.5,
+      scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
       width: 794,
-      logging: false
+      windowWidth: 794,
+      logging: false,
+      removeContainer: false,
+      allowTaint: true
     });
 
     // Crear PDF
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('portrait', 'mm', 'a4');
 
-    // Calcular dimensiones con márgenes mínimos
-    const pageWidth = 210; // Ancho A4 en mm
-    const pageHeight = 297; // Alto A4 en mm
-    const margin = 5; // Margen mínimo de 5mm
+    // Dimensiones de página A4
+    const pageWidth = 210; // mm
+    const pageHeight = 297; // mm
+    const margin = 3; // Margen mínimo
 
+    // Calcular dimensiones manteniendo proporción
     const availableWidth = pageWidth - (margin * 2);
     const availableHeight = pageHeight - (margin * 2);
 
-    // Calcular altura proporcional al ancho disponible
+    // Calcular la altura de la imagen basada en el ancho completo
     const imgHeight = (canvas.height * availableWidth) / canvas.width;
 
-    let finalWidth = availableWidth;
-    let finalHeight = imgHeight;
+    let finalWidth, finalHeight;
 
-    // Si la altura excede el espacio disponible, ajustar por altura
-    if (imgHeight > availableHeight) {
+    if (imgHeight <= availableHeight) {
+      // La imagen cabe en altura, usar ancho completo
+      finalWidth = availableWidth;
+      finalHeight = imgHeight;
+    } else {
+      // La imagen es muy alta, ajustar por altura
       finalHeight = availableHeight;
       finalWidth = (canvas.width * availableHeight) / canvas.height;
     }
 
-    // Centrar solo si es necesario (cuando la imagen es más pequeña que el área disponible)
-    const xOffset = margin + (availableWidth - finalWidth) / 2;
-    const yOffset = margin + (availableHeight - finalHeight) / 2;
+    // Posicionar con márgenes mínimos
+    const xOffset = margin;
+    const yOffset = margin;
 
-    // Agregar imagen al PDF
-    const imgData = canvas.toDataURL('image/png', 0.95);
+    // Agregar imagen al PDF con calidad máxima
+    const imgData = canvas.toDataURL('image/png', 1.0);
     pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
     
     // Limpiar elemento temporal
