@@ -1,11 +1,7 @@
-console.log('🚀 [NOMINA.JS] Iniciando carga del archivo...');
-
 // ===== CONFIGURACIÓN FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-console.log('🚀 [NOMINA.JS] Imports de Firebase cargados');
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
@@ -770,8 +766,6 @@ async function actualizarDashboardCajaAhorro() {
     console.error('Error actualizando dashboard caja de ahorro:', error);
   }
 }
-
-console.log('🚀 [NOMINA.JS] Definiendo window.calcularNomina...');
 
 window.calcularNomina = async function() {
   if (!validarAccesoAutorizado()) return;
@@ -3972,28 +3966,6 @@ window.toggleSalaryManager = window.toggleSalaryManager || function() {
   manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
 };
 
-// ===== VERIFICAR FUNCIONES EXPORTADAS =====
-console.log('🔍 Verificando funciones globales...');
-const funcionesRequeridas = [
-  'calcularNomina',
-  'exportarExcel',
-  'guardarNominaCompleta',
-  'generarTodosLosPDFs',
-  'mostrarModalEnvioEmail',
-  'enviarTodosLosEmails',
-  'abrirModalFestivos',
-  'generarTicketPDF'
-];
-
-funcionesRequeridas.forEach(fn => {
-  if (typeof window[fn] === 'function') {
-    console.log(`✅ ${fn} disponible`);
-  } else {
-    console.warn(`⚠️ ${fn} NO encontrada`);
-  }
-});
-
-console.log(`🏢 Sistema de Nómina Cielito Home - Funciones exportadas correctamente`);
 
 
 // ===== EXPONER VARIABLES AL SCOPE GLOBAL PARA DEBUG =====
