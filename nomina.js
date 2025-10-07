@@ -1,10 +1,11 @@
-// ===== MÓDULOS OPTIMIZADOS =====
-import './modules/init.js'; // Carga funciones optimizadas automáticamente
+console.log('🚀 [NOMINA.JS] Iniciando carga del archivo...');
 
 // ===== CONFIGURACIÓN FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+console.log('🚀 [NOMINA.JS] Imports de Firebase cargados');
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2o2FyUwVZafKIv-qtM6fmA663ldB_1Uo",
@@ -19,9 +20,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// ===== HABILITAR PERSISTENCIA OFFLINE =====
-// Nota: La persistencia se habilita automáticamente con la configuración del SDK
-// El warning de deprecación es solo informativo, la funcionalidad sigue funcionando
+// ===== PERSISTENCIA OFFLINE =====
+// NOTA: Persistencia deshabilitada temporalmente - Firebase ya tiene caché automático
+// que funciona sin configuración adicional. Si se necesita persistencia offline,
+// debe habilitarse ANTES de cualquier otra operación de Firestore.
+/*
 enableIndexedDbPersistence(db)
   .then(() => {
     console.log('✅ Persistencia offline habilitada');
@@ -33,6 +36,7 @@ enableIndexedDbPersistence(db)
       console.warn('⚠️ Navegador no soporta persistencia');
     }
   });
+*/
 
 // ===== VARIABLES GLOBALES =====
 let empleadosGlobales = [];
@@ -763,6 +767,8 @@ async function actualizarDashboardCajaAhorro() {
     console.error('Error actualizando dashboard caja de ahorro:', error);
   }
 }
+
+console.log('🚀 [NOMINA.JS] Definiendo window.calcularNomina...');
 
 window.calcularNomina = async function() {
   if (!validarAccesoAutorizado()) return;
