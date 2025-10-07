@@ -2179,35 +2179,29 @@ window.generarTicketPDF = async function(empleadoId) {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('portrait', 'mm', 'a4');
 
-    // Calcular dimensiones para ajustar a una página
-    const imgWidth = 210; // Ancho A4 en mm
+    // Calcular dimensiones con márgenes mínimos
+    const pageWidth = 210; // Ancho A4 en mm
     const pageHeight = 297; // Alto A4 en mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const margin = 5; // Margen mínimo de 5mm
 
-    // Si la imagen es más alta que la página, comprimir para que quepa
-    let finalWidth = imgWidth;
+    const availableWidth = pageWidth - (margin * 2);
+    const availableHeight = pageHeight - (margin * 2);
+
+    // Calcular altura proporcional al ancho disponible
+    const imgHeight = (canvas.height * availableWidth) / canvas.width;
+
+    let finalWidth = availableWidth;
     let finalHeight = imgHeight;
 
-    if (imgHeight > pageHeight) {
-      // Comprimir proporcionalmente para que quepa en una página
-      finalHeight = pageHeight;
-      finalWidth = (canvas.width * pageHeight) / canvas.height;
-
-      // Si el ancho también se sale, ajustar
-      if (finalWidth > imgWidth) {
-        finalWidth = imgWidth;
-        finalHeight = (canvas.height * imgWidth) / canvas.width;
-        // Si aún no cabe, forzar a tamaño de página con margen
-        if (finalHeight > pageHeight) {
-          finalHeight = pageHeight - 10; // Margen de seguridad
-          finalWidth = imgWidth - 10;
-        }
-      }
+    // Si la altura excede el espacio disponible, ajustar por altura
+    if (imgHeight > availableHeight) {
+      finalHeight = availableHeight;
+      finalWidth = (canvas.width * availableHeight) / canvas.height;
     }
 
-    // Centrar la imagen
-    const xOffset = (imgWidth - finalWidth) / 2;
-    const yOffset = (pageHeight - finalHeight) / 2;
+    // Centrar solo si es necesario (cuando la imagen es más pequeña que el área disponible)
+    const xOffset = margin + (availableWidth - finalWidth) / 2;
+    const yOffset = margin + (availableHeight - finalHeight) / 2;
 
     // Agregar imagen al PDF
     const imgData = canvas.toDataURL('image/png', 0.95);
