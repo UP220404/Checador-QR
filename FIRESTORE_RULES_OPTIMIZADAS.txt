@@ -87,7 +87,8 @@ service cloud.firestore {
 
     // Ausencias - Solo admins
     match /ausencias/{document} {
-      allow read, write: if isAdmin() && validSize();
+      allow read: if isAdmin();
+      allow write: if isAdmin() && validSize();
     }
 
     // Nóminas - Solo admins

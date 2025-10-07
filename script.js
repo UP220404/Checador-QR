@@ -10,6 +10,7 @@ import {
   getFirestore,
   doc,
   getDoc,
+  setDoc,
   updateDoc,
   increment,
   collection,
