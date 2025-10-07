@@ -62,6 +62,8 @@ const EMAILS_NOMINA_AUTORIZADOS = [
   'direcciongeneral@cielitohome.com'
 ];
 
+// NOTA: Persistencia offline comentada - causa conflicto de inicialización
+/*
 enableIndexedDbPersistence(db)
   .then(() => {
     console.log('✅ Persistencia offline habilitada');
@@ -73,6 +75,7 @@ enableIndexedDbPersistence(db)
       console.warn('⚠️ Navegador no soporta persistencia');
     }
   });
+*/
 
 // ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', function() {
