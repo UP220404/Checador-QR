@@ -143,7 +143,7 @@ async function validarQR() {
   const minutos = ahora.getMinutes();
   
   // ✅ PERMITIR QR ESTÁTICO ANTERIOR EN TODO EL HORARIO LABORAL
-  if (hora >= 7 && hora < 18) {
+  if (hora >= 7 && hora < 20) {
     console.log('✅ QR estático anterior permitido en horario laboral completo');
     await incrementarContador('exitosos');
   } else {
