@@ -1,0 +1,212 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== FUNCIONES HELPER =====
+
+    // Verificar si el usuario está autenticado
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Verificar si el usuario es admin
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email in [
+          'sistemas16ch@gmail.com',
+          'sistemas16cielitohome@gmail.com',
+          'leticia@cielitohome.com',
+          'sistemas@cielitohome.com',
+          'direcciongeneral@cielitohome.com',
+          'sistemas6cielitohome@gmail.com'
+        ];
+    }
+
+    // Verificar que los datos no excedan cierto tamaño
+    function validSize() {
+      return request.resource.data.size() < 100;
+    }
+
+    // Validar estructura básica de usuario
+    function validUserData() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['nombre', 'correo', 'tipo']) &&
+             data.nombre is string &&
+             data.correo is string &&
+             data.tipo is string &&
+             (!('salarioQuincenal' in data) || data.salarioQuincenal is number) &&
+             (!('pagoPorHora' in data) || data.pagoPorHora is number);
+    }
+
+    // Validar que el email sea válido
+    function validEmail(email) {
+      return email.matches('.*@.*\\..*');
+    }
+
+    // ===== REGLAS DE COLECCIONES =====
+
+    // Usuarios - Lectura para autenticados, escritura solo admins
+    match /usuarios/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && validUserData() && validSize();
+      allow update: if isAdmin() && validUserData() && validSize();
+      allow delete: if isAdmin();
+    }
+
+    // Meetings - Solo admins (antes era público)
+    match /meetings/{document} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Clientes - Solo admins (antes era público)
+    match /clientes/{document} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Registros de asistencia - Usuarios pueden crear sus propios registros
+    match /registros/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Notificaciones - Los usuarios solo pueden ver/eliminar las suyas
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() &&
+                     (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && validSize();
+      allow update: if isSignedIn() &&
+                       (isAdmin() || resource.data.userId == request.auth.uid);
+      allow delete: if isSignedIn() &&
+                       (isAdmin() || resource.data.userId == request.auth.uid);
+    }
+
+    // Ausencias - Solo admins
+    match /ausencias/{document} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Nóminas - Solo admins
+    match /nominas/{document} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Rankings mensuales - Solo admins escriben, todos leen
+    match /rankings-mensuales/{document} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Configuración de nómina - Solo admins
+    match /configuracion_nomina/{document} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Accesos sospechosos - Crear público, leer solo admins
+    match /accesos_sospechosos/{document} {
+      allow create: if true; // Cualquiera puede reportar
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ===== SISTEMA QR =====
+
+    // Tokens QR - Lectura pública, escritura solo admins
+    match /qr_tokens/{document} {
+      allow read: if true; // Necesario para validar QR
+      allow write: if isAdmin();
+    }
+
+    // Estadísticas QR - Lectura pública, escritura controlada
+    match /qr_stats/{document} {
+      allow read: if true;
+      allow create, update: if isSignedIn(); // Solo autenticados pueden incrementar
+      allow delete: if isAdmin();
+    }
+
+    // Violaciones de seguridad - Crear público, leer solo admins
+    match /security_violations/{document} {
+      allow create: if true && validSize();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Logs de actividad QR - Sistema puede crear, admins pueden leer
+    match /qr_activity_logs/{document} {
+      allow create: if isSignedIn() && validSize();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Configuración de seguridad QR
+    match /qr_security_config/{document} {
+      allow read: if true; // Sistema necesita leer config
+      allow write: if isAdmin();
+    }
+
+    // Métricas QR - Sistema puede escribir, admins pueden leer
+    match /qr_metrics/{document} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && validSize();
+      allow delete: if isAdmin();
+    }
+
+    // Logs de debug - Solo para admins
+    match /qr_debug_logs/{document} {
+      allow create: if isSignedIn() && validSize();
+      allow read, delete: if isAdmin();
+    }
+
+    // ===== NÓMINAS - CAMBIOS MANUALES =====
+
+    // Cambios manuales de nómina - Solo admins
+    match /nominas_cambios_manuales/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // Días festivos - Lectura pública, escritura solo admins
+    match /dias_festivos/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && validSize();
+    }
+
+    // ===== LOGS DE SEGURIDAD (NUEVO) =====
+
+    // Logs de seguridad - Solo admins pueden leer
+    match /logs_seguridad/{logId} {
+      allow create: if isSignedIn() && validSize();
+      allow read: if isAdmin();
+      allow update, delete: if false; // Logs son inmutables
+    }
+
+    // ===== ASISTENCIAS (OPTIMIZADO) =====
+
+    // Asistencias - Usuarios pueden crear las suyas, admins pueden todo
+    match /asistencias/{asistenciaId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       request.resource.data.usuarioId == request.auth.uid &&
+                       validSize();
+      allow update, delete: if isAdmin();
+    }
+
+    // ===== EMPLEADOS (OPTIMIZADO) =====
+
+    // Empleados - Todos pueden leer, solo admins pueden escribir
+    match /empleados/{empleadoId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && validUserData() && validSize();
+      allow delete: if isAdmin();
+    }
+
+    // ===== REGLA POR DEFECTO =====
+
+    // Denegar acceso a todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

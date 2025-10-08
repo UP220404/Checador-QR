@@ -33,7 +33,7 @@ const firebaseConfig = {
 
 // Constantes de configuración
 const CONFIG = {
-  MODO_PRUEBAS: false, // Cambiar a true para pruebas 
+  MODO_PRUEBAS: true, // Cambiar a true para pruebas
   HORA_LIMITE_ENTRADA: { hours: 8, minutes: 10 }, // 8:10 AM
   HORA_LIMITE_SALIDA_BECARIO: { hours: 13, minutes: 0 }, // 1:00 PM
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
@@ -165,21 +165,21 @@ async function validarQR() {
 
 // 📊 Función para incrementar contadores
 async function incrementarContador(tipo) {
+  const hoy = new Date().toISOString().split('T')[0];
+  const statsRef = doc(db, "qr_stats", hoy);
+
   try {
-    const hoy = new Date().toISOString().split('T')[0];
-    const statsRef = doc(db, "qr_stats", hoy);
-    
     const updateData = {};
     updateData[tipo] = increment(1);
     updateData.ultimaActualizacion = new Date();
-    
+
     console.log(`📊 Incrementando contador ${tipo} para fecha ${hoy}`);
     await updateDoc(statsRef, updateData);
     console.log(`✅ Contador ${tipo} incrementado exitosamente`);
-    
+
   } catch (error) {
     console.error('Error actualizando contador:', error);
-    
+
     // Si el documento no existe, crearlo
     if (error.code === 'not-found') {
       try {
@@ -191,7 +191,7 @@ async function incrementarContador(tipo) {
           ultimaActualizacion: new Date()
         };
         newData[tipo] = 1;
-        
+
         await setDoc(statsRef, newData);
         console.log(`✅ Documento creado y contador ${tipo} inicializado`);
       } catch (createError) {
@@ -664,12 +664,12 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     return;
   }
 
-  // TERCERO: Solo validar ubicación si NO es remoto (QR ya fue validado antes)
-  if (!esRemoto) {
+  // TERCERO: Solo validar ubicación si NO es remoto Y NO está en modo pruebas
+  if (!esRemoto && !CONFIG.MODO_PRUEBAS) {
     // ✅ QUITAR LA VALIDACIÓN DE QR AQUÍ - ya se hizo antes
-    
+
     // RESTRICCIÓN: No permitir registros en fin de semana
-    const diaSemana = ahora.getDay(); 
+    const diaSemana = ahora.getDay();
     if (diaSemana === 0 || diaSemana === 6) {
       mostrarEstado("error", "⛔ No puedes registrar asistencia en fin de semana.");
       return;
@@ -709,6 +709,11 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       mostrarEstado("error", "⛔ Solo puedes registrar asistencia dentro de la oficina.");
       return;
     }
+  }
+
+  // Mensaje de modo pruebas
+  if (CONFIG.MODO_PRUEBAS) {
+    console.warn("⚠️ MODO PRUEBAS ACTIVO - Validaciones de ubicación omitidas");
   }
 
   // CUARTO: Crear registro en Firestore
@@ -833,10 +838,10 @@ onAuthStateChanged(auth, async (user) => {
       }
       
       // Si llegamos aquí, el usuario está autorizado y el QR es válido (o es remoto)
-      
-      // Verificar si es usuario remoto ANTES de obtener ubicación
-      if (esRemoto) {
-        // Usuario remoto: registrar sin ubicación
+
+      // Verificar si es usuario remoto O modo pruebas ANTES de obtener ubicación
+      if (esRemoto || CONFIG.MODO_PRUEBAS) {
+        // Usuario remoto o modo pruebas: registrar sin ubicación
         registrarAsistencia(user, userData, null);
       } else {
         // Usuario presencial: obtener ubicación
