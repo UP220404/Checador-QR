@@ -170,7 +170,7 @@ Cielito Home - Experiencias a la Carta
 
 ═══════════════════════════════════════════════════════════
 Este es un mensaje automático, por favor no responder a este correo.
-Para consultas, contactar: sistemas@cielitohome.com
+Para consultas, contactar: direcciongeneral@cielitohome.com
 ═══════════════════════════════════════════════════════════`;
 
   return content;
