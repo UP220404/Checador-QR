@@ -1,13 +1,13 @@
 // ===== CONFIGURACIÓN EMAILJS ACTUALIZADA =====
 const EMAIL_CONFIG = {
   // Configuración de EmailJS (actualizada)
-  USER_ID: 'D6CcJTy6k_fYOuvp5',
-  SERVICE_ID: 'service_dr0t5od',
-  TEMPLATE_ID: 'template_gpspxm3',
+  USER_ID: 'TsUC1dOMXmxb4h00Y',
+  SERVICE_ID: 'service_je1e978',
+  TEMPLATE_ID: 'template_vobe2vd',
   
   // Configuración del remitente
   FROM_NAME: 'Recursos Humanos - Cielito Home',
-  FROM_EMAIL: 'sistemas@cielitohome.com',
+  FROM_EMAIL: 'direcciongeneral@cielitohome.com',
   
   // Límites de servicio
   DAILY_LIMIT: 200,
