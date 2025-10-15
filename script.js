@@ -197,7 +197,7 @@ async function incrementarContador(tipo) {
       } catch (createError) {
         console.error('Error creando documento de estadísticas:', createError);
       }
-    }
+    } 
   }
 }
 
@@ -454,9 +454,17 @@ function mostrarEstado(tipo, mensaje) {
  */
 function evaluarHoraEntrada() {
   const ahora = new Date();
-  const limite = new Date();
-  limite.setHours(CONFIG.HORA_LIMITE_ENTRADA.hours, CONFIG.HORA_LIMITE_ENTRADA.minutes, 0);
-  return ahora <= limite ? "puntual" : "retardo";
+  const horaActual = ahora.getHours();
+  const minutosActual = ahora.getMinutes();
+  
+  const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
+  const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 10
+  
+  // Convertir a minutos totales para comparación precisa
+  const minutosActuales = (horaActual * 60) + minutosActual;
+  const minutosLimite = (limiteHora * 60) + limiteMinutos; // 8:10 = 490 minutos
+  
+  return minutosActuales <= minutosLimite ? "puntual" : "retardo";
 }
 
 /**
@@ -608,53 +616,89 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
   const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
 
-  // Definir límites según tipo
-  const inicioEntrada = new Date();
-  inicioEntrada.setHours(7, 0, 0, 0);
-  const finEntrada = new Date();
-  const horaSalida = new Date();
-  if (datosUsuario.tipo === "becario") {
-    finEntrada.setHours(13, 0, 0, 0);
-    horaSalida.setHours(13, 0, 0, 0);
-  } else {
-    finEntrada.setHours(16, 0, 0, 0);
-    horaSalida.setHours(16, 0, 0, 0);
-  }
+  // ✅ NUEVO: Lógica especial para usuario tipo "especial"
+  const esUsuarioEspecial = datosUsuario.tipo === "especial" || datosUsuario.tipo === "horario_especial";
 
   // SEGUNDO: Verificar horarios y lógica de negocio
   let tipoEvento;
   let mensajeTipo = "";
 
   if (!yaRegistroEntrada) {
-    if (ahora < inicioEntrada) {
-      mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
-      return;
+    // ✅ Para usuarios especiales: sin restricciones de horario de entrada
+    if (!esUsuarioEspecial) {
+      // Lógica normal para becarios y tiempo completo
+      const inicioEntrada = new Date();
+      inicioEntrada.setHours(7, 0, 0, 0);
+      const finEntrada = new Date();
+      
+      if (datosUsuario.tipo === "becario") {
+        finEntrada.setHours(13, 0, 0, 0);
+      } else {
+        finEntrada.setHours(16, 0, 0, 0);
+      }
+
+      if (ahora < inicioEntrada) {
+        mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
+        return;
+      }
+      if (ahora >= finEntrada) {
+        mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
+        return;
+      }
     }
-    if (ahora >= finEntrada) {
-      mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
-      return;
-    }
+    
     // Es una entrada
     const horaActual = ahora.getHours();
     const minutosActual = ahora.getMinutes();
-    const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
-    const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
-
+    
     let esPuntual = false;
-    if (horaActual < limiteHora) {
-      esPuntual = true;
-    } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
-      esPuntual = true;
-    } else {
-      esPuntual = false;
-    }
+    
+    if (esUsuarioEspecial) {
+  // ✅ Usuario especial: SIEMPRE es puntual (sin evaluación de horario)
+  esPuntual = true;
+} else {
+  // ✅ LÓGICA SIMPLIFICADA Y CORRECTA
+  const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
+  const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 11
+  
+  console.log(`🕐 Evaluando puntualidad: ${horaActual}:${String(minutosActual).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos - 1).padStart(2, '0')}`);
+  
+  // ✅ LÓGICA CORREGIDA: considerar hasta 8:10:59
+  if (horaActual < limiteHora) {
+    // Antes de las 8:00 = PUNTUAL
+    esPuntual = true;
+    console.log('✅ PUNTUAL: Antes de las 8:00');
+  } else if (horaActual === limiteHora && minutosActual < limiteMinutos) {
+    // Entre 8:00 y 8:10:59 = PUNTUAL
+    esPuntual = true;
+    console.log('✅ PUNTUAL: Entre 8:00 y 8:10');
+  } else {
+    // A partir de 8:11:00 = RETARDO
+    esPuntual = false;
+    console.log('⚠️ RETARDO: A partir de 8:11');
+  }
+}
+    
     tipoEvento = esPuntual ? "puntual" : "retardo";
     mensajeTipo = "entrada";
+    
   } else if (!yaRegistroSalida) {
-    if (ahora < horaSalida) {
-      mostrarEstado("error", `⏳ Espera a la hora de salida (${horaSalida.getHours()}:00) para registrar tu salida.`);
-      return;
+    // ✅ Para usuarios especiales: sin restricciones de horario de salida
+    if (!esUsuarioEspecial) {
+      // Lógica normal para otros tipos
+      const horaSalida = new Date();
+      if (datosUsuario.tipo === "becario") {
+        horaSalida.setHours(13, 0, 0, 0);
+      } else {
+        horaSalida.setHours(16, 0, 0, 0);
+      }
+      
+      if (ahora < horaSalida) {
+        mostrarEstado("error", `⏳ Espera a la hora de salida (${horaSalida.getHours()}:00) para registrar tu salida.`);
+        return;
+      }
     }
+    
     // Es una salida
     tipoEvento = "salida";
     mensajeTipo = "salida";
@@ -665,23 +709,20 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
   // TERCERO: Solo validar ubicación si NO es remoto Y NO está en modo pruebas
   if (!esRemoto && !CONFIG.MODO_PRUEBAS) {
-    // ✅ QUITAR LA VALIDACIÓN DE QR AQUÍ - ya se hizo antes
-
-    // RESTRICCIÓN: No permitir registros en fin de semana
+    // Validaciones normales de ubicación, fin de semana, etc.
     const diaSemana = ahora.getDay();
     if (diaSemana === 0 || diaSemana === 6) {
       mostrarEstado("error", "⛔ No puedes registrar asistencia en fin de semana.");
       return;
     }
 
-    // RESTRICCIÓN: No permitir registros fuera de 7:00 a 22:00
     const horaActual = ahora.getHours();
     if (horaActual < 7 || horaActual >= 22) {
       mostrarEstado("error", "❌ Solo puedes registrar entre 7:00 am y 10:00 pm.");
       return;
     }
 
-    // Coordenadas de la oficina
+    // Coordenadas y validación de ubicación (sin cambios)
     const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
     const RADIO_METROS = 40;
 
@@ -698,7 +739,6 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       return R * c;
     }
 
-    // Validación de ubicación
     if (!coords || !coords.lat || !coords.lng) {
       mostrarEstado("error", "⛔ No se pudo obtener tu ubicación. Activa la ubicación para registrar asistencia.");
       return;
@@ -738,14 +778,17 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
     let mensaje = "";
     if (tipoEvento === "puntual") {
-      mensaje = `✅ Entrada puntual a las ${hora}`;
+      mensaje = esUsuarioEspecial 
+        ? `✅ Entrada registrada a las ${hora} - Horario Especial` 
+        : `✅ Entrada puntual a las ${hora}`;
     } else if (tipoEvento === "retardo") {
       mensaje = `⚠️ Entrada con retardo a las ${hora}`;
     } else if (tipoEvento === "salida") {
-      mensaje = `📤 Salida registrada a las ${hora}`;
+      mensaje = esUsuarioEspecial 
+        ? `📤 Salida registrada a las ${hora} - Horario Especial`
+        : `📤 Salida registrada a las ${hora}`;
     }
 
-    // Si hay mensaje especial, lo agregas debajo
     const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
     if (mensajeEspecial) {
       mensaje += `\n${mensajeEspecial}`;
