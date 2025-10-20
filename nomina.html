@@ -359,7 +359,15 @@
               <i class="bi bi-info-circle me-2"></i>
               <strong>Edición Manual:</strong> Los cambios aquí tienen prioridad sobre el sistema automático.
             </div>
-            
+
+            <!-- Alerta cuando se cargan ausencias automáticamente -->
+            <div class="alert alert-success d-none" id="alertaAusenciasImportadas">
+              <i class="bi bi-check-circle me-2"></i>
+              <strong>Ausencias Importadas:</strong> <span id="textoAusenciasImportadas"></span>
+              <br>
+              <small class="text-muted">Los valores pueden ser editados manualmente si es necesario.</small>
+            </div>
+
             <form id="formEditarNomina">
               <input type="hidden" id="editEmpleadoId">
               

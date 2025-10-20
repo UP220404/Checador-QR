@@ -961,8 +961,9 @@ window.calcularNomina = async function() {
         registros.forEach(registro => {
           const [regAño, regMes, regDia] = registro.fecha.split('-').map(Number);
           diasAsistidos.push(regDia);
-          
-          if (registro.estado === 'retardo') {
+
+          // 🆕 Solo contar como retardo si NO fue corregido por ausencia
+          if (registro.estado === 'retardo' && !registro.corregidoPorAusencia) {
             retardos++;
             detalleRetardos.push({
               fecha: registro.fecha,
@@ -1375,24 +1376,25 @@ function llenarTabla(resultados) {
 }
 
 // ===== EDICIÓN MANUAL =====
-window.abrirEdicionNomina = function(empleadoId) {
+window.abrirEdicionNomina = async function(empleadoId) {
   const resultado = resultadosNomina.find(r => r.empleado.uid === empleadoId);
   if (!resultado) {
     mostrarNotificacion('No se encontraron datos del empleado', 'error');
     return;
   }
-  
+
   document.getElementById('editEmpleadoId').value = empleadoId;
   document.getElementById('editEmpleadoNombre').textContent = resultado.empleado.nombre;
   document.getElementById('editEmpleadoTipo').textContent = getTipoNombre(resultado.empleado.tipo);
   document.getElementById('editSalarioBase').textContent = `$${formatearNumero(resultado.salarioQuincenal)}`;
   document.getElementById('editPeriodo').textContent = `${quinceActual} - ${mesActual}`;
-  
+
   document.getElementById('editDiasTrabajados').value = resultado.diasTrabajados;
   document.getElementById('editRetardos').value = resultado.retardos;
   document.getElementById('editDiasExtra').value = 0;
   document.getElementById('editBonoExtra').value = 0;
-  
+
+  // Resetear checkboxes de justificaciones
   ['tieneVacaciones', 'tieneIncapacidad', 'tieneViaje'].forEach(id => {
     document.getElementById(id).checked = false;
     const inputId = id.replace('tiene', 'dias');
@@ -1402,10 +1404,88 @@ window.abrirEdicionNomina = function(empleadoId) {
       input.value = '';
     }
   });
-  
+
   document.getElementById('editComentarios').value = '';
+
+  // Ocultar alerta de ausencias importadas por defecto
+  document.getElementById('alertaAusenciasImportadas').classList.add('d-none');
+
+  // 🆕 CARGAR AUSENCIAS APROBADAS AUTOMÁTICAMENTE
+  try {
+    const ausencias = await obtenerAusenciasDelPeriodo(
+      resultado.empleado.correo,
+      mesActual,
+      añoActual,
+      quinceActual
+    );
+
+    if (ausencias.length > 0) {
+      console.log(`📋 ${ausencias.length} ausencias encontradas para pre-llenar`);
+
+      // Acumular días por tipo
+      const diasPorTipo = {
+        vacaciones: 0,
+        incapacidad: 0,
+        viaje: 0
+      };
+
+      let comentariosAusencias = [];
+      const ausenciasIds = [];
+
+      ausencias.forEach(ausencia => {
+        const mapeo = mapearTipoAusenciaANomina(ausencia.tipo);
+        if (mapeo && mapeo.campo) {
+          diasPorTipo[mapeo.campo] += ausencia.diasJustificados || 0;
+          comentariosAusencias.push(`${mapeo.nombre}: ${ausencia.diasJustificados} día(s) - ${ausencia.motivo}`);
+        }
+        ausenciasIds.push(ausencia.id);
+      });
+
+      // Pre-llenar campos de vacaciones
+      if (diasPorTipo.vacaciones > 0) {
+        document.getElementById('tieneVacaciones').checked = true;
+        document.getElementById('diasVacaciones').disabled = false;
+        document.getElementById('diasVacaciones').value = Math.round(diasPorTipo.vacaciones);
+      }
+
+      // Pre-llenar campos de incapacidad
+      if (diasPorTipo.incapacidad > 0) {
+        document.getElementById('tieneIncapacidad').checked = true;
+        document.getElementById('diasIncapacidad').disabled = false;
+        document.getElementById('diasIncapacidad').value = Math.round(diasPorTipo.incapacidad);
+      }
+
+      // Pre-llenar campos de viaje
+      if (diasPorTipo.viaje > 0) {
+        document.getElementById('tieneViaje').checked = true;
+        document.getElementById('diasViaje').disabled = false;
+        document.getElementById('diasViaje').value = Math.round(diasPorTipo.viaje);
+      }
+
+      // Agregar comentarios automáticos
+      const comentariosTexto = '📋 Justificaciones importadas desde ausencias:\n' + comentariosAusencias.join('\n');
+      document.getElementById('editComentarios').value = comentariosTexto;
+
+      // Guardar IDs de ausencias para marcarlas después
+      window.ausenciasAplicadas = ausenciasIds;
+
+      // 🆕 MOSTRAR ALERTA VISUAL DE AUSENCIAS IMPORTADAS
+      const alertaElement = document.getElementById('alertaAusenciasImportadas');
+      const textoElement = document.getElementById('textoAusenciasImportadas');
+      textoElement.textContent = `Se cargaron ${ausencias.length} ausencia(s) aprobada(s) automáticamente.`;
+      alertaElement.classList.remove('d-none');
+
+      mostrarNotificacion(`✅ ${ausencias.length} ausencia(s) pre-cargada(s) automáticamente`, 'success');
+    } else {
+      window.ausenciasAplicadas = [];
+    }
+  } catch (error) {
+    console.error('Error cargando ausencias:', error);
+    window.ausenciasAplicadas = [];
+  }
+
   window.datosOriginales = { ...resultado };
-  
+
   calcularPreviaEdicion();
   new bootstrap.Modal(document.getElementById('modalEditarNomina')).show();
 };
@@ -1497,6 +1577,9 @@ async function guardarEdicionManual() {
 
     const comentarios = document.getElementById('editComentarios').value;
 
+    // 🆕 Generar ID único para esta nómina
+    const nominaReferencia = `nomina_${empleadoId}_${añoActual}_${mesActual}_${quinceActual}_${Date.now()}`;
+
     const datosEdicion = {
       diasTrabajados,
       retardos,
@@ -1506,7 +1589,10 @@ async function guardarEdicionManual() {
       justificacionesDetalle,
       comentarios,
       editadoManualmente: true,
-      fechaEdicion: new Date().toISOString()
+      fechaEdicion: new Date().toISOString(),
+      // 🆕 Guardar referencia de ausencias aplicadas
+      ausenciasAplicadas: window.ausenciasAplicadas || [],
+      nominaReferencia: nominaReferencia
     };
 
     // Guardar en memoria
@@ -1521,6 +1607,15 @@ async function guardarEdicionManual() {
 
     // ✅ GUARDAR EN FIREBASE AUTOMÁTICAMENTE
     await guardarCambiosEnFirebase(empleadoId, datosEdicion);
+
+    // 🆕 MARCAR AUSENCIAS COMO APLICADAS EN NÓMINA
+    if (window.ausenciasAplicadas && window.ausenciasAplicadas.length > 0) {
+      console.log(`📋 Marcando ${window.ausenciasAplicadas.length} ausencias como aplicadas...`);
+      for (const ausenciaId of window.ausenciasAplicadas) {
+        await marcarAusenciaAplicada(ausenciaId, nominaReferencia);
+      }
+      console.log('✅ Ausencias marcadas como aplicadas');
+    }
 
     actualizarTarjetaEmpleado(empleadoId);
 
@@ -1622,6 +1717,70 @@ async function cargarTodosCambiosDelPeriodo() {
     console.error('❌ Error cargando cambios del período:', error);
     return {};
   }
+}
+
+// ===== SISTEMA DE INTEGRACIÓN CON AUSENCIAS =====
+
+// Función para obtener ausencias aprobadas de un período
+async function obtenerAusenciasDelPeriodo(emailEmpleado, mes, anio, periodo) {
+  try {
+    console.log(`🔄 Buscando ausencias aprobadas para ${emailEmpleado} - ${mes}/${anio} periodo ${periodo}`);
+
+    const q = query(
+      collection(db, 'ausencias'),
+      where('emailUsuario', '==', emailEmpleado),
+      where('estado', '==', 'aprobada'),
+      where('quincena.mes', '==', mes),
+      where('quincena.anio', '==', anio),
+      where('quincena.periodo', '==', periodo)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ausencias = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      ausencias.push({
+        id: doc.id,
+        ...data
+      });
+    });
+
+    console.log(`✅ ${ausencias.length} ausencias aprobadas encontradas`);
+    return ausencias;
+
+  } catch (error) {
+    console.error('❌ Error obteniendo ausencias del período:', error);
+    return [];
+  }
+}
+
+// Función para marcar ausencia como aplicada en nómina
+async function marcarAusenciaAplicada(ausenciaId, nominaReferencia) {
+  try {
+    const ausenciaRef = doc(db, 'ausencias', ausenciaId);
+    await updateDoc(ausenciaRef, {
+      aplicadaEnNomina: true,
+      nominaReferencia: nominaReferencia,
+      fechaAplicacion: new Date().toISOString()
+    });
+    console.log(`✅ Ausencia ${ausenciaId} marcada como aplicada`);
+  } catch (error) {
+    console.error('❌ Error marcando ausencia como aplicada:', error);
+  }
+}
+
+// Función para mapear tipo de ausencia a campo de nómina
+function mapearTipoAusenciaANomina(tipo) {
+  const mapeo = {
+    'vacaciones': { campo: 'vacaciones', nombre: 'Vacaciones' },
+    'incapacidad': { campo: 'incapacidad', nombre: 'Incapacidad' },
+    'viaje_negocios': { campo: 'viaje', nombre: 'Viaje de negocios' },
+    'permiso': { campo: 'vacaciones', nombre: 'Permiso' }, // Permisos se cuentan como vacaciones
+    'justificante': { campo: 'incapacidad', nombre: 'Justificante médico' }, // Justificantes como incapacidad
+    'retardo_justificado': { campo: null, nombre: 'Retardo justificado' } // No descuenta día completo
+  };
+  return mapeo[tipo] || null;
 }
 
 // ===== SISTEMA DE DÍAS FESTIVOS =====

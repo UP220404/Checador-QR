@@ -295,9 +295,14 @@
 <div id="justificantes" class="seccion d-none">
   <div class="section-header">
     <h2><i class="bi bi-envelope-paper"></i> Gestión de Ausencias</h2>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaAusencia">
-      <i class="bi bi-plus-circle me-2"></i>Nueva Ausencia
-    </button>
+    <div>
+      <button class="btn btn-danger me-2" onclick="generarReporteAusenciasPDF()">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Generar Reporte PDF
+      </button>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaAusencia">
+        <i class="bi bi-plus-circle me-2"></i>Nueva Ausencia
+      </button>
+    </div>
   </div>
 
   <!-- Estadísticas rápidas -->
@@ -368,6 +373,8 @@
         <option value="justificante">Justificantes</option>
         <option value="vacaciones">Vacaciones</option>
         <option value="incapacidad">Incapacidades</option>
+        <option value="viaje_negocios">Viaje de Negocios</option>
+        <option value="retardo_justificado">Retardo Justificado</option>
       </select>
     </div>
     <div class="col-md-4">
@@ -425,6 +432,8 @@
                 <option value="justificante">📋 Justificante</option>
                 <option value="vacaciones">🏖️ Vacaciones</option>
                 <option value="incapacidad">🏥 Incapacidad Médica</option>
+                <option value="viaje_negocios">✈️ Viaje de Negocios</option>
+                <option value="retardo_justificado">⏰ Retardo Justificado</option>
               </select>
             </div>
           </div>
@@ -441,9 +450,30 @@
           </div>
           <div class="mt-3">
             <label class="form-label">Motivo/Observaciones *</label>
-            <textarea class="form-control" id="ausenciaMotivo" rows="3" 
+            <textarea class="form-control" id="ausenciaMotivo" rows="3"
                       placeholder="Describe el motivo de la ausencia..." required></textarea>
           </div>
+
+          <!-- Campo para corregir hora de entrada (solo para retardos justificados) -->
+          <div class="mt-3 d-none" id="divHoraCorregidaNueva">
+            <div class="alert alert-info">
+              <i class="bi bi-clock-history me-2"></i>
+              <strong>Corrección de Hora:</strong> Ingresa la hora a la que debería aparecer la entrada.
+              <br><small class="text-muted">Esto modificará el registro de asistencia y evitará que se cuente como retardo.</small>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Hora de Entrada Corregida</label>
+                <input type="time" class="form-control" id="ausenciaHoraCorregida">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Fecha de la Entrada</label>
+                <input type="date" class="form-control" id="ausenciaFechaEntrada">
+                <small class="text-muted">Fecha del registro a corregir</small>
+              </div>
+            </div>
+          </div>
+
           <div class="mt-3">
             <label class="form-label">Estado Inicial</label>
             <select class="form-select" id="ausenciaEstado">
@@ -489,6 +519,8 @@
                 <option value="justificante">📋 Justificante</option>
                 <option value="vacaciones">🏖️ Vacaciones</option>
                 <option value="incapacidad">🏥 Incapacidad Médica</option>
+                <option value="viaje_negocios">✈️ Viaje de Negocios</option>
+                <option value="retardo_justificado">⏰ Retardo Justificado</option>
               </select>
             </div>
           </div>
@@ -506,6 +538,28 @@
             <label class="form-label">Motivo/Observaciones</label>
             <textarea class="form-control" id="editarMotivo" rows="3"></textarea>
           </div>
+
+          <!-- Campo para corregir hora de entrada (solo para retardos justificados) -->
+          <div class="mt-3 d-none" id="divHoraCorregida">
+            <div class="alert alert-info">
+              <i class="bi bi-clock-history me-2"></i>
+              <strong>Corrección de Hora:</strong> Ingresa la hora a la que debería aparecer la entrada (formato 24hrs: HH:MM).
+              <br><small class="text-muted">Esto modificará el registro de asistencia y evitará que se cuente como retardo.</small>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Hora de Entrada Corregida</label>
+                <input type="time" class="form-control" id="editarHoraCorregida"
+                       placeholder="Ej: 08:00">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Fecha de la Entrada</label>
+                <input type="date" class="form-control" id="editarFechaEntrada">
+                <small class="text-muted">Fecha del registro a corregir</small>
+              </div>
+            </div>
+          </div>
+
           <div class="row mt-3">
             <div class="col-md-6">
               <label class="form-label">Estado</label>
@@ -517,7 +571,7 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Comentarios del Admin</label>
-              <input type="text" class="form-control" id="editarComentarios" 
+              <input type="text" class="form-control" id="editarComentarios"
                      placeholder="Comentarios adicionales...">
             </div>
           </div>

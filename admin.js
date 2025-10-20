@@ -2067,7 +2067,9 @@ function getBadgeClassTipo(tipo) {
     permiso: "bg-warning text-dark",
     justificante: "bg-info",
     vacaciones: "bg-success",
-    incapacidad: "bg-danger"
+    incapacidad: "bg-danger",
+    viaje_negocios: "bg-primary",
+    retardo_justificado: "bg-secondary"
   };
   return classes[tipo] || "bg-secondary";
 }
@@ -2094,7 +2096,9 @@ function formatearTipo(tipo) {
     permiso: "Permiso",
     justificante: "Justificante",
     vacaciones: "Vacaciones",
-    incapacidad: "Incapacidad"
+    incapacidad: "Incapacidad",
+    viaje_negocios: "Viaje de Negocios",
+    retardo_justificado: "Retardo Justificado"
   };
   return nombres[tipo] || tipo;
 }
@@ -2108,6 +2112,58 @@ function formatearEstado(estado) {
   return nombres[estado] || estado;
 }
 
+// Función para calcular la quincena de una fecha
+function calcularQuincenaDeAusencia(fechaString) {
+  const fecha = new Date(fechaString + 'T00:00:00');
+  const dia = fecha.getDate();
+  const mes = fecha.getMonth() + 1; // 1-12
+  const anio = fecha.getFullYear();
+
+  // Calcular periodo (1 = días 1-15, 2 = días 16-fin)
+  const periodo = dia <= 15 ? 1 : 2;
+
+  // Calcular semana del mes (para nómina semanal)
+  const primerDiaMes = new Date(anio, mes - 1, 1);
+  const semana = Math.ceil((dia + primerDiaMes.getDay()) / 7);
+
+  return {
+    mes: mes,
+    anio: anio,
+    periodo: periodo,
+    semana: semana
+  };
+}
+
+// Función para calcular días justificados según tipo y rango de fechas
+function calcularDiasJustificados(fechaInicio, fechaFin, tipo) {
+  const inicio = new Date(fechaInicio + 'T00:00:00');
+  const fin = fechaFin ? new Date(fechaFin + 'T00:00:00') : inicio;
+
+  // Calcular días calendario
+  const diffTime = Math.abs(fin - inicio);
+  const diasCalendario = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+  // Para retardo justificado, contar solo 0.5 días
+  if (tipo === 'retardo_justificado') {
+    return 0.5;
+  }
+
+  // Para otros tipos, contar solo días laborales (lunes a viernes)
+  let diasLaborales = 0;
+  const fechaActual = new Date(inicio);
+
+  while (fechaActual <= fin) {
+    const diaSemana = fechaActual.getDay();
+    // Si es lunes (1) a viernes (5), contar
+    if (diaSemana >= 1 && diaSemana <= 5) {
+      diasLaborales++;
+    }
+    fechaActual.setDate(fechaActual.getDate() + 1);
+  }
+
+  return diasLaborales;
+}
+
 async function manejarNuevaAusencia(e) {
   e.preventDefault();
 
@@ -2115,17 +2171,47 @@ async function manejarNuevaAusencia(e) {
   const emailUsuario = selectUsuario.value;
   const nombreUsuario = selectUsuario.selectedOptions[0]?.textContent.trim() || emailUsuario;
 
+  const tipo = document.getElementById("ausenciaTipo").value;
+  const fechaInicio = document.getElementById("ausenciaFechaInicio").value;
+  const fechaFin = document.getElementById("ausenciaFechaFin").value || null;
+
+  // Calcular quincena automáticamente
+  const quincenaInfo = calcularQuincenaDeAusencia(fechaInicio);
+
+  // Calcular días justificados automáticamente
+  const diasJustificados = calcularDiasJustificados(fechaInicio, fechaFin, tipo);
+
   const formData = {
     emailUsuario: emailUsuario,
     nombreUsuario: nombreUsuario,
-    tipo: document.getElementById("ausenciaTipo").value,
-    fechaInicio: document.getElementById("ausenciaFechaInicio").value, // Guardar como string YYYY-MM-DD
-    fechaFin: document.getElementById("ausenciaFechaFin").value || null, // Guardar como string YYYY-MM-DD o null
+    tipo: tipo,
+    fechaInicio: fechaInicio, // Guardar como string YYYY-MM-DD
+    fechaFin: fechaFin, // Guardar como string YYYY-MM-DD o null
     motivo: document.getElementById("ausenciaMotivo").value,
     estado: document.getElementById("ausenciaEstado").value,
     comentariosAdmin: "",
-    fechaCreacion: new Date() // Timestamp de Firebase
+    fechaCreacion: new Date(), // Timestamp de Firebase
+
+    // NUEVO: Datos para nómina
+    quincena: quincenaInfo,
+    diasJustificados: diasJustificados,
+    aplicadaEnNomina: false,
+    nominaReferencia: null
   };
+
+  // 🆕 NUEVO: Si es retardo justificado, incluir datos de corrección de hora
+  if (tipo === 'retardo_justificado') {
+    const horaCorregida = document.getElementById("ausenciaHoraCorregida").value;
+    const fechaEntrada = document.getElementById("ausenciaFechaEntrada").value;
+
+    if (horaCorregida && fechaEntrada) {
+      formData.correccionHora = {
+        horaCorregida: horaCorregida,
+        fechaEntrada: fechaEntrada,
+        aplicada: false
+      };
+    }
+  }
 
   // Validaciones
   if (!formData.emailUsuario || !formData.tipo || !formData.fechaInicio || !formData.motivo) {
@@ -2158,7 +2244,7 @@ function editarAusencia(id) {
 
   const fechaInicioLocal = new Date(ausencia.fechaInicio.getTime() - (ausencia.fechaInicio.getTimezoneOffset() * 60000));
   const fechaFinLocal = ausencia.fechaFin ? new Date(ausencia.fechaFin.getTime() - (ausencia.fechaFin.getTimezoneOffset() * 60000)) : null;
-  
+
   document.getElementById("editarAusenciaId").value = id;
   document.getElementById("editarUsuario").value = `${ausencia.nombreUsuario} (${ausencia.emailUsuario})`;
   document.getElementById("editarTipo").value = ausencia.tipo;
@@ -2168,20 +2254,41 @@ function editarAusencia(id) {
   document.getElementById("editarEstado").value = ausencia.estado;
   document.getElementById("editarComentarios").value = ausencia.comentariosAdmin || '';
 
+  // 🆕 Mostrar/ocultar y pre-llenar campos de corrección de hora
+  const divHoraCorregida = document.getElementById("divHoraCorregida");
+  if (ausencia.tipo === 'retardo_justificado') {
+    divHoraCorregida.classList.remove("d-none");
+
+    // Pre-llenar si existe corrección de hora
+    if (ausencia.correccionHora) {
+      document.getElementById("editarHoraCorregida").value = ausencia.correccionHora.horaCorregida || '';
+      document.getElementById("editarFechaEntrada").value = ausencia.correccionHora.fechaEntrada || '';
+    } else {
+      document.getElementById("editarHoraCorregida").value = '';
+      document.getElementById("editarFechaEntrada").value = '';
+    }
+  } else {
+    divHoraCorregida.classList.add("d-none");
+    document.getElementById("editarHoraCorregida").value = '';
+    document.getElementById("editarFechaEntrada").value = '';
+  }
+
   new bootstrap.Modal(document.getElementById("modalEditarAusencia")).show();
 }
 
 // FUNCIÓN MANEJAR EDITAR AUSENCIA COMPLETA
 async function manejarEditarAusencia(e) {
   e.preventDefault();
-  
+
   if (!ausenciaEditandoId) {
     mostrarNotificacion("No hay ausencia seleccionada para editar", "warning");
     return;
   }
 
+  const tipo = document.getElementById("editarTipo").value;
+
   const datosActualizados = {
-    tipo: document.getElementById("editarTipo").value,
+    tipo: tipo,
     fechaInicio: document.getElementById("editarFechaInicio").value,
     fechaFin: document.getElementById("editarFechaFin").value || null,
     motivo: document.getElementById("editarMotivo").value,
@@ -2189,6 +2296,23 @@ async function manejarEditarAusencia(e) {
     comentariosAdmin: document.getElementById("editarComentarios").value,
     fechaModificacion: new Date()
   };
+
+  // 🆕 NUEVO: Si es retardo justificado, incluir/actualizar datos de corrección de hora
+  if (tipo === 'retardo_justificado') {
+    const horaCorregida = document.getElementById("editarHoraCorregida").value;
+    const fechaEntrada = document.getElementById("editarFechaEntrada").value;
+
+    if (horaCorregida && fechaEntrada) {
+      datosActualizados.correccionHora = {
+        horaCorregida: horaCorregida,
+        fechaEntrada: fechaEntrada,
+        aplicada: false
+      };
+    }
+  } else {
+    // Si cambió de tipo y ya NO es retardo justificado, eliminar corrección de hora
+    datosActualizados.correccionHora = null;
+  }
 
   if (!datosActualizados.tipo || !datosActualizados.fechaInicio || !datosActualizados.motivo) {
     mostrarNotificacion("Por favor completa todos los campos obligatorios", "warning");
@@ -2239,16 +2363,77 @@ async function aprobarAusencia(id) {
   if (!confirm("¿Estás seguro de aprobar esta ausencia?")) return;
 
   try {
+    // Obtener datos de la ausencia
+    const ausencia = ausenciasData.find(a => a.id === id);
+    if (!ausencia) {
+      mostrarNotificacion("Ausencia no encontrada", "danger");
+      return;
+    }
+
+    // Actualizar estado de ausencia
     await updateDoc(doc(db, "ausencias", id), {
       estado: "aprobada",
       fechaAprobacion: new Date(),
       comentariosAdmin: "Aprobada por administrador"
     });
-    mostrarNotificacion("Ausencia aprobada", "success");
+
+    // 🆕 Si tiene corrección de hora, modificar el registro de asistencia
+    if (ausencia.correccionHora && !ausencia.correccionHora.aplicada) {
+      await aplicarCorreccionHora(ausencia);
+    }
+
+    mostrarNotificacion("Ausencia aprobada" + (ausencia.correccionHora ? " y hora corregida" : ""), "success");
     cargarAusencias();
   } catch (error) {
     console.error("Error aprobando ausencia:", error);
     mostrarNotificacion("Error al aprobar la ausencia", "danger");
+  }
+}
+
+// 🆕 Función para aplicar corrección de hora en registro de asistencia
+async function aplicarCorreccionHora(ausencia) {
+  try {
+    const { horaCorregida, fechaEntrada } = ausencia.correccionHora;
+
+    console.log(`🔧 Aplicando corrección de hora para ${ausencia.emailUsuario} en fecha ${fechaEntrada}`);
+
+    // Buscar el registro de entrada de ese día
+    const registrosQuery = query(
+      collection(db, "registros"),
+      where("email", "==", ausencia.emailUsuario),
+      where("fecha", "==", fechaEntrada),
+      where("tipoEvento", "==", "entrada")
+    );
+
+    const registrosSnapshot = await getDocs(registrosQuery);
+
+    if (registrosSnapshot.empty) {
+      console.warn(`⚠️ No se encontró registro de entrada para ${ausencia.emailUsuario} en ${fechaEntrada}`);
+      return;
+    }
+
+    // Actualizar el primer registro encontrado
+    const registroDoc = registrosSnapshot.docs[0];
+    await updateDoc(doc(db, "registros", registroDoc.id), {
+      hora: horaCorregida,
+      estado: "puntual",
+      corregidoPorAusencia: true,
+      ausenciaRef: ausencia.id,
+      fechaCorreccion: new Date(),
+      horaOriginal: registroDoc.data().hora // Guardar hora original
+    });
+
+    // Marcar corrección como aplicada
+    await updateDoc(doc(db, "ausencias", ausencia.id), {
+      "correccionHora.aplicada": true,
+      "correccionHora.fechaAplicacion": new Date()
+    });
+
+    console.log(`✅ Hora corregida: ${registroDoc.data().hora} → ${horaCorregida}`);
+
+  } catch (error) {
+    console.error("❌ Error aplicando corrección de hora:", error);
+    throw error;
   }
 }
 
@@ -2665,11 +2850,37 @@ document.addEventListener('DOMContentLoaded', function() {
   if (formNuevaAusencia) {
     formNuevaAusencia.addEventListener("submit", manejarNuevaAusencia);
   }
-  
+
   // Formulario editar ausencia
   const formEditarAusencia = document.getElementById("formEditarAusencia");
   if (formEditarAusencia) {
     formEditarAusencia.addEventListener("submit", manejarEditarAusencia);
+  }
+
+  // Mostrar/ocultar campo de hora corregida en modal nueva ausencia
+  const ausenciaTipo = document.getElementById("ausenciaTipo");
+  if (ausenciaTipo) {
+    ausenciaTipo.addEventListener("change", function() {
+      const divHoraCorregida = document.getElementById("divHoraCorregidaNueva");
+      if (this.value === "retardo_justificado") {
+        divHoraCorregida.classList.remove("d-none");
+      } else {
+        divHoraCorregida.classList.add("d-none");
+      }
+    });
+  }
+
+  // Mostrar/ocultar campo de hora corregida en modal editar ausencia
+  const editarTipo = document.getElementById("editarTipo");
+  if (editarTipo) {
+    editarTipo.addEventListener("change", function() {
+      const divHoraCorregida = document.getElementById("divHoraCorregida");
+      if (this.value === "retardo_justificado") {
+        divHoraCorregida.classList.remove("d-none");
+      } else {
+        divHoraCorregida.classList.add("d-none");
+      }
+    });
   }
 
   // Filtros de ausencias
@@ -2679,7 +2890,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { id: "filtroFechaAusencia", event: "change" },
     { id: "filtroBusquedaAusencia", event: "input" }
   ];
-  
+
   filtros.forEach(filtro => {
     const elemento = document.getElementById(filtro.id);
     if (elemento) {
@@ -2687,3 +2898,184 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+// =================== GENERACIÓN DE REPORTE PDF DE AUSENCIAS ===================
+
+async function generarReporteAusenciasPDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+
+    if (!jsPDF) {
+      mostrarNotificacion("Error: jsPDF no está cargado", "danger");
+      return;
+    }
+
+    mostrarNotificacion("Generando reporte PDF...", "info");
+
+    // Obtener filtro de mes actual
+    const filtroMes = document.getElementById("filtroMesAusencias")?.value || "";
+
+    // Usar ausenciasData actual (ya filtrado por el mes seleccionado)
+    const ausencias = [...ausenciasData];
+
+    if (ausencias.length === 0) {
+      mostrarNotificacion("No hay ausencias para generar el reporte", "warning");
+      return;
+    }
+
+    // Crear documento PDF
+    const doc = new jsPDF();
+
+    // ===== ENCABEZADO =====
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Reporte de Ausencias y Permisos", 105, 15, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const fechaGeneracion = new Date().toLocaleString('es-MX');
+    doc.text(`Generado: ${fechaGeneracion}`, 105, 22, { align: "center" });
+
+    // Filtro aplicado
+    if (filtroMes) {
+      const [anio, mes] = filtroMes.split('-');
+      const nombreMes = new Date(anio, mes - 1).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+      doc.text(`Período: ${nombreMes}`, 105, 28, { align: "center" });
+    } else {
+      doc.text("Período: Últimos 30 días", 105, 28, { align: "center" });
+    }
+
+    // ===== RESUMEN ESTADÍSTICO =====
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resumen", 14, 38);
+
+    const pendientes = ausencias.filter(a => a.estado === 'pendiente').length;
+    const aprobadas = ausencias.filter(a => a.estado === 'aprobada').length;
+    const rechazadas = ausencias.filter(a => a.estado === 'rechazada').length;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total: ${ausencias.length} ausencias`, 14, 44);
+    doc.text(`Aprobadas: ${aprobadas}`, 14, 49);
+    doc.text(`Pendientes: ${pendientes}`, 60, 49);
+    doc.text(`Rechazadas: ${rechazadas}`, 106, 49);
+
+    // ===== TABLA DE AUSENCIAS =====
+    const tableData = ausencias.map(ausencia => {
+      const fechaInicio = ausencia.fechaInicio instanceof Date
+        ? ausencia.fechaInicio.toLocaleDateString('es-MX')
+        : new Date(ausencia.fechaInicio).toLocaleDateString('es-MX');
+
+      const fechaFin = ausencia.fechaFin
+        ? (ausencia.fechaFin instanceof Date
+          ? ausencia.fechaFin.toLocaleDateString('es-MX')
+          : new Date(ausencia.fechaFin).toLocaleDateString('es-MX'))
+        : '-';
+
+      return [
+        ausencia.nombreUsuario,
+        formatearTipo(ausencia.tipo),
+        fechaInicio,
+        fechaFin,
+        ausencia.diasJustificados || '-',
+        formatearEstado(ausencia.estado),
+        ausencia.motivo.substring(0, 30) + (ausencia.motivo.length > 30 ? '...' : '')
+      ];
+    });
+
+    doc.autoTable({
+      head: [['Empleado', 'Tipo', 'Inicio', 'Fin', 'Días', 'Estado', 'Motivo']],
+      body: tableData,
+      startY: 55,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },  // Empleado
+        1: { cellWidth: 25 },  // Tipo
+        2: { cellWidth: 20 },  // Inicio
+        3: { cellWidth: 20 },  // Fin
+        4: { cellWidth: 12 },  // Días
+        5: { cellWidth: 20 },  // Estado
+        6: { cellWidth: 'auto' }  // Motivo
+      },
+      didParseCell: function(data) {
+        // Colorear filas según estado
+        if (data.section === 'body') {
+          const estado = data.row.raw[5]; // índice del estado
+          if (estado === 'Aprobada') {
+            data.cell.styles.fillColor = [230, 255, 230];
+          } else if (estado === 'Rechazada') {
+            data.cell.styles.fillColor = [255, 230, 230];
+          } else if (estado === 'Pendiente') {
+            data.cell.styles.fillColor = [255, 250, 230];
+          }
+        }
+      }
+    });
+
+    // ===== RESUMEN POR TIPO =====
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    if (finalY < 250) { // Si hay espacio en la página
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Resumen por Tipo de Ausencia", 14, finalY);
+
+      const resumenPorTipo = {};
+      ausencias.forEach(a => {
+        if (!resumenPorTipo[a.tipo]) {
+          resumenPorTipo[a.tipo] = { total: 0, dias: 0 };
+        }
+        resumenPorTipo[a.tipo].total++;
+        resumenPorTipo[a.tipo].dias += a.diasJustificados || 0;
+      });
+
+      let yPos = finalY + 7;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+
+      Object.keys(resumenPorTipo).forEach(tipo => {
+        const data = resumenPorTipo[tipo];
+        doc.text(`• ${formatearTipo(tipo)}: ${data.total} ausencias (${data.dias} días)`, 14, yPos);
+        yPos += 5;
+      });
+    }
+
+    // ===== PIE DE PÁGINA =====
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.text(
+        `Página ${i} de ${pageCount} - Cielito Home - Sistema de Gestión de Ausencias`,
+        105,
+        285,
+        { align: "center" }
+      );
+    }
+
+    // ===== GUARDAR PDF =====
+    const nombreArchivo = filtroMes
+      ? `Reporte_Ausencias_${filtroMes}.pdf`
+      : `Reporte_Ausencias_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    doc.save(nombreArchivo);
+
+    mostrarNotificacion(`✅ Reporte PDF generado: ${nombreArchivo}`, "success");
+
+  } catch (error) {
+    console.error("Error generando PDF:", error);
+    mostrarNotificacion("Error al generar el reporte PDF", "danger");
+  }
+}
+
+window.generarReporteAusenciasPDF = generarReporteAusenciasPDF;
