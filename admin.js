@@ -2866,7 +2866,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!emailSeleccionado) {
       listaRetardos.innerHTML = `
-        <div class="text-muted text-center py-3 small">
+        <div class="text-muted text-center py-3" style="font-size: 13px;">
           <i class="bi bi-clock"></i> Selecciona un empleado primero
         </div>
       `;
@@ -2874,7 +2874,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     listaRetardos.innerHTML = `
-      <div class="text-center py-2 small">
+      <div class="text-center py-3" style="font-size: 13px;">
         <div class="spinner-border spinner-border-sm" role="status"></div>
         <span class="ms-2">Cargando retardos...</span>
       </div>
@@ -2925,7 +2925,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (retardos.length === 0) {
         listaRetardos.innerHTML = `
-          <div class="text-success text-center py-3 small">
+          <div class="text-success text-center py-3" style="font-size: 13px;">
             <i class="bi bi-check-circle"></i> Sin retardos en esta quincena
           </div>
         `;
@@ -2933,31 +2933,29 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // Mostrar lista de retardos como lista compacta
-      listaRetardos.innerHTML = `
-        <div class="list-group list-group-flush">
-          ${retardos.map(retardo => `
-            <label class="list-group-item list-group-item-action p-2 d-flex align-items-center gap-2"
-                   style="cursor: pointer; font-size: 0.875rem; border-left: none; border-right: none;"
-                   for="retardo_${retardo.id}">
-              <input class="form-check-input m-0 flex-shrink-0"
-                     type="radio"
-                     name="retardoSeleccionado"
-                     id="retardo_${retardo.id}"
-                     value="${retardo.id}"
-                     data-fecha="${retardo.fecha}"
-                     data-hora="${retardo.hora}"
-                     onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')">
-              <span class="flex-grow-1">${retardo.fecha}</span>
-              <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 0.75rem;">${retardo.hora}</span>
-            </label>
-          `).join('')}
-        </div>
-      `;
+      listaRetardos.innerHTML = retardos.map(retardo => `
+        <label class="d-flex align-items-center gap-2 px-3 py-2 border-bottom"
+               style="cursor: pointer; font-size: 14px; margin: 0; background-color: #fff; transition: background-color 0.15s;"
+               onmouseover="this.style.backgroundColor='#f8f9fa'"
+               onmouseout="this.style.backgroundColor='#fff'"
+               for="retardo_${retardo.id}">
+          <input type="radio"
+                 name="retardoSeleccionado"
+                 id="retardo_${retardo.id}"
+                 value="${retardo.id}"
+                 data-fecha="${retardo.fecha}"
+                 data-hora="${retardo.hora}"
+                 onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')"
+                 style="width: 16px; height: 16px; margin: 0; flex-shrink: 0; cursor: pointer;">
+          <span style="flex: 1; font-size: 13px; color: #495057;">${retardo.fecha}</span>
+          <span class="badge bg-warning text-dark" style="font-size: 11px; padding: 4px 8px;">${retardo.hora}</span>
+        </label>
+      `).join('');
 
     } catch (error) {
       console.error("Error cargando retardos:", error);
       listaRetardos.innerHTML = `
-        <div class="text-danger text-center py-3 small">
+        <div class="text-danger text-center py-3" style="font-size: 13px;">
           <i class="bi bi-exclamation-triangle"></i> Error al cargar retardos
         </div>
       `;
