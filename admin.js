@@ -2866,7 +2866,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!emailSeleccionado) {
       listaRetardos.innerHTML = `
-        <div class="text-muted text-center py-3" style="font-size: 0.85rem;">
+        <div class="text-muted text-center py-3 small">
           <i class="bi bi-clock"></i> Selecciona un empleado primero
         </div>
       `;
@@ -2874,22 +2874,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     listaRetardos.innerHTML = `
-      <div class="text-center py-2" style="font-size: 0.85rem;">
+      <div class="text-center py-2 small">
         <div class="spinner-border spinner-border-sm" role="status"></div>
         <span class="ms-2">Cargando retardos...</span>
       </div>
     `;
 
     try {
-      // Buscar retardos del empleado en los últimos 60 días
-      const hace60Dias = new Date();
-      hace60Dias.setDate(hace60Dias.getDate() - 60);
+      // Calcular rango de la quincena actual
+      const hoy = new Date();
+      const diaActual = hoy.getDate();
+      const mesActual = hoy.getMonth();
+      const anioActual = hoy.getFullYear();
+
+      let inicioQuincena, finQuincena;
+
+      if (diaActual <= 15) {
+        // Primera quincena (1-15)
+        inicioQuincena = new Date(anioActual, mesActual, 1, 0, 0, 0);
+        finQuincena = new Date(anioActual, mesActual, 15, 23, 59, 59);
+      } else {
+        // Segunda quincena (16-fin de mes)
+        inicioQuincena = new Date(anioActual, mesActual, 16, 0, 0, 0);
+        finQuincena = new Date(anioActual, mesActual + 1, 0, 23, 59, 59); // Último día del mes
+      }
 
       const q = query(
         collection(db, "registros"),
         where("email", "==", emailSeleccionado),
         where("tipoEvento", "==", "entrada"),
-        where("timestamp", ">=", hace60Dias),
+        where("timestamp", ">=", inicioQuincena),
+        where("timestamp", "<=", finQuincena),
         orderBy("timestamp", "desc")
       );
 
@@ -2910,43 +2925,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (retardos.length === 0) {
         listaRetardos.innerHTML = `
-          <div class="text-success text-center py-3" style="font-size: 0.85rem;">
-            <i class="bi bi-check-circle"></i> Este empleado no tiene retardos sin justificar
+          <div class="text-success text-center py-3 small">
+            <i class="bi bi-check-circle"></i> Sin retardos en esta quincena
           </div>
         `;
         return;
       }
 
-      // Mostrar lista de retardos como botones seleccionables
-      listaRetardos.innerHTML = retardos.map(retardo => `
-        <div class="form-check p-2 mb-1 border rounded"
-             style="cursor: pointer; transition: all 0.15s; font-size: 0.9rem;"
-             onmouseover="this.style.backgroundColor='#e9ecef'; this.style.borderColor='#0d6efd';"
-             onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='#dee2e6';"
-             onclick="document.getElementById('retardo_${retardo.id}').click();">
-          <div class="d-flex align-items-center">
-            <input class="form-check-input me-2 mt-0" type="radio" name="retardoSeleccionado"
-                   id="retardo_${retardo.id}"
-                   value="${retardo.id}"
-                   data-fecha="${retardo.fecha}"
-                   data-hora="${retardo.hora}"
-                   onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')"
-                   style="flex-shrink: 0;">
-            <label class="form-check-label w-100 d-flex justify-content-between align-items-center m-0"
-                   for="retardo_${retardo.id}" style="cursor: pointer;">
-              <span style="font-size: 0.85rem;">
-                <i class="bi bi-calendar-date me-1" style="font-size: 0.8rem;"></i>${retardo.fecha}
-              </span>
-              <span class="badge bg-warning text-dark" style="font-size: 0.75rem;">${retardo.hora}</span>
+      // Mostrar lista de retardos como lista compacta
+      listaRetardos.innerHTML = `
+        <div class="list-group list-group-flush">
+          ${retardos.map(retardo => `
+            <label class="list-group-item list-group-item-action p-2 d-flex align-items-center gap-2"
+                   style="cursor: pointer; font-size: 0.875rem; border-left: none; border-right: none;"
+                   for="retardo_${retardo.id}">
+              <input class="form-check-input m-0 flex-shrink-0"
+                     type="radio"
+                     name="retardoSeleccionado"
+                     id="retardo_${retardo.id}"
+                     value="${retardo.id}"
+                     data-fecha="${retardo.fecha}"
+                     data-hora="${retardo.hora}"
+                     onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')">
+              <span class="flex-grow-1">${retardo.fecha}</span>
+              <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 0.75rem;">${retardo.hora}</span>
             </label>
-          </div>
+          `).join('')}
         </div>
-      `).join('');
+      `;
 
     } catch (error) {
       console.error("Error cargando retardos:", error);
       listaRetardos.innerHTML = `
-        <div class="text-danger text-center py-3" style="font-size: 0.85rem;">
+        <div class="text-danger text-center py-3 small">
           <i class="bi bi-exclamation-triangle"></i> Error al cargar retardos
         </div>
       `;
