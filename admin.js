@@ -2213,11 +2213,13 @@ async function manejarNuevaAusencia(e) {
   if (tipo === 'retardo_justificado') {
     const horaCorregida = document.getElementById("ausenciaHoraCorregida").value;
     const fechaEntrada = document.getElementById("ausenciaFechaEntrada").value;
+    const retardoSeleccionado = document.querySelector('input[name="retardoSeleccionado"]:checked');
 
-    if (horaCorregida && fechaEntrada) {
+    if (horaCorregida && fechaEntrada && retardoSeleccionado) {
       formData.correccionHora = {
         horaCorregida: horaCorregida,
         fechaEntrada: fechaEntrada,
+        registroId: retardoSeleccionado.value, // ID del documento de Firestore
         aplicada: false
       };
     }
@@ -2403,43 +2405,68 @@ async function aprobarAusencia(id) {
 // 🆕 Función para aplicar corrección de hora en registro de asistencia
 async function aplicarCorreccionHora(ausencia) {
   try {
-    const { horaCorregida, fechaEntrada } = ausencia.correccionHora;
+    const { horaCorregida, fechaEntrada, registroId } = ausencia.correccionHora;
 
     console.log(`🔧 Aplicando corrección de hora para ${ausencia.emailUsuario} en fecha ${fechaEntrada}`);
 
-    // Buscar el registro de entrada de ese día
-    const registrosQuery = query(
-      collection(db, "registros"),
-      where("email", "==", ausencia.emailUsuario),
-      where("fecha", "==", fechaEntrada),
-      where("tipoEvento", "==", "entrada")
-    );
+    // Si tenemos el ID del registro, usarlo directamente
+    if (registroId) {
+      // Obtener el registro actual para guardar la hora original
+      const registroRef = doc(db, "registros", registroId);
+      const registroSnap = await getDoc(registroRef);
 
-    const registrosSnapshot = await getDocs(registrosQuery);
+      if (!registroSnap.exists()) {
+        console.warn(`⚠️ No se encontró el registro con ID ${registroId}`);
+        return;
+      }
 
-    if (registrosSnapshot.empty) {
-      console.warn(`⚠️ No se encontró registro de entrada para ${ausencia.emailUsuario} en ${fechaEntrada}`);
-      return;
+      const horaOriginal = registroSnap.data().hora;
+
+      // Actualizar el registro directamente
+      await updateDoc(registroRef, {
+        hora: horaCorregida,
+        estado: "puntual",
+        corregidoPorAusencia: true,
+        ausenciaRef: ausencia.id,
+        fechaCorreccion: new Date(),
+        horaOriginal: horaOriginal // Guardar hora original
+      });
+
+      console.log(`✅ Hora corregida: ${horaOriginal} → ${horaCorregida}`);
+    } else {
+      // Fallback: Buscar por fecha (método antiguo)
+      const registrosQuery = query(
+        collection(db, "registros"),
+        where("email", "==", ausencia.emailUsuario),
+        where("fecha", "==", fechaEntrada),
+        where("tipoEvento", "==", "entrada")
+      );
+
+      const registrosSnapshot = await getDocs(registrosQuery);
+
+      if (registrosSnapshot.empty) {
+        console.warn(`⚠️ No se encontró registro de entrada para ${ausencia.emailUsuario} en ${fechaEntrada}`);
+        return;
+      }
+
+      const registroDoc = registrosSnapshot.docs[0];
+      await updateDoc(doc(db, "registros", registroDoc.id), {
+        hora: horaCorregida,
+        estado: "puntual",
+        corregidoPorAusencia: true,
+        ausenciaRef: ausencia.id,
+        fechaCorreccion: new Date(),
+        horaOriginal: registroDoc.data().hora
+      });
+
+      console.log(`✅ Hora corregida: ${registroDoc.data().hora} → ${horaCorregida}`);
     }
-
-    // Actualizar el primer registro encontrado
-    const registroDoc = registrosSnapshot.docs[0];
-    await updateDoc(doc(db, "registros", registroDoc.id), {
-      hora: horaCorregida,
-      estado: "puntual",
-      corregidoPorAusencia: true,
-      ausenciaRef: ausencia.id,
-      fechaCorreccion: new Date(),
-      horaOriginal: registroDoc.data().hora // Guardar hora original
-    });
 
     // Marcar corrección como aplicada
     await updateDoc(doc(db, "ausencias", ausencia.id), {
       "correccionHora.aplicada": true,
       "correccionHora.fechaAplicacion": new Date()
     });
-
-    console.log(`✅ Hora corregida: ${registroDoc.data().hora} → ${horaCorregida}`);
 
   } catch (error) {
     console.error("❌ Error aplicando corrección de hora:", error);

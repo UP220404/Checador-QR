@@ -87,7 +87,8 @@ service cloud.firestore {
     // Ausencias - Solo admins
     match /ausencias/{document} {
       allow read: if isAdmin();
-      allow write: if isAdmin() && validSize();
+      allow create, update: if isAdmin() && validSize();
+      allow delete: if isAdmin(); // Delete no necesita validSize
     }
 
     // Nóminas - Solo admins
