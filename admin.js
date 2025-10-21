@@ -2391,7 +2391,12 @@ async function aprobarAusencia(id) {
 
     // 🆕 Si tiene corrección de hora, modificar el registro de asistencia
     if (ausencia.correccionHora && !ausencia.correccionHora.aplicada) {
+      console.log("📋 Ausencia tiene corrección de hora, aplicando...", ausencia.correccionHora);
       await aplicarCorreccionHora(ausencia);
+    } else if (!ausencia.correccionHora) {
+      console.log("⚠️ Ausencia NO tiene corrección de hora");
+    } else if (ausencia.correccionHora.aplicada) {
+      console.log("ℹ️ Corrección de hora ya fue aplicada anteriormente");
     }
 
     mostrarNotificacion("Ausencia aprobada" + (ausencia.correccionHora ? " y hora corregida" : ""), "success");
