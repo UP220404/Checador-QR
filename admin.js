@@ -2215,6 +2215,12 @@ async function manejarNuevaAusencia(e) {
     const fechaEntrada = document.getElementById("ausenciaFechaEntrada").value;
     const retardoSeleccionado = document.querySelector('input[name="retardoSeleccionado"]:checked');
 
+    console.log("🔍 Verificando datos de retardo justificado:", {
+      horaCorregida,
+      fechaEntrada,
+      retardoSeleccionado: retardoSeleccionado?.value
+    });
+
     if (horaCorregida && fechaEntrada && retardoSeleccionado) {
       formData.correccionHora = {
         horaCorregida: horaCorregida,
@@ -2222,6 +2228,9 @@ async function manejarNuevaAusencia(e) {
         registroId: retardoSeleccionado.value, // ID del documento de Firestore
         aplicada: false
       };
+      console.log("✅ correccionHora guardado:", formData.correccionHora);
+    } else {
+      console.warn("⚠️ Falta información para guardar corrección de hora");
     }
   }
 
