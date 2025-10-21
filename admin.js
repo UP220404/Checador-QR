@@ -2451,6 +2451,10 @@ async function aplicarCorreccionHora(ausencia) {
       });
 
       console.log(`✅ Hora corregida: ${horaOriginal} → ${horaCorregida}`);
+
+      // Verificar que se guardó correctamente
+      const verificacion = await getDoc(registroRef);
+      console.log(`🔍 Verificación del registro actualizado:`, verificacion.data());
     } else {
       // Fallback: Buscar por fecha (método antiguo)
       const registrosQuery = query(
