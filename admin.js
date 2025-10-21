@@ -2033,6 +2033,11 @@ async function eliminarAusenciaDirecta(id) {
   if (!confirm(detalleEliminacion)) return;
 
   try {
+    // 🆕 Si tiene corrección de hora aplicada, revertirla antes de eliminar
+    if (ausencia.correccionHora && ausencia.correccionHora.aplicada) {
+      await revertirCorreccionHora(ausencia);
+    }
+
     await deleteDoc(doc(db, "ausencias", id));
     mostrarNotificacion("Ausencia eliminada correctamente", "success");
     cargarAusencias(); // Recargar la tabla
@@ -2373,6 +2378,11 @@ async function eliminarAusencia() {
   if (!confirmar) return;
 
   try {
+    // 🆕 Si tiene corrección de hora aplicada, revertirla antes de eliminar
+    if (ausencia.correccionHora && ausencia.correccionHora.aplicada) {
+      await revertirCorreccionHora(ausencia);
+    }
+
     await deleteDoc(doc(db, "ausencias", ausenciaEditandoId));
     mostrarNotificacion("Ausencia eliminada correctamente", "success");
     bootstrap.Modal.getInstance(document.getElementById("modalEditarAusencia")).hide();
@@ -2492,6 +2502,50 @@ async function aplicarCorreccionHora(ausencia) {
 
   } catch (error) {
     console.error("❌ Error aplicando corrección de hora:", error);
+    throw error;
+  }
+}
+
+// 🆕 Función para revertir corrección de hora cuando se elimina una ausencia
+async function revertirCorreccionHora(ausencia) {
+  try {
+    const { registroId } = ausencia.correccionHora;
+
+    console.log(`🔄 Revirtiendo corrección de hora para ${ausencia.emailUsuario}`);
+
+    if (registroId) {
+      // Obtener el registro
+      const registroRef = doc(db, "registros", registroId);
+      const registroSnap = await getDoc(registroRef);
+
+      if (!registroSnap.exists()) {
+        console.warn(`⚠️ No se encontró el registro con ID ${registroId}`);
+        return;
+      }
+
+      const datosRegistro = registroSnap.data();
+
+      // Restaurar la hora original y el estado de retardo
+      const actualizacion = {
+        corregidoPorAusencia: false,
+        ausenciaRef: null,
+        fechaCorreccion: null
+      };
+
+      // Si tiene hora original guardada, restaurarla
+      if (datosRegistro.horaOriginal) {
+        actualizacion.hora = datosRegistro.horaOriginal;
+        actualizacion.estado = "retardo"; // Volver a marcar como retardo
+        actualizacion.horaOriginal = null;
+      }
+
+      await updateDoc(registroRef, actualizacion);
+
+      console.log(`✅ Corrección revertida para registro ${registroId}`);
+    }
+
+  } catch (error) {
+    console.error("❌ Error revirtiendo corrección de hora:", error);
     throw error;
   }
 }
