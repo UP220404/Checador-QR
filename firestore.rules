@@ -68,6 +68,7 @@ service cloud.firestore {
     // Registros de asistencia - Usuarios pueden crear sus propios registros
     match /registros/{docId} {
       allow read: if isSignedIn();
+      allow list: if isAdmin(); // ✅ Permite queries complejas solo a admins
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if isAdmin();
     }
@@ -115,16 +116,16 @@ service cloud.firestore {
 
     // ===== SISTEMA QR =====
 
-    // Tokens QR - Lectura pública, escritura solo admins
+    // Tokens QR - Lectura pública, escritura pública para automatización
     match /qr_tokens/{document} {
       allow read: if true; // Necesario para validar QR
-      allow write: if isAdmin();
+      allow write: if true; // Permitir generación automática de QR
     }
 
-    // Estadísticas QR - Lectura pública, escritura controlada
+    // Estadísticas QR - Lectura pública, escritura pública para contadores
     match /qr_stats/{document} {
       allow read: if true;
-      allow create, update: if isSignedIn(); // Solo autenticados pueden incrementar
+      allow create, update: if true; // Permitir incrementar contadores automáticamente
       allow delete: if isAdmin();
     }
 
@@ -210,3 +211,4 @@ service cloud.firestore {
     }
   }
 }
+  

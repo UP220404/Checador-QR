@@ -2866,7 +2866,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!emailSeleccionado) {
       listaRetardos.innerHTML = `
-        <div class="text-muted text-center py-3">
+        <div class="text-muted text-center py-3" style="font-size: 0.85rem;">
           <i class="bi bi-clock"></i> Selecciona un empleado primero
         </div>
       `;
@@ -2874,7 +2874,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     listaRetardos.innerHTML = `
-      <div class="text-center py-3">
+      <div class="text-center py-2" style="font-size: 0.85rem;">
         <div class="spinner-border spinner-border-sm" role="status"></div>
         <span class="ms-2">Cargando retardos...</span>
       </div>
@@ -2910,7 +2910,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (retardos.length === 0) {
         listaRetardos.innerHTML = `
-          <div class="text-success text-center py-3">
+          <div class="text-success text-center py-3" style="font-size: 0.85rem;">
             <i class="bi bi-check-circle"></i> Este empleado no tiene retardos sin justificar
           </div>
         `;
@@ -2919,31 +2919,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Mostrar lista de retardos como botones seleccionables
       listaRetardos.innerHTML = retardos.map(retardo => `
-        <div class="form-check p-2 mb-2 border rounded hover-bg"
-             style="cursor: pointer; transition: all 0.2s;"
-             onmouseover="this.style.backgroundColor='#e9ecef'"
-             onmouseout="this.style.backgroundColor='transparent'">
-          <input class="form-check-input" type="radio" name="retardoSeleccionado"
-                 id="retardo_${retardo.id}"
-                 value="${retardo.id}"
-                 data-fecha="${retardo.fecha}"
-                 data-hora="${retardo.hora}"
-                 onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')">
-          <label class="form-check-label w-100" for="retardo_${retardo.id}" style="cursor: pointer;">
-            <div class="d-flex justify-content-between align-items-center">
-              <span>
-                <i class="bi bi-calendar-date me-2"></i>${retardo.fecha}
+        <div class="form-check p-2 mb-1 border rounded"
+             style="cursor: pointer; transition: all 0.15s; font-size: 0.9rem;"
+             onmouseover="this.style.backgroundColor='#e9ecef'; this.style.borderColor='#0d6efd';"
+             onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='#dee2e6';"
+             onclick="document.getElementById('retardo_${retardo.id}').click();">
+          <div class="d-flex align-items-center">
+            <input class="form-check-input me-2 mt-0" type="radio" name="retardoSeleccionado"
+                   id="retardo_${retardo.id}"
+                   value="${retardo.id}"
+                   data-fecha="${retardo.fecha}"
+                   data-hora="${retardo.hora}"
+                   onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')"
+                   style="flex-shrink: 0;">
+            <label class="form-check-label w-100 d-flex justify-content-between align-items-center m-0"
+                   for="retardo_${retardo.id}" style="cursor: pointer;">
+              <span style="font-size: 0.85rem;">
+                <i class="bi bi-calendar-date me-1" style="font-size: 0.8rem;"></i>${retardo.fecha}
               </span>
-              <span class="badge bg-warning text-dark">${retardo.hora}</span>
-            </div>
-          </label>
+              <span class="badge bg-warning text-dark" style="font-size: 0.75rem;">${retardo.hora}</span>
+            </label>
+          </div>
         </div>
       `).join('');
 
     } catch (error) {
       console.error("Error cargando retardos:", error);
       listaRetardos.innerHTML = `
-        <div class="text-danger text-center py-3">
+        <div class="text-danger text-center py-3" style="font-size: 0.85rem;">
           <i class="bi bi-exclamation-triangle"></i> Error al cargar retardos
         </div>
       `;
