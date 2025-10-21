@@ -964,7 +964,7 @@ window.calcularNomina = async function() {
 
           // 🆕 Solo contar como retardo si NO fue corregido por ausencia
           if (registro.estado === 'retardo' && !registro.corregidoPorAusencia) {
-            console.log(`⚠️ Contando retardo: ${registro.fecha} ${registro.hora} (corregido: ${!!registro.corregidoPorAusencia})`);
+            console.log(`⚠️ Contando retardo: ${registro.fecha} ${registro.hora} | corregidoPorAusencia=${registro.corregidoPorAusencia} | ausenciaRef=${registro.ausenciaRef}`);
             retardos++;
             detalleRetardos.push({
               fecha: registro.fecha,
@@ -972,6 +972,8 @@ window.calcularNomina = async function() {
             });
           } else if (registro.estado === 'retardo' && registro.corregidoPorAusencia) {
             console.log(`✅ Retardo corregido (NO se cuenta): ${registro.fecha} ${registro.hora}`);
+          } else if (registro.estado === 'puntual' && registro.corregidoPorAusencia) {
+            console.log(`💚 Puntual por corrección: ${registro.fecha} ${registro.hora} (era retardo)`);
           }
         });
 
