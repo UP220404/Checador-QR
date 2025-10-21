@@ -2932,13 +2932,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // Mostrar lista de retardos como lista compacta
+      // Mostrar lista de retardos como lista compacta y legible
       listaRetardos.innerHTML = retardos.map(retardo => `
-        <label class="d-flex align-items-center gap-2 px-3 py-2 border-bottom"
-               style="cursor: pointer; font-size: 14px; margin: 0; background-color: #fff; transition: background-color 0.15s;"
-               onmouseover="this.style.backgroundColor='#f8f9fa'"
-               onmouseout="this.style.backgroundColor='#fff'"
-               for="retardo_${retardo.id}">
+        <div style="display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid #dee2e6; cursor: pointer; background: #fff;"
+             onmouseover="this.style.backgroundColor='#f8f9fa'"
+             onmouseout="this.style.backgroundColor='#fff'"
+             onclick="document.getElementById('retardo_${retardo.id}').click();">
           <input type="radio"
                  name="retardoSeleccionado"
                  id="retardo_${retardo.id}"
@@ -2946,10 +2945,10 @@ document.addEventListener('DOMContentLoaded', function() {
                  data-fecha="${retardo.fecha}"
                  data-hora="${retardo.hora}"
                  onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')"
-                 style="width: 16px; height: 16px; margin: 0; flex-shrink: 0; cursor: pointer;">
-          <span style="flex: 1; font-size: 13px; color: #495057;">${retardo.fecha}</span>
-          <span class="badge bg-warning text-dark" style="font-size: 11px; padding: 4px 8px;">${retardo.hora}</span>
-        </label>
+                 style="width: 16px !important; height: 16px !important; min-width: 16px !important; min-height: 16px !important; margin: 0 8px 0 0 !important; flex-shrink: 0;">
+          <span style="flex: 1; font-size: 13px; color: #333;">${retardo.fecha}</span>
+          <span style="background: #ffc107; color: #000; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500;">${retardo.hora}</span>
+        </div>
       `).join('');
 
     } catch (error) {
