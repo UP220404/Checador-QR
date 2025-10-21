@@ -659,19 +659,19 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 } else {
   // ✅ LÓGICA SIMPLIFICADA Y CORRECTA
   const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
-  const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 11
-  
-  console.log(`🕐 Evaluando puntualidad: ${horaActual}:${String(minutosActual).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos - 1).padStart(2, '0')}`);
-  
+  const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 10
+
+  console.log(`🕐 Evaluando puntualidad: ${horaActual}:${String(minutosActual).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos).padStart(2, '0')}`);
+
   // ✅ LÓGICA CORREGIDA: considerar hasta 8:10:59
   if (horaActual < limiteHora) {
     // Antes de las 8:00 = PUNTUAL
     esPuntual = true;
     console.log('✅ PUNTUAL: Antes de las 8:00');
-  } else if (horaActual === limiteHora && minutosActual < limiteMinutos) {
+  } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
     // Entre 8:00 y 8:10:59 = PUNTUAL
     esPuntual = true;
-    console.log('✅ PUNTUAL: Entre 8:00 y 8:10');
+    console.log('✅ PUNTUAL: Entre 8:00 y 8:10:59');
   } else {
     // A partir de 8:11:00 = RETARDO
     esPuntual = false;

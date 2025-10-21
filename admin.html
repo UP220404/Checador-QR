@@ -458,18 +458,29 @@
           <div class="mt-3 d-none" id="divHoraCorregidaNueva">
             <div class="alert alert-info">
               <i class="bi bi-clock-history me-2"></i>
-              <strong>Corrección de Hora:</strong> Ingresa la hora a la que debería aparecer la entrada.
-              <br><small class="text-muted">Esto modificará el registro de asistencia y evitará que se cuente como retardo.</small>
+              <strong>Corrección de Hora:</strong> Selecciona el retardo que deseas justificar de la lista.
+              <br><small class="text-muted">Esto modificará el registro de asistencia y evitará que se cuente como retardo en la nómina.</small>
             </div>
+
+            <!-- Lista de retardos del empleado -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Retardos registrados del empleado:</label>
+              <div id="listaRetardosEmpleado" class="border rounded p-2" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+                <div class="text-muted text-center py-3">
+                  <i class="bi bi-clock"></i> Selecciona un empleado primero
+                </div>
+              </div>
+            </div>
+
             <div class="row">
               <div class="col-md-6">
                 <label class="form-label">Hora de Entrada Corregida</label>
-                <input type="time" class="form-control" id="ausenciaHoraCorregida">
+                <input type="time" class="form-control" id="ausenciaHoraCorregida" value="08:00">
               </div>
               <div class="col-md-6">
                 <label class="form-label">Fecha de la Entrada</label>
-                <input type="date" class="form-control" id="ausenciaFechaEntrada">
-                <small class="text-muted">Fecha del registro a corregir</small>
+                <input type="date" class="form-control" id="ausenciaFechaEntrada" readonly>
+                <small class="text-muted">Se llena automáticamente al seleccionar un retardo</small>
               </div>
             </div>
           </div>

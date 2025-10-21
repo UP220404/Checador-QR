@@ -34,6 +34,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const adminEmails = ["sistemas16ch@gmail.com", "direcciongeneral@cielitohome.com", "sistemas@cielitohome.com"];
+const USUARIOS_REMOTOS = [
+  "sistemas20cielitoh@gmail.com",
+  "operacionescielitoh@gmail.com",
+  "atencionmedicacielitoh@gmail.com"
+];
 const tabla = document.querySelector("#tabla-registros tbody");const tipoFiltro = document.getElementById("filtroTipo");
 const fechaFiltro = document.getElementById("filtroFecha");
 const busquedaFiltro = document.getElementById("filtroBusqueda");
@@ -1259,8 +1264,13 @@ async function calcularYGuardarRankingHistorico(mes, anio) {
 
 function calcularPuntajes(entradas) {
   const puntajes = {};
-  
+
   entradas.forEach(r => {
+    // Excluir usuarios remotos del ranking
+    if (r.email && USUARIOS_REMOTOS.includes(r.email)) {
+      return; // Saltar este usuario
+    }
+
     const fecha = new Date(r.timestamp.seconds * 1000);
     const hora = fecha.getHours();
     const minutos = fecha.getMinutes();
@@ -1275,7 +1285,7 @@ function calcularPuntajes(entradas) {
     } else if (hora === 8 && minutos <= 10) {
       puntos = 1; // 8:06-8:10
     }
-    
+
     if (puntos > 0) {
       const nombre = r.nombre || 'Usuario Desconocido';
       puntajes[nombre] = (puntajes[nombre] || 0) + puntos;
@@ -2845,6 +2855,113 @@ window.actualizarTablaAusencias = actualizarTablaAusencias;
 
 // =================== EVENT LISTENERS PARA AUSENCIAS ===================
 document.addEventListener('DOMContentLoaded', function() {
+  // Función para cargar retardos del empleado seleccionado
+  async function cargarRetardosEmpleado() {
+    const usuarioSelect = document.getElementById("ausenciaUsuario");
+    const listaRetardos = document.getElementById("listaRetardosEmpleado");
+
+    if (!usuarioSelect || !listaRetardos) return;
+
+    const emailSeleccionado = usuarioSelect.value;
+
+    if (!emailSeleccionado) {
+      listaRetardos.innerHTML = `
+        <div class="text-muted text-center py-3">
+          <i class="bi bi-clock"></i> Selecciona un empleado primero
+        </div>
+      `;
+      return;
+    }
+
+    listaRetardos.innerHTML = `
+      <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span class="ms-2">Cargando retardos...</span>
+      </div>
+    `;
+
+    try {
+      // Buscar retardos del empleado en los últimos 60 días
+      const hace60Dias = new Date();
+      hace60Dias.setDate(hace60Dias.getDate() - 60);
+
+      const q = query(
+        collection(db, "registros"),
+        where("email", "==", emailSeleccionado),
+        where("tipoEvento", "==", "entrada"),
+        where("timestamp", ">=", hace60Dias),
+        orderBy("timestamp", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+      const retardos = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.estado === "retardo" && !data.corregidoPorAusencia) {
+          retardos.push({
+            id: doc.id,
+            fecha: formatearFecha(data.timestamp),
+            hora: formatearHora(data.timestamp),
+            timestamp: data.timestamp
+          });
+        }
+      });
+
+      if (retardos.length === 0) {
+        listaRetardos.innerHTML = `
+          <div class="text-success text-center py-3">
+            <i class="bi bi-check-circle"></i> Este empleado no tiene retardos sin justificar
+          </div>
+        `;
+        return;
+      }
+
+      // Mostrar lista de retardos como botones seleccionables
+      listaRetardos.innerHTML = retardos.map(retardo => `
+        <div class="form-check p-2 mb-2 border rounded hover-bg"
+             style="cursor: pointer; transition: all 0.2s;"
+             onmouseover="this.style.backgroundColor='#e9ecef'"
+             onmouseout="this.style.backgroundColor='transparent'">
+          <input class="form-check-input" type="radio" name="retardoSeleccionado"
+                 id="retardo_${retardo.id}"
+                 value="${retardo.id}"
+                 data-fecha="${retardo.fecha}"
+                 data-hora="${retardo.hora}"
+                 onchange="seleccionarRetardo('${retardo.fecha}', '${retardo.hora}')">
+          <label class="form-check-label w-100" for="retardo_${retardo.id}" style="cursor: pointer;">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>
+                <i class="bi bi-calendar-date me-2"></i>${retardo.fecha}
+              </span>
+              <span class="badge bg-warning text-dark">${retardo.hora}</span>
+            </div>
+          </label>
+        </div>
+      `).join('');
+
+    } catch (error) {
+      console.error("Error cargando retardos:", error);
+      listaRetardos.innerHTML = `
+        <div class="text-danger text-center py-3">
+          <i class="bi bi-exclamation-triangle"></i> Error al cargar retardos
+        </div>
+      `;
+    }
+  }
+
+  // Función global para seleccionar un retardo
+  window.seleccionarRetardo = function(fecha, hora) {
+    const inputFecha = document.getElementById("ausenciaFechaEntrada");
+    const inputHora = document.getElementById("ausenciaHoraCorregida");
+
+    if (inputFecha) inputFecha.value = fecha;
+    if (inputHora && inputHora.value === "08:00") {
+      // Sugerir una hora antes del límite
+      inputHora.value = "08:05";
+    }
+  };
+
   // Formulario nueva ausencia
   const formNuevaAusencia = document.getElementById("formNuevaAusencia");
   if (formNuevaAusencia) {
@@ -2864,8 +2981,20 @@ document.addEventListener('DOMContentLoaded', function() {
       const divHoraCorregida = document.getElementById("divHoraCorregidaNueva");
       if (this.value === "retardo_justificado") {
         divHoraCorregida.classList.remove("d-none");
+        cargarRetardosEmpleado(); // Cargar retardos cuando se selecciona este tipo
       } else {
         divHoraCorregida.classList.add("d-none");
+      }
+    });
+  }
+
+  // Listener para cuando cambie el empleado seleccionado
+  const ausenciaUsuario = document.getElementById("ausenciaUsuario");
+  if (ausenciaUsuario) {
+    ausenciaUsuario.addEventListener("change", function() {
+      const tipoSeleccionado = document.getElementById("ausenciaTipo")?.value;
+      if (tipoSeleccionado === "retardo_justificado") {
+        cargarRetardosEmpleado();
       }
     });
   }
