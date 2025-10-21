@@ -1926,12 +1926,16 @@ async function cargarAusencias() {
         motivo: data.motivo || '',
         estado: data.estado || 'pendiente',
         comentariosAdmin: data.comentariosAdmin || '',
-        fechaCreacion: data.fechaCreacion && data.fechaCreacion.toDate ? 
-          data.fechaCreacion.toDate() : 
+        fechaCreacion: data.fechaCreacion && data.fechaCreacion.toDate ?
+          data.fechaCreacion.toDate() :
           (data.fechaCreacion ? new Date(data.fechaCreacion) : new Date()),
-        fechaModificacion: data.fechaModificacion ? 
-          (data.fechaModificacion.toDate ? data.fechaModificacion.toDate() : new Date(data.fechaModificacion)) 
-          : null
+        fechaModificacion: data.fechaModificacion ?
+          (data.fechaModificacion.toDate ? data.fechaModificacion.toDate() : new Date(data.fechaModificacion))
+          : null,
+        correccionHora: data.correccionHora || null, // ✅ NUEVO: Incluir datos de corrección de hora
+        quincena: data.quincena || null,
+        diasJustificados: data.diasJustificados || 0,
+        aplicadaEnNomina: data.aplicadaEnNomina || false
       });
     });
     
