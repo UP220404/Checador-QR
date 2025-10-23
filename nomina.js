@@ -1065,6 +1065,18 @@ window.calcularNomina = async function() {
         const cantidadFaltas = Math.max(0, faltasSinJustificar); // No puede ser negativo
         const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
 
+        // 🔍 DEBUG para todos los empleados con ausencias
+        if (ausenciasEmpleado.length > 0) {
+          console.log(`🔍 CÁLCULO ${empleado.nombre}:`, {
+            diasEstandar: DIAS_ESTANDAR,
+            diasTrabajados: diasTrabajadosEfectivos,
+            diasJustificados: diasJustificadosTotal,
+            faltasCalculadas: cantidadFaltas,
+            ausencias: ausenciasEmpleado.length,
+            detalleAusencias: justificacionesDetalle
+          });
+        }
+
         // 🔍 DEBUG: Log para ver qué está pasando
         if (empleado.nombre.includes('Lenin') || empleado.nombre.includes('lenin')) {
           console.log('🔍 DEBUG DETALLADO:', {
@@ -1364,21 +1376,21 @@ function mostrarVistaCompactaExtendida(resultados) {
         </div>
       ` : ''}
 
-      ${resultado.diasJustificados > 0 ? `
+      ${resultado.justificacionesDetalle && resultado.justificacionesDetalle.length > 0 ? `
         <div class="ausencias-badge">
           <div class="alert alert-info py-2 mb-2">
             <i class="bi bi-calendar-check me-2"></i>
-            <strong>+${resultado.diasJustificados} día${resultado.diasJustificados > 1 ? 's' : ''} justificado${resultado.diasJustificados > 1 ? 's' : ''}</strong>
+            <strong>Ajustes Aplicados:</strong>
             ${resultado.justificacionesDetalle.map(j => {
               // Si es retardo justificado (0.5 días), mostrar mensaje diferente
               if (j.tipo === 'retardo_justificado') {
                 const cantidad = Math.round(j.dias * 2); // 0.5 → 1, 1 → 2
                 return `<small class="d-block mt-1">
-                  <i class="bi bi-arrow-right-short"></i> ${cantidad} retardo${cantidad > 1 ? 's' : ''} corregido${cantidad > 1 ? 's' : ''}
+                  <i class="bi bi-check-circle text-success"></i> ${cantidad} retardo${cantidad > 1 ? 's' : ''} justificado${cantidad > 1 ? 's' : ''}
                 </small>`;
               } else {
                 return `<small class="d-block mt-1">
-                  <i class="bi bi-arrow-right-short"></i> ${j.nombreTipo}: ${j.dias} día${j.dias > 1 ? 's' : ''}
+                  <i class="bi bi-check-circle text-success"></i> ${j.nombreTipo}: ${j.dias} día${j.dias > 1 ? 's' : ''}
                 </small>`;
               }
             }).join('')}
