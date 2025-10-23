@@ -1071,6 +1071,7 @@ window.calcularNomina = async function() {
             diasEstandar: DIAS_ESTANDAR,
             diasTrabajados: diasTrabajadosEfectivos,
             diasJustificados: diasJustificadosTotal,
+            formula: `${DIAS_ESTANDAR} - ${diasTrabajadosEfectivos} - ${diasJustificadosTotal} = ${cantidadFaltas}`,
             faltasCalculadas: cantidadFaltas,
             ausencias: ausenciasEmpleado.length,
             detalleAusencias: justificacionesDetalle
@@ -1558,8 +1559,8 @@ window.abrirEdicionNomina = async function(empleadoId) {
   try {
     const ausencias = await obtenerAusenciasDelPeriodo(
       resultado.empleado.correo,
-      mesActual,
-      añoActual,
+      mesActualNum,
+      añoActualNum,
       quinceActual
     );
 
