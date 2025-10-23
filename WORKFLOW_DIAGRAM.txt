@@ -1,0 +1,57 @@
+PERMISO TO NOMINA WORKFLOW - SEQUENCE DIAGRAM
+
+Step 1: Create Permiso
+=======================
+admin.html → manejarNuevaAusencia() → save to ausencias (estado: pendiente/aprobada)
+
+Step 2: Approve Permiso
+=======================
+admin.html → aprobarAusencia() → update ausencias (estado: aprobada)
+  If tardiness: also update registros collection
+
+Step 3: Calculate Nomina (DOES NOT FETCH AUSENCIAS)
+====================
+nomina.html → calcularNomina() 
+  Queries: registros, usuarios, dias_festivos
+  Does NOT query: ausencias
+  Result: Nomina without permiso deduction
+
+Step 4: Open Employee Editor (FETCHES AUSENCIAS HERE)
+=============================================
+nomina.html → abrirEdicionNomina() 
+  → obtenerAusenciasDelPeriodo()
+  Query: emailUsuario, estado="aprobada", quincena data
+  Result: Auto-fills permiso data
+  Alert: "X ausencia(s) pre-cargada(s)"
+
+Step 5: Save Changes
+====================
+nomina.html → guardarEdicionManual()
+  Updates nomina with deductions
+  Marks: aplicadaEnNomina: true
+
+TIMELINE FOR OCT 21 PERMISO
+============================
+10:00 - Create permiso (not visible in nomina yet)
+10:05 - Approve permiso (estado: aprobada, still not visible)
+10:10 - Calculate nomina (permiso NOT fetched, shows normal)
+10:15 - Click employee edit (permiso NOW loaded)
+10:20 - Save changes (permiso NOW in nomina)
+
+TOTAL DELAY: 10-20 minutes (NOT AUTOMATIC)
+
+REAL-TIME LISTENERS: NONE FOUND
+================================
+✗ onSnapshot()
+✗ MutationObserver  
+✗ Polling
+✗ WebSocket
+
+TARDINESS VS PERMISO
+====================
+Tardiness: Updates registros immediately (line 2454)
+           Reflected automatically in nomina
+           
+Permiso:   Does NOT update other records
+           Only loaded when editor opened
+           Requires manual save

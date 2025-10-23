@@ -1,0 +1,86 @@
+CODE REFERENCES FOR PERMISO/NOMINA WORKFLOW
+
+1. CREATING PERMISO
+   File: admin.js
+   Function: manejarNuevaAusencia()
+   Lines: 2186-2262
+   What: Saves permiso to ausencias collection
+   Key line 2253: await addDoc(collection(db, "ausencias"), formData);
+
+2. APPROVING PERMISO
+   File: admin.js
+   Function: aprobarAusencia()
+   Lines: 2399-2431
+   What: Sets estado to "aprobada"
+   Key line 2410: estado: "aprobada"
+
+3. TARDINESS CORRECTION (REAL-TIME)
+   File: admin.js
+   Function: aplicarCorreccionHora()
+   Lines: 2434-2507
+   What: Updates registros collection immediately
+   Key lines 2454-2461: updateDoc registros with corrected time
+
+4. NOMINA CALCULATION (NO AUSENCIAS QUERY)
+   File: nomina.js
+   Function: calcularNomina()
+   Lines: 770-1320
+   What: Calculates payroll WITHOUT fetching ausencias
+   Note: No query for ausencias collection
+
+5. LOADING AUSENCIAS IN EDITOR
+   File: nomina.js
+   Function: abrirEdicionNomina()
+   Lines: 1384-1496
+   What: Opens editor and fetches approved absences
+   Key line 1420: Calls obtenerAusenciasDelPeriodo()
+
+6. FETCHING APPROVED AUSENCIAS ONLY
+   File: nomina.js
+   Function: obtenerAusenciasDelPeriodo()
+   Lines: 1730-1761
+   Critical Line 1737: where('estado', '==', 'aprobada')
+   This is why unapproved absences don't load
+
+7. MAPPING ABSENCE TYPES
+   File: nomina.js
+   Function: mapearTipoAusenciaANomina()
+   Lines: 1779-1789
+   Key line 1784: 'permiso' maps to 'vacaciones'
+
+8. CHECKING TARDINESS IN CALCULATION
+   File: nomina.js
+   Lines: 966-972
+   What: Checks corregidoPorAusencia flag
+   Only counts as tardiness if NOT corrected
+
+9. FIREBASE IMPORTS
+   File: nomina.js, Lines 2-4
+   Note: No onSnapshot imported - NO REAL-TIME LISTENERS
+
+10. EVENT LISTENERS (LOCAL, NOT FIREBASE)
+    File: nomina.js
+    Function: inicializarEventListeners()
+    Lines: 492-527
+    What: Sets up DOM listeners for form controls
+
+CRITICAL FINDINGS:
+- Line 1737 (nomina.js): Only loads absences with estado: "aprobada"
+- Line 966 (nomina.js): Checks corregidoPorAusencia flag
+- Line 2454 (admin.js): Tardiness updates registros immediately
+- No onSnapshot found anywhere - NO REAL-TIME LISTENERS
+
+TIMELINE:
+1. Create permiso (10:00) -> saved to ausencias
+2. Approve permiso (10:05) -> estado: "aprobada"
+3. Calculate nomina (10:10) -> NOT fetched during calc
+4. Open editor (10:15) -> NOW fetched and auto-filled
+5. Save changes (10:20) -> aplicadaEnNomina: true
+
+TOTAL TIME: 5-20 minutes (NOT automatic)
+
+VERIFICATION:
+- Check Firebase: ausencias collection for estado field
+- Check nomina.js line 1737: Filter query
+- Check admin.js line 2454: Tardiness update
+- Search for "onSnapshot" - returns nothing (no real-time)

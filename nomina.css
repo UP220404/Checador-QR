@@ -307,6 +307,29 @@ body {
   border-color: var(--secondary);
 }
 
+/* 🆕 Estilos para tarjetas con ausencias */
+.employee-card-compact.tiene-ausencias {
+  border-color: #fbbf24;
+  background: linear-gradient(to bottom, #fffbeb 0%, var(--white) 10%);
+}
+
+.employee-card-compact.tiene-ausencias::before {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.employee-card-compact.tiene-ausencias:hover {
+  border-color: #f59e0b;
+}
+
+/* Estilos para filas de tabla con ausencias */
+tr.tiene-ausencias {
+  background-color: #fffbeb;
+}
+
+tr.tiene-ausencias:hover {
+  background-color: #fef3c7 !important;
+}
+
 .compact-header {
   display: flex;
   justify-content: space-between;

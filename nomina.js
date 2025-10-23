@@ -946,10 +946,39 @@ window.calcularNomina = async function() {
     let empleadosConDescuento = 0;
     let totalNominaFinal = 0;
 
+    // 🆕 CARGAR TODAS LAS AUSENCIAS APROBADAS DEL PERÍODO
+    console.log('📋 Cargando ausencias aprobadas del período...');
+    const ausenciasPorEmpleado = {};
+
+    try {
+      const qAusencias = query(
+        collection(db, 'ausencias'),
+        where('estado', '==', 'aprobada'),
+        where('quincena.mes', '==', mesNum),
+        where('quincena.anio', '==', añoNum),
+        where('quincena.periodo', '==', quinceSelect)
+      );
+
+      const ausenciasSnapshot = await getDocs(qAusencias);
+      console.log(`✅ ${ausenciasSnapshot.size} ausencias aprobadas encontradas`);
+
+      ausenciasSnapshot.forEach(doc => {
+        const ausencia = { id: doc.id, ...doc.data() };
+        const email = ausencia.emailUsuario;
+
+        if (!ausenciasPorEmpleado[email]) {
+          ausenciasPorEmpleado[email] = [];
+        }
+        ausenciasPorEmpleado[email].push(ausencia);
+      });
+    } catch (error) {
+      console.error('❌ Error cargando ausencias:', error);
+    }
+
     for (const empleado of empleados) {
       try {
         const registros = registrosPorEmpleado[empleado.uid] || [];
-        
+
         const salarioBase = empleado.salarioQuincenal;
         const pagoPorDia = empleado.pagoPorDia;
 
@@ -957,6 +986,9 @@ window.calcularNomina = async function() {
         let diasTrabajados = registros.length;
         const detalleRetardos = [];
         const diasAsistidos = [];
+
+        // 🆕 Obtener ausencias del empleado
+        const ausenciasEmpleado = ausenciasPorEmpleado[empleado.email] || [];
 
         registros.forEach(registro => {
           const [regAño, regMes, regDia] = registro.fecha.split('-').map(Number);
@@ -1004,12 +1036,34 @@ window.calcularNomina = async function() {
           });
         }
 
+        // 🆕 CALCULAR DÍAS JUSTIFICADOS POR AUSENCIAS
+        let diasJustificadosTotal = 0;
+        const justificacionesDetalle = [];
+
+        ausenciasEmpleado.forEach(ausencia => {
+          const dias = ausencia.diasJustificados || 0;
+          if (dias > 0) {
+            const mapeo = mapearTipoAusenciaANomina(ausencia.tipo);
+            diasJustificadosTotal += dias;
+            justificacionesDetalle.push({
+              tipo: ausencia.tipo,
+              dias: dias,
+              motivo: ausencia.motivo,
+              nombreTipo: mapeo ? mapeo.nombre : ausencia.tipo,
+              fechaInicio: ausencia.fechaInicio,
+              fechaFin: ausencia.fechaFin
+            });
+            console.log(`✅ ${empleado.nombre}: +${dias} días por ${mapeo?.nombre || ausencia.tipo}`);
+          }
+        });
+
         // Descuento por retardos (cada 4 retardos = 1 día)
         const diasDescuentoPorRetardos = Math.floor(retardos / 4);
 
-        // Días efectivos pagados = días estándar - faltas - descuento por retardos
-        const diasEfectivos = DIAS_ESTANDAR - cantidadFaltas - diasDescuentoPorRetardos;
-        const pagoTotal = Math.max(0, diasEfectivos * pagoPorDia);
+        // Días efectivos pagados = días trabajados - descuento por retardos + días justificados
+        const diasEfectivos = diasTrabajadosEfectivos - diasDescuentoPorRetardos;
+        const diasTotalesAPagar = diasEfectivos + diasJustificadosTotal;
+        const pagoTotal = Math.max(0, diasTotalesAPagar * pagoPorDia);
 
         // Descuentos ajustados por tipo de nómina
         let descuentoIMSS = 0;
@@ -1064,6 +1118,9 @@ window.calcularNomina = async function() {
           retardos,
           diasDescuento: diasDescuentoPorRetardos, // Días descontados por retardos
           diasEfectivos,
+          diasJustificados: diasJustificadosTotal, // 🆕 Días justificados por ausencias
+          justificacionesDetalle: justificacionesDetalle, // 🆕 Detalle de ausencias aplicadas
+          tieneAusencias: ausenciasEmpleado.length > 0, // 🆕 Indicador de ausencias
           pagoPorDia: Math.round(pagoPorDia),
           pagoTotal: Math.round(pagoTotal),
           descuentoIMSS,
@@ -1233,6 +1290,11 @@ function mostrarVistaCompactaExtendida(resultados) {
     const tipoNomina = resultado.tipoNominaEmpleado === 'semanal' ? 'Semanal' : 'Quincenal';
     const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
     
+    // 🆕 Agregar clase especial si tiene ausencias
+    if (resultado.tieneAusencias) {
+      empleadoCard.classList.add('tiene-ausencias');
+    }
+
     empleadoCard.innerHTML = `
       <div class="compact-header">
         <div class="compact-name">
@@ -1240,6 +1302,7 @@ function mostrarVistaCompactaExtendida(resultados) {
           <span class="badge bg-secondary ms-2">${tipoNombre}</span>
           <span class="badge ${resultado.tipoNominaEmpleado === 'semanal' ? 'bg-info' : 'bg-success'} ms-1">${tipoNomina}</span>
           ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
+          ${resultado.tieneAusencias ? '<span class="badge bg-warning ms-1" title="Tiene ausencias/justificantes aplicados"><i class="bi bi-calendar-check"></i></span>' : ''}
         </div>
         <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
           <i class="bi bi-pencil"></i>
@@ -1271,6 +1334,20 @@ function mostrarVistaCompactaExtendida(resultados) {
             <i class="bi bi-exclamation-triangle me-2"></i>
             <strong>Descuento: ${resultado.diasDescuento} día${resultado.diasDescuento > 1 ? 's' : ''}</strong>
             <small class="d-block">Por ${resultado.retardos} retardos (4 retardos = 1 día)</small>
+          </div>
+        </div>
+      ` : ''}
+
+      ${resultado.diasJustificados > 0 ? `
+        <div class="ausencias-badge">
+          <div class="alert alert-info py-2 mb-2">
+            <i class="bi bi-calendar-check me-2"></i>
+            <strong>+${resultado.diasJustificados} día${resultado.diasJustificados > 1 ? 's' : ''} justificado${resultado.diasJustificados > 1 ? 's' : ''}</strong>
+            ${resultado.justificacionesDetalle.map(j => `
+              <small class="d-block mt-1">
+                <i class="bi bi-arrow-right-short"></i> ${j.nombreTipo}: ${j.dias} día${j.dias > 1 ? 's' : ''}
+              </small>
+            `).join('')}
           </div>
         </div>
       ` : ''}
@@ -1319,10 +1396,16 @@ function llenarTabla(resultados) {
     const tipoNombre = getTipoNombre(resultado.empleado.tipo);
     const pagoFinalMostrar = resultado.pagoFinalConJustificaciones || resultado.pagoFinal;
 
+    // 🆕 Agregar clase especial si tiene ausencias
+    if (resultado.tieneAusencias) {
+      row.classList.add('tiene-ausencias');
+    }
+
     row.innerHTML = `
       <td>
         <div class="fw-bold">${resultado.empleado.nombre}</div>
         ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">Editado</span>' : ''}
+        ${resultado.tieneAusencias ? '<span class="badge bg-warning ms-1" title="Tiene ausencias/justificantes"><i class="bi bi-calendar-check"></i></span>' : ''}
       </td>
       <td>
         <span class="badge ${resultado.empleado.tipo === 'becario' ? 'bg-info' : 'bg-secondary'}">
@@ -1345,6 +1428,15 @@ function llenarTabla(resultados) {
         <span class="badge ${resultado.diasFaltantes > 0 ? 'bg-danger' : 'bg-success'}">
           ${resultado.diasFaltantes}
         </span>
+      </td>
+      <td class="text-center">
+        ${resultado.diasJustificados > 0 ? `
+          <span class="badge bg-info" title="${resultado.justificacionesDetalle.map(j => `${j.nombreTipo}: ${j.dias} día(s)`).join(', ')}">
+            +${resultado.diasJustificados}
+          </span>
+        ` : `
+          <span class="text-muted">-</span>
+        `}
       </td>
       <td class="text-center">
         ${resultado.totalDescuentos > 0 ? `
