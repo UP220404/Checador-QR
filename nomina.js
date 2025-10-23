@@ -1041,13 +1041,20 @@ window.calcularNomina = async function() {
 
         // 🆕 CALCULAR DÍAS JUSTIFICADOS POR AUSENCIAS PRIMERO
         let diasJustificadosTotal = 0;
+        let diasJustificadosCompletos = 0; // Solo permisos/vacaciones completas
         const justificacionesDetalle = [];
 
         ausenciasEmpleado.forEach(ausencia => {
           const dias = ausencia.diasJustificados || 0;
           if (dias > 0) {
             const mapeo = mapearTipoAusenciaANomina(ausencia.tipo);
-            diasJustificadosTotal += dias;
+
+            // Si es retardo justificado, NO cuenta para días trabajados ni faltas
+            if (ausencia.tipo !== 'retardo_justificado') {
+              diasJustificadosTotal += dias;
+              diasJustificadosCompletos += dias;
+            }
+
             justificacionesDetalle.push({
               tipo: ausencia.tipo,
               dias: dias,
@@ -1060,18 +1067,22 @@ window.calcularNomina = async function() {
           }
         });
 
-        // Calcular faltas sobre los días estándar - RESTANDO días justificados
-        const faltasSinJustificar = DIAS_ESTANDAR - diasTrabajadosEfectivos - diasJustificadosTotal;
+        // Calcular faltas sobre los días estándar - RESTANDO solo días justificados completos (no retardos)
+        const faltasSinJustificar = DIAS_ESTANDAR - diasTrabajadosEfectivos - diasJustificadosCompletos;
         const cantidadFaltas = Math.max(0, faltasSinJustificar); // No puede ser negativo
         const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
+
+        // Días trabajados mostrados = días efectivos + días justificados completos
+        const diasTrabajadosMostrar = diasTrabajadosEfectivos + diasJustificadosCompletos;
 
         // 🔍 DEBUG para todos los empleados con ausencias
         if (ausenciasEmpleado.length > 0) {
           console.log(`🔍 CÁLCULO ${empleado.nombre}:`, {
             diasEstandar: DIAS_ESTANDAR,
-            diasTrabajados: diasTrabajadosEfectivos,
-            diasJustificados: diasJustificadosTotal,
-            formula: `${DIAS_ESTANDAR} - ${diasTrabajadosEfectivos} - ${diasJustificadosTotal} = ${cantidadFaltas}`,
+            diasTrabajadosReales: diasTrabajadosEfectivos,
+            diasJustificadosCompletos: diasJustificadosCompletos,
+            diasTrabajadosMostrar: diasTrabajadosMostrar,
+            formula: `${DIAS_ESTANDAR} - ${diasTrabajadosEfectivos} - ${diasJustificadosCompletos} = ${cantidadFaltas}`,
             faltasCalculadas: cantidadFaltas,
             ausencias: ausenciasEmpleado.length,
             detalleAusencias: justificacionesDetalle
@@ -1149,7 +1160,8 @@ window.calcularNomina = async function() {
           tipoNominaEmpleado: empleado.tipoNomina,
           diasLaboralesEsperados: DIAS_ESTANDAR, // 5 días para semanal, 10 para quincenal
           diasLaboralesReales: diasLaborales.length, // Días reales del período
-          diasTrabajados: diasTrabajadosEfectivos, // Días trabajados válidos (dentro de los días estándar)
+          diasTrabajados: diasTrabajadosMostrar, // Días trabajados mostrados (incluye justificados)
+          diasTrabajadosReales: diasTrabajadosEfectivos, // Días realmente trabajados
           diasFaltantes: cantidadFaltas, // Número de faltas
           retardos,
           diasDescuento: diasDescuentoPorRetardos, // Días descontados por retardos
