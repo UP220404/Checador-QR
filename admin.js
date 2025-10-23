@@ -2276,7 +2276,7 @@ function editarAusencia(id) {
   const fechaFinLocal = ausencia.fechaFin ? new Date(ausencia.fechaFin.getTime() - (ausencia.fechaFin.getTimezoneOffset() * 60000)) : null;
 
   document.getElementById("editarAusenciaId").value = id;
-  document.getElementById("editarUsuario").value = `${ausencia.nombreUsuario} (${ausencia.emailUsuario})`;
+  document.getElementById("editarUsuario").value = ausencia.nombreUsuario;
   document.getElementById("editarTipo").value = ausencia.tipo;
   document.getElementById("editarFechaInicio").value = fechaInicioLocal.toISOString().split('T')[0];
   document.getElementById("editarFechaFin").value = fechaFinLocal ? fechaFinLocal.toISOString().split('T')[0] : '';
