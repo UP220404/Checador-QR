@@ -1039,26 +1039,7 @@ window.calcularNomina = async function() {
         const diasAsistidosValidos = diasAsistidos.filter(dia => diasLaboralesEstandar.includes(dia));
         const diasTrabajadosEfectivos = diasAsistidosValidos.length;
 
-        // Calcular faltas sobre los días estándar
-        const cantidadFaltas = DIAS_ESTANDAR - diasTrabajadosEfectivos;
-        const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
-
-        // 🔍 DEBUG: Log para ver qué está pasando
-        if (empleado.nombre.includes('Lenin') || empleado.nombre.includes('lenin')) {
-          console.log('🔍 DEBUG DETALLADO:', {
-            empleado: empleado.nombre,
-            diasLaboralesDelPeriodo: diasLaborales,
-            totalDiasDelPeriodo: diasLaborales.length,
-            diasLaboralesEstandar: diasLaboralesEstandar,
-            diasQueAsistio: diasAsistidos,
-            diasAsistidosValidos: diasAsistidosValidos,
-            diasTrabajadosEfectivos: diasTrabajadosEfectivos,
-            diasQueFalto: diasFaltantes,
-            cantidadFaltas: cantidadFaltas
-          });
-        }
-
-        // 🆕 CALCULAR DÍAS JUSTIFICADOS POR AUSENCIAS
+        // 🆕 CALCULAR DÍAS JUSTIFICADOS POR AUSENCIAS PRIMERO
         let diasJustificadosTotal = 0;
         const justificacionesDetalle = [];
 
@@ -1078,6 +1059,26 @@ window.calcularNomina = async function() {
             console.log(`✅ ${empleado.nombre}: +${dias} días por ${mapeo?.nombre || ausencia.tipo}`);
           }
         });
+
+        // Calcular faltas sobre los días estándar - RESTANDO días justificados
+        const faltasSinJustificar = DIAS_ESTANDAR - diasTrabajadosEfectivos - diasJustificadosTotal;
+        const cantidadFaltas = Math.max(0, faltasSinJustificar); // No puede ser negativo
+        const diasFaltantes = diasLaboralesEstandar.filter(dia => !diasAsistidos.includes(dia));
+
+        // 🔍 DEBUG: Log para ver qué está pasando
+        if (empleado.nombre.includes('Lenin') || empleado.nombre.includes('lenin')) {
+          console.log('🔍 DEBUG DETALLADO:', {
+            empleado: empleado.nombre,
+            diasLaboralesDelPeriodo: diasLaborales,
+            totalDiasDelPeriodo: diasLaborales.length,
+            diasLaboralesEstandar: diasLaboralesEstandar,
+            diasQueAsistio: diasAsistidos,
+            diasAsistidosValidos: diasAsistidosValidos,
+            diasTrabajadosEfectivos: diasTrabajadosEfectivos,
+            diasQueFalto: diasFaltantes,
+            cantidadFaltas: cantidadFaltas
+          });
+        }
 
         // Descuento por retardos (cada 4 retardos = 1 día)
         const diasDescuentoPorRetardos = Math.floor(retardos / 4);
@@ -1368,11 +1369,19 @@ function mostrarVistaCompactaExtendida(resultados) {
           <div class="alert alert-info py-2 mb-2">
             <i class="bi bi-calendar-check me-2"></i>
             <strong>+${resultado.diasJustificados} día${resultado.diasJustificados > 1 ? 's' : ''} justificado${resultado.diasJustificados > 1 ? 's' : ''}</strong>
-            ${resultado.justificacionesDetalle.map(j => `
-              <small class="d-block mt-1">
-                <i class="bi bi-arrow-right-short"></i> ${j.nombreTipo}: ${j.dias} día${j.dias > 1 ? 's' : ''}
-              </small>
-            `).join('')}
+            ${resultado.justificacionesDetalle.map(j => {
+              // Si es retardo justificado (0.5 días), mostrar mensaje diferente
+              if (j.tipo === 'retardo_justificado') {
+                const cantidad = Math.round(j.dias * 2); // 0.5 → 1, 1 → 2
+                return `<small class="d-block mt-1">
+                  <i class="bi bi-arrow-right-short"></i> ${cantidad} retardo${cantidad > 1 ? 's' : ''} corregido${cantidad > 1 ? 's' : ''}
+                </small>`;
+              } else {
+                return `<small class="d-block mt-1">
+                  <i class="bi bi-arrow-right-short"></i> ${j.nombreTipo}: ${j.dias} día${j.dias > 1 ? 's' : ''}
+                </small>`;
+              }
+            }).join('')}
           </div>
         </div>
       ` : ''}
