@@ -951,20 +951,39 @@ window.calcularNomina = async function() {
     const ausenciasPorEmpleado = {};
 
     try {
-      const qAusencias = query(
-        collection(db, 'ausencias'),
-        where('estado', '==', 'aprobada'),
-        where('quincena.mes', '==', mesNum),
-        where('quincena.anio', '==', añoNum),
-        where('quincena.periodo', '==', quinceSelect)
-      );
+      // Convertir quinceSelect a número para comparar (primera = 1, segunda = 2)
+      const periodoNumero = quinceSelect === 'primera' ? 1 : quinceSelect === 'segunda' ? 2 : null;
+
+      console.log(`🔍 Buscando ausencias: mes=${mesNum}, año=${añoNum}, periodo=${periodoNumero} (quinceSelect="${quinceSelect}")`);
+
+      // Si es nómina quincenal, filtrar por período
+      let qAusencias;
+      if (tipoNominaCalculo === 'quincenal' && periodoNumero) {
+        qAusencias = query(
+          collection(db, 'ausencias'),
+          where('estado', '==', 'aprobada'),
+          where('quincena.mes', '==', mesNum),
+          where('quincena.anio', '==', añoNum),
+          where('quincena.periodo', '==', periodoNumero)
+        );
+      } else {
+        // Para nómina semanal o si no hay período, buscar solo por mes/año
+        qAusencias = query(
+          collection(db, 'ausencias'),
+          where('estado', '==', 'aprobada'),
+          where('quincena.mes', '==', mesNum),
+          where('quincena.anio', '==', añoNum)
+        );
+      }
 
       const ausenciasSnapshot = await getDocs(qAusencias);
-      console.log(`✅ ${ausenciasSnapshot.size} ausencias aprobadas encontradas`);
+      console.log(`✅ ${ausenciasSnapshot.size} ausencias aprobadas encontradas para el período`);
 
       ausenciasSnapshot.forEach(doc => {
         const ausencia = { id: doc.id, ...doc.data() };
         const email = ausencia.emailUsuario;
+
+        console.log(`  📄 Ausencia: ${ausencia.nombreUsuario} - ${ausencia.tipo} - ${ausencia.diasJustificados} días`);
 
         if (!ausenciasPorEmpleado[email]) {
           ausenciasPorEmpleado[email] = [];
@@ -986,6 +1005,7 @@ window.calcularNomina = async function() {
         let diasTrabajados = registros.length;
         const detalleRetardos = [];
         const diasAsistidos = [];
+        let retardosCorregidos = 0; // 🆕 Contador de retardos corregidos
 
         // 🆕 Obtener ausencias del empleado
         const ausenciasEmpleado = ausenciasPorEmpleado[empleado.email] || [];
@@ -1004,8 +1024,10 @@ window.calcularNomina = async function() {
             });
           } else if (registro.estado === 'retardo' && registro.corregidoPorAusencia) {
             console.log(`✅ Retardo corregido (NO se cuenta): ${registro.fecha} ${registro.hora}`);
+            retardosCorregidos++; // 🆕 Contar retardo corregido
           } else if (registro.estado === 'puntual' && registro.corregidoPorAusencia) {
             console.log(`💚 Puntual por corrección: ${registro.fecha} ${registro.hora} (era retardo)`);
+            retardosCorregidos++; // 🆕 Contar corrección
           }
         });
 
@@ -1121,6 +1143,8 @@ window.calcularNomina = async function() {
           diasJustificados: diasJustificadosTotal, // 🆕 Días justificados por ausencias
           justificacionesDetalle: justificacionesDetalle, // 🆕 Detalle de ausencias aplicadas
           tieneAusencias: ausenciasEmpleado.length > 0, // 🆕 Indicador de ausencias
+          retardosCorregidos: retardosCorregidos, // 🆕 Contador de retardos corregidos
+          tieneCorrecciones: retardosCorregidos > 0, // 🆕 Indicador de correcciones
           pagoPorDia: Math.round(pagoPorDia),
           pagoTotal: Math.round(pagoTotal),
           descuentoIMSS,
@@ -1303,6 +1327,7 @@ function mostrarVistaCompactaExtendida(resultados) {
           <span class="badge ${resultado.tipoNominaEmpleado === 'semanal' ? 'bg-info' : 'bg-success'} ms-1">${tipoNomina}</span>
           ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">E</span>' : ''}
           ${resultado.tieneAusencias ? '<span class="badge bg-warning ms-1" title="Tiene ausencias/justificantes aplicados"><i class="bi bi-calendar-check"></i></span>' : ''}
+          ${resultado.tieneCorrecciones ? '<span class="badge bg-primary ms-1" title="${resultado.retardosCorregidos} retardo(s) corregido(s)"><i class="bi bi-clock-history"></i></span>' : ''}
         </div>
         <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicionNomina('${resultado.empleado.uid}')">
           <i class="bi bi-pencil"></i>
@@ -1406,6 +1431,7 @@ function llenarTabla(resultados) {
         <div class="fw-bold">${resultado.empleado.nombre}</div>
         ${resultado.editadoManualmente ? '<span class="badge bg-purple ms-1">Editado</span>' : ''}
         ${resultado.tieneAusencias ? '<span class="badge bg-warning ms-1" title="Tiene ausencias/justificantes"><i class="bi bi-calendar-check"></i></span>' : ''}
+        ${resultado.tieneCorrecciones ? '<span class="badge bg-primary ms-1" title="${resultado.retardosCorregidos} retardo(s) corregido(s)"><i class="bi bi-clock-history"></i></span>' : ''}
       </td>
       <td>
         <span class="badge ${resultado.empleado.tipo === 'becario' ? 'bg-info' : 'bg-secondary'}">
