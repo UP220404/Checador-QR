@@ -1819,7 +1819,8 @@ async function cargarUsuariosParaAusencias() {
     usuariosArray.forEach(usuario => {
       const option = document.createElement("option");
       option.value = usuario.email;
-      option.textContent = `${usuario.nombre} (${usuario.email})`;
+      option.textContent = usuario.nombre;
+      option.dataset.nombre = usuario.nombre; // Guardar nombre en dataset
       option.dataset.tipo = usuario.tipo;
       selectUsuario.appendChild(option);
     });
@@ -2188,7 +2189,7 @@ async function manejarNuevaAusencia(e) {
 
   const selectUsuario = document.getElementById("ausenciaUsuario");
   const emailUsuario = selectUsuario.value;
-  const nombreUsuario = selectUsuario.selectedOptions[0]?.textContent.trim() || emailUsuario;
+  const nombreUsuario = selectUsuario.selectedOptions[0]?.dataset.nombre || selectUsuario.selectedOptions[0]?.textContent.trim() || emailUsuario;
 
   const tipo = document.getElementById("ausenciaTipo").value;
   const fechaInicio = document.getElementById("ausenciaFechaInicio").value;
