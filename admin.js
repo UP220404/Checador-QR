@@ -2627,11 +2627,14 @@ function verDetalleAusencia(id) {
   }) : "No especificada";
   
   const diasAusencia = calcularDiasAusencia(ausencia.fechaInicio, ausencia.fechaFin);
-  
+
+  // Limpiar el correo del nombre si existe
+  const nombreLimpio = ausencia.nombreUsuario.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
   const detalles = `
 📋 DETALLE DE AUSENCIA
 
-👤 Usuario: ${ausencia.nombreUsuario}
+👤 Usuario: ${nombreLimpio}
 
 📅 Tipo: ${formatearTipo(ausencia.tipo)} 
 📅 Fecha inicio: ${fechaInicioStr}
@@ -2732,8 +2735,11 @@ function actualizarTablaAusenciasSafe() {
       }) : "";
       const rangoFecha = fechaFinStr ? `${fechaInicioStr} - ${fechaFinStr}` : fechaInicioStr;
 
+      // Limpiar el correo del nombre si existe (formato "Nombre (correo)")
+      const nombreLimpio = ausencia.nombreUsuario.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
       tr.innerHTML = `
-        <td><div class="fw-bold">${ausencia.nombreUsuario}</div></td>
+        <td><div class="fw-bold">${nombreLimpio}</div></td>
         <td><span class="badge ${getBadgeClassTipo(ausencia.tipo)}">${formatearTipo(ausencia.tipo)}</span></td>
         <td>${rangoFecha}</td>
         <td><span class="badge bg-light text-dark">${diasAusencia} día${diasAusencia !== 1 ? 's' : ''}</span></td>
