@@ -1360,6 +1360,7 @@ function mostrarVistaCompactaExtendida(resultados) {
         <div class="compact-stat">
           <span class="stat-value ${resultado.diasFaltantes > 0 ? 'text-danger' : 'text-success'}">${resultado.diasFaltantes}</span>
           <small>Faltas</small>
+          ${resultado.diasJustificados > 0 ? `<small class="text-muted d-block" style="font-size: 9px;">-${resultado.diasJustificados} justif.</small>` : ''}
         </div>
         <div class="compact-stat highlight">
           <span class="stat-value text-success">$${formatearNumero(pagoFinalMostrar)}</span>
