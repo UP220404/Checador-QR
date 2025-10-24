@@ -1571,7 +1571,7 @@ window.abrirEdicionNomina = async function(empleadoId) {
   // 🆕 CARGAR AUSENCIAS APROBADAS AUTOMÁTICAMENTE
   try {
     const ausencias = await obtenerAusenciasDelPeriodo(
-      resultado.empleado.correo,
+      resultado.empleado.email,
       mesActualNum,
       añoActualNum,
       quinceActual
@@ -1736,7 +1736,7 @@ async function guardarEdicionManual() {
     const comentarios = document.getElementById('editComentarios').value;
 
     // 🆕 Generar ID único para esta nómina
-    const nominaReferencia = `nomina_${empleadoId}_${añoActual}_${mesActual}_${quinceActual}_${Date.now()}`;
+    const nominaReferencia = `nomina_${empleadoId}_${añoActualNum}_${mesActualNum}_${quinceActual}_${Date.now()}`;
 
     const datosEdicion = {
       diasTrabajados,
@@ -1884,14 +1884,45 @@ async function obtenerAusenciasDelPeriodo(emailEmpleado, mes, anio, periodo) {
   try {
     console.log(`🔄 Buscando ausencias aprobadas para ${emailEmpleado} - ${mes}/${anio} periodo ${periodo}`);
 
-    const q = query(
-      collection(db, 'ausencias'),
+    // Convertir periodo a número si es necesario
+    let periodoNumero = null;
+
+    // Si periodo contiene "Período" seguido de un número, extraerlo
+    if (typeof periodo === 'string' && periodo.includes('Período')) {
+      const match = periodo.match(/Período\s+(\d+)/);
+      if (match) {
+        periodoNumero = parseInt(match[1]);
+      }
+    }
+    // Si es "primera" o "segunda", convertir a número
+    else if (periodo === 'primera') {
+      periodoNumero = 1;
+    } else if (periodo === 'segunda') {
+      periodoNumero = 2;
+    }
+    // Si ya es un número, usarlo directamente
+    else if (typeof periodo === 'number') {
+      periodoNumero = periodo;
+    }
+    // Para nóminas semanales, no filtrar por periodo
+    else if (typeof periodo === 'string' && periodo.includes('Semana')) {
+      periodoNumero = null; // No filtrar por periodo para semanales
+    }
+
+    // Construir query base
+    let queryConstraints = [
       where('emailUsuario', '==', emailEmpleado),
       where('estado', '==', 'aprobada'),
       where('quincena.mes', '==', mes),
-      where('quincena.anio', '==', anio),
-      where('quincena.periodo', '==', periodo)
-    );
+      where('quincena.anio', '==', anio)
+    ];
+
+    // Agregar filtro de periodo solo si es quincenal
+    if (periodoNumero !== null) {
+      queryConstraints.push(where('quincena.periodo', '==', periodoNumero));
+    }
+
+    const q = query(collection(db, 'ausencias'), ...queryConstraints);
 
     const querySnapshot = await getDocs(q);
     const ausencias = [];
