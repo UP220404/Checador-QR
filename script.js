@@ -604,12 +604,12 @@ function getBadgeClass(tipoEvento) {
 async function registrarAsistencia(user, datosUsuario, coords) {
   const esRemoto = USUARIOS_REMOTOS.includes(user.email);
 
-  const ahora = new Date();
-  const hora = ahora.toLocaleTimeString("es-MX", { hour12: false });
-  const fecha = [
-    ahora.getFullYear(),
-    String(ahora.getMonth() + 1).padStart(2, '0'),
-    String(ahora.getDate()).padStart(2, '0')
+  // ⚠️ SOLO para referencia inicial de fecha (no se usa para evaluar puntualidad)
+  const ahoraLocal = new Date();
+  const fechaLocal = [
+    ahoraLocal.getFullYear(),
+    String(ahoraLocal.getMonth() + 1).padStart(2, '0'),
+    String(ahoraLocal.getDate()).padStart(2, '0')
   ].join('-');
 
   // PRIMERO: Verificar registros existentes
@@ -619,88 +619,52 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   // ✅ NUEVO: Lógica especial para usuario tipo "especial"
   const esUsuarioEspecial = datosUsuario.tipo === "especial" || datosUsuario.tipo === "horario_especial";
 
-  // SEGUNDO: Verificar horarios y lógica de negocio
-  let tipoEvento;
+  // SEGUNDO: Verificar horarios y lógica de negocio (validaciones básicas con hora local)
   let mensajeTipo = "";
 
   if (!yaRegistroEntrada) {
     // ✅ Para usuarios especiales: sin restricciones de horario de entrada
     if (!esUsuarioEspecial) {
-      // Lógica normal para becarios y tiempo completo
+      // Validación básica de ventana de entrada (hora local solo para prevenir intentos obviamente fuera de hora)
       const inicioEntrada = new Date();
       inicioEntrada.setHours(7, 0, 0, 0);
       const finEntrada = new Date();
-      
+
       if (datosUsuario.tipo === "becario") {
         finEntrada.setHours(13, 0, 0, 0);
       } else {
         finEntrada.setHours(16, 0, 0, 0);
       }
 
-      if (ahora < inicioEntrada) {
+      if (ahoraLocal < inicioEntrada) {
         mostrarEstado("error", "❌ Solo puedes registrar entrada a partir de las 7:00 am.");
         return;
       }
-      if (ahora >= finEntrada) {
+      if (ahoraLocal >= finEntrada) {
         mostrarEstado("error", `❌ Ya no puedes registrar entrada después de las ${finEntrada.getHours()}:00.`);
         return;
       }
     }
-    
-    // Es una entrada
-    const horaActual = ahora.getHours();
-    const minutosActual = ahora.getMinutes();
-    
-    let esPuntual = false;
-    
-    if (esUsuarioEspecial) {
-  // ✅ Usuario especial: SIEMPRE es puntual (sin evaluación de horario)
-  esPuntual = true;
-} else {
-  // ✅ LÓGICA SIMPLIFICADA Y CORRECTA
-  const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
-  const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 10
 
-  console.log(`🕐 Evaluando puntualidad: ${horaActual}:${String(minutosActual).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos).padStart(2, '0')}`);
-
-  // ✅ LÓGICA CORREGIDA: considerar hasta 8:10:59
-  if (horaActual < limiteHora) {
-    // Antes de las 8:00 = PUNTUAL
-    esPuntual = true;
-    console.log('✅ PUNTUAL: Antes de las 8:00');
-  } else if (horaActual === limiteHora && minutosActual <= limiteMinutos) {
-    // Entre 8:00 y 8:10:59 = PUNTUAL
-    esPuntual = true;
-    console.log('✅ PUNTUAL: Entre 8:00 y 8:10:59');
-  } else {
-    // A partir de 8:11:00 = RETARDO
-    esPuntual = false;
-    console.log('⚠️ RETARDO: A partir de 8:11');
-  }
-}
-    
-    tipoEvento = esPuntual ? "puntual" : "retardo";
     mensajeTipo = "entrada";
-    
+
   } else if (!yaRegistroSalida) {
     // ✅ Para usuarios especiales: sin restricciones de horario de salida
     if (!esUsuarioEspecial) {
-      // Lógica normal para otros tipos
+      // Validación básica de hora de salida
       const horaSalida = new Date();
       if (datosUsuario.tipo === "becario") {
         horaSalida.setHours(13, 0, 0, 0);
       } else {
         horaSalida.setHours(16, 0, 0, 0);
       }
-      
-      if (ahora < horaSalida) {
+
+      if (ahoraLocal < horaSalida) {
         mostrarEstado("error", `⏳ Espera a la hora de salida (${horaSalida.getHours()}:00) para registrar tu salida.`);
         return;
       }
     }
-    
-    // Es una salida
-    tipoEvento = "salida";
+
     mensajeTipo = "salida";
   } else {
     mostrarEstado("error", "⚠️ Ya registraste entrada y salida hoy.");
@@ -710,13 +674,13 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   // TERCERO: Solo validar ubicación si NO es remoto Y NO está en modo pruebas
   if (!esRemoto && !CONFIG.MODO_PRUEBAS) {
     // Validaciones normales de ubicación, fin de semana, etc.
-    const diaSemana = ahora.getDay();
+    const diaSemana = ahoraLocal.getDay();
     if (diaSemana === 0 || diaSemana === 6) {
       mostrarEstado("error", "⛔ No puedes registrar asistencia en fin de semana.");
       return;
     }
 
-    const horaActual = ahora.getHours();
+    const horaActual = ahoraLocal.getHours();
     if (horaActual < 7 || horaActual >= 22) {
       mostrarEstado("error", "❌ Solo puedes registrar entre 7:00 am y 10:00 pm.");
       return;
@@ -755,41 +719,109 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     console.warn("⚠️ MODO PRUEBAS ACTIVO - Validaciones de ubicación omitidas");
   }
 
-  // CUARTO: Crear registro en Firestore
+  // CUARTO: Crear registro en Firestore con timestamp del servidor
   try {
+    // 1️⃣ Guardar registro SIN estado (pendiente de evaluación)
     const docRef = await addDoc(collection(db, "registros"), {
       uid: user.uid,
       nombre: datosUsuario.nombre,
       email: user.email,
       tipo: datosUsuario.tipo,
-      fecha,
-      hora,
+      fecha: fechaLocal, // Fecha aproximada, se actualizará con la del servidor
+      hora: "pendiente", // Se actualizará con la hora del servidor
       tipoEvento: mensajeTipo,
-      estado: tipoEvento,
+      estado: "pendiente", // Se evaluará con el timestamp del servidor
       ubicacion: coords || null,
       timestamp: serverTimestamp()
     });
+
+    console.log("📝 Registro creado, esperando timestamp del servidor...");
+
+    // 2️⃣ Leer el documento recién creado para obtener el timestamp del servidor
+    const registroDoc = await getDoc(docRef);
+    const registroData = registroDoc.data();
+
+    if (!registroData || !registroData.timestamp) {
+      throw new Error("No se pudo obtener el timestamp del servidor");
+    }
+
+    // 3️⃣ Convertir timestamp del servidor a fecha/hora de México
+    const timestampServidor = registroData.timestamp.toDate();
+    const horaServidor = timestampServidor.toLocaleTimeString("es-MX", {
+      hour12: false,
+      timeZone: "America/Mexico_City"
+    });
+    const fechaServidor = [
+      timestampServidor.getFullYear(),
+      String(timestampServidor.getMonth() + 1).padStart(2, '0'),
+      String(timestampServidor.getDate()).padStart(2, '0')
+    ].join('-');
+
+    console.log(`🕐 Hora del servidor: ${horaServidor} (vs hora local que podría estar manipulada)`);
+
+    // 4️⃣ Evaluar puntualidad usando la hora del SERVIDOR
+    let tipoEvento = "salida"; // Default para salidas
+
+    if (mensajeTipo === "entrada") {
+      // Solo evaluar puntualidad para entradas
+      if (esUsuarioEspecial) {
+        // ✅ Usuario especial: SIEMPRE es puntual
+        tipoEvento = "puntual";
+      } else {
+        // ✅ Evaluar con la hora del SERVIDOR (no manipulable)
+        const horaActualServidor = timestampServidor.getHours();
+        const minutosActualServidor = timestampServidor.getMinutes();
+
+        const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
+        const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 10
+
+        console.log(`🔒 Evaluando puntualidad con hora del servidor: ${horaActualServidor}:${String(minutosActualServidor).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos).padStart(2, '0')}`);
+
+        if (horaActualServidor < limiteHora) {
+          // Antes de las 8:00 = PUNTUAL
+          tipoEvento = "puntual";
+          console.log('✅ PUNTUAL: Antes de las 8:00 (servidor)');
+        } else if (horaActualServidor === limiteHora && minutosActualServidor <= limiteMinutos) {
+          // Entre 8:00 y 8:10:59 = PUNTUAL
+          tipoEvento = "puntual";
+          console.log('✅ PUNTUAL: Entre 8:00 y 8:10:59 (servidor)');
+        } else {
+          // A partir de 8:11:00 = RETARDO
+          tipoEvento = "retardo";
+          console.log('⚠️ RETARDO: A partir de 8:11 (servidor)');
+        }
+      }
+    }
+
+    // 5️⃣ Actualizar registro con el estado correcto basado en timestamp del servidor
+    await updateDoc(docRef, {
+      fecha: fechaServidor,
+      hora: horaServidor,
+      estado: tipoEvento
+    });
+
+    console.log(`✅ Registro actualizado con estado: ${tipoEvento} y hora del servidor: ${horaServidor}`);
 
     setTimeout(async () => {
       await cargarHistorial(user.uid);
     }, 1200);
 
-    actualizarUI(user, datosUsuario, { fecha, hora, tipoEvento: mensajeTipo });
+    actualizarUI(user, datosUsuario, { fecha: fechaServidor, hora: horaServidor, tipoEvento: mensajeTipo });
 
     let mensaje = "";
     if (tipoEvento === "puntual") {
-      mensaje = esUsuarioEspecial 
-        ? `✅ Entrada registrada a las ${hora} - Horario Especial` 
-        : `✅ Entrada puntual a las ${hora}`;
+      mensaje = esUsuarioEspecial
+        ? `✅ Entrada registrada a las ${horaServidor} - Horario Especial`
+        : `✅ Entrada puntual a las ${horaServidor}`;
     } else if (tipoEvento === "retardo") {
-      mensaje = `⚠️ Entrada con retardo a las ${hora}`;
+      mensaje = `⚠️ Entrada con retardo a las ${horaServidor}`;
     } else if (tipoEvento === "salida") {
-      mensaje = esUsuarioEspecial 
-        ? `📤 Salida registrada a las ${hora} - Horario Especial`
-        : `📤 Salida registrada a las ${hora}`;
+      mensaje = esUsuarioEspecial
+        ? `📤 Salida registrada a las ${horaServidor} - Horario Especial`
+        : `📤 Salida registrada a las ${horaServidor}`;
     }
 
-    const mensajeEspecial = generarMensajeEspecial(ahora.getDay(), tipoEvento, datosUsuario.nombre);
+    const mensajeEspecial = generarMensajeEspecial(timestampServidor.getDay(), tipoEvento, datosUsuario.nombre);
     if (mensajeEspecial) {
       mensaje += `\n${mensajeEspecial}`;
     }

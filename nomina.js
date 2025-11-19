@@ -1104,8 +1104,8 @@ window.calcularNomina = async function() {
           });
         }
 
-        // Descuento por retardos (cada 4 retardos = 1 día)
-        const diasDescuentoPorRetardos = Math.floor(retardos / 4);
+        // Descuento por retardos (solo 1 día al llegar a 4 retardos, sin importar si tienen más)
+        const diasDescuentoPorRetardos = retardos >= 4 ? 1 : 0;
 
         // Días efectivos pagados = días trabajados - descuento por retardos + días justificados
         const diasEfectivos = diasTrabajadosEfectivos - diasDescuentoPorRetardos;
@@ -1212,7 +1212,7 @@ window.calcularNomina = async function() {
           console.log(`✏️ Aplicando cambios a ${resultado.empleado.nombre}`);
 
           // Recalcular con los datos editados
-          const diasDescuentoPorRetardos = Math.floor(cambiosManual.retardos / 4);
+          const diasDescuentoPorRetardos = cambiosManual.retardos >= 4 ? 1 : 0;
           const diasEfectivos = Math.max(0, cambiosManual.diasTrabajados - diasDescuentoPorRetardos);
           const diasTotalesAPagar = diasEfectivos + (cambiosManual.diasJustificados || 0) + (cambiosManual.diasExtra || 0);
 
@@ -1668,7 +1668,7 @@ function calcularPreviaEdicion() {
     diasJustificados += parseInt(document.getElementById('diasViaje').value) || 0;
   }
 
-  const diasDescuentoPorRetardos = Math.floor(retardos / 4);
+  const diasDescuentoPorRetardos = retardos >= 4 ? 1 : 0;
   const diasEfectivos = Math.max(0, diasTrabajados - diasDescuentoPorRetardos);
   const diasTotalesAPagar = diasEfectivos + diasJustificados + diasExtra;
   
