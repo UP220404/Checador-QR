@@ -18,7 +18,8 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Configuración de Firebase
@@ -737,99 +738,112 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
     console.log("📝 Registro creado, esperando timestamp del servidor...");
 
-    // 2️⃣ Leer el documento recién creado para obtener el timestamp del servidor
-    const registroDoc = await getDoc(docRef);
-    const registroData = registroDoc.data();
+    // 2️⃣ Usar onSnapshot para esperar a que Firebase actualice el timestamp del servidor
+    const unsubscribe = onSnapshot(docRef, (registroDoc) => {
+      const registroData = registroDoc.data();
 
-    if (!registroData || !registroData.timestamp) {
-      throw new Error("No se pudo obtener el timestamp del servidor");
-    }
+      // Verificar que el timestamp ya esté disponible (no sea null)
+      if (!registroData || !registroData.timestamp) {
+        console.log("⏳ Esperando a que Firebase asigne el timestamp del servidor...");
+        return; // Esperar al siguiente snapshot
+      }
 
-    // 3️⃣ Convertir timestamp del servidor a fecha/hora de México
-    const timestampServidor = registroData.timestamp.toDate();
-    const horaServidor = timestampServidor.toLocaleTimeString("es-MX", {
-      hour12: false,
-      timeZone: "America/Mexico_City"
-    });
-    const fechaServidor = [
-      timestampServidor.getFullYear(),
-      String(timestampServidor.getMonth() + 1).padStart(2, '0'),
-      String(timestampServidor.getDate()).padStart(2, '0')
-    ].join('-');
+      // 3️⃣ Convertir timestamp del servidor a fecha/hora de México
+      const timestampServidor = registroData.timestamp.toDate();
+      const horaServidor = timestampServidor.toLocaleTimeString("es-MX", {
+        hour12: false,
+        timeZone: "America/Mexico_City"
+      });
+      const fechaServidor = [
+        timestampServidor.getFullYear(),
+        String(timestampServidor.getMonth() + 1).padStart(2, '0'),
+        String(timestampServidor.getDate()).padStart(2, '0')
+      ].join('-');
 
-    console.log(`🕐 Hora del servidor: ${horaServidor} (vs hora local que podría estar manipulada)`);
+      console.log(`🕐 Hora del servidor: ${horaServidor} (vs hora local que podría estar manipulada)`);
 
-    // 4️⃣ Evaluar puntualidad usando la hora del SERVIDOR
-    let tipoEvento = "salida"; // Default para salidas
+      // 4️⃣ Evaluar puntualidad usando la hora del SERVIDOR
+      let tipoEvento = "salida"; // Default para salidas
 
-    if (mensajeTipo === "entrada") {
-      // Solo evaluar puntualidad para entradas
-      if (esUsuarioEspecial) {
-        // ✅ Usuario especial: SIEMPRE es puntual
-        tipoEvento = "puntual";
-      } else {
-        // ✅ Evaluar con la hora del SERVIDOR (no manipulable)
-        const horaActualServidor = timestampServidor.getHours();
-        const minutosActualServidor = timestampServidor.getMinutes();
-
-        const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
-        const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 10
-
-        console.log(`🔒 Evaluando puntualidad con hora del servidor: ${horaActualServidor}:${String(minutosActualServidor).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos).padStart(2, '0')}`);
-
-        if (horaActualServidor < limiteHora) {
-          // Antes de las 8:00 = PUNTUAL
+      if (mensajeTipo === "entrada") {
+        // Solo evaluar puntualidad para entradas
+        if (esUsuarioEspecial) {
+          // ✅ Usuario especial: SIEMPRE es puntual
           tipoEvento = "puntual";
-          console.log('✅ PUNTUAL: Antes de las 8:00 (servidor)');
-        } else if (horaActualServidor === limiteHora && minutosActualServidor <= limiteMinutos) {
-          // Entre 8:00 y 8:10:59 = PUNTUAL
-          tipoEvento = "puntual";
-          console.log('✅ PUNTUAL: Entre 8:00 y 8:10:59 (servidor)');
         } else {
-          // A partir de 8:11:00 = RETARDO
-          tipoEvento = "retardo";
-          console.log('⚠️ RETARDO: A partir de 8:11 (servidor)');
+          // ✅ Evaluar con la hora del SERVIDOR (no manipulable)
+          const horaActualServidor = timestampServidor.getHours();
+          const minutosActualServidor = timestampServidor.getMinutes();
+
+          const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours; // 8
+          const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes; // 10
+
+          console.log(`🔒 Evaluando puntualidad con hora del servidor: ${horaActualServidor}:${String(minutosActualServidor).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos).padStart(2, '0')}`);
+
+          if (horaActualServidor < limiteHora) {
+            // Antes de las 8:00 = PUNTUAL
+            tipoEvento = "puntual";
+            console.log('✅ PUNTUAL: Antes de las 8:00 (servidor)');
+          } else if (horaActualServidor === limiteHora && minutosActualServidor <= limiteMinutos) {
+            // Entre 8:00 y 8:10:59 = PUNTUAL
+            tipoEvento = "puntual";
+            console.log('✅ PUNTUAL: Entre 8:00 y 8:10:59 (servidor)');
+          } else {
+            // A partir de 8:11:00 = RETARDO
+            tipoEvento = "retardo";
+            console.log('⚠️ RETARDO: A partir de 8:11 (servidor)');
+          }
         }
       }
-    }
 
-    // 5️⃣ Actualizar registro con el estado correcto basado en timestamp del servidor
-    await updateDoc(docRef, {
-      fecha: fechaServidor,
-      hora: horaServidor,
-      estado: tipoEvento
+      // 5️⃣ Actualizar registro con el estado correcto basado en timestamp del servidor
+      updateDoc(docRef, {
+        fecha: fechaServidor,
+        hora: horaServidor,
+        estado: tipoEvento
+      }).then(() => {
+        console.log(`✅ Registro actualizado con estado: ${tipoEvento} y hora del servidor: ${horaServidor}`);
+
+        setTimeout(async () => {
+          await cargarHistorial(user.uid);
+        }, 1200);
+
+        actualizarUI(user, datosUsuario, { fecha: fechaServidor, hora: horaServidor, tipoEvento: mensajeTipo });
+
+        let mensaje = "";
+        if (tipoEvento === "puntual") {
+          mensaje = esUsuarioEspecial
+            ? `✅ Entrada registrada a las ${horaServidor} - Horario Especial`
+            : `✅ Entrada puntual a las ${horaServidor}`;
+        } else if (tipoEvento === "retardo") {
+          mensaje = `⚠️ Entrada con retardo a las ${horaServidor}`;
+        } else if (tipoEvento === "salida") {
+          mensaje = esUsuarioEspecial
+            ? `📤 Salida registrada a las ${horaServidor} - Horario Especial`
+            : `📤 Salida registrada a las ${horaServidor}`;
+        }
+
+        const mensajeEspecial = generarMensajeEspecial(timestampServidor.getDay(), tipoEvento, datosUsuario.nombre);
+        if (mensajeEspecial) {
+          mensaje += `\n${mensajeEspecial}`;
+        }
+
+        mostrarEstado(tipoEvento, mensaje);
+        setTimeout(() => {
+          window.close();
+        }, 7000);
+
+        // Desuscribirse del listener
+        unsubscribe();
+      }).catch(error => {
+        console.error("Error actualizando registro:", error);
+        mostrarEstado("error", "❌ Error al actualizar registro");
+        unsubscribe();
+      });
+    }, (error) => {
+      console.error("Error en snapshot:", error);
+      mostrarEstado("error", "❌ Error al obtener timestamp del servidor");
     });
-
-    console.log(`✅ Registro actualizado con estado: ${tipoEvento} y hora del servidor: ${horaServidor}`);
-
-    setTimeout(async () => {
-      await cargarHistorial(user.uid);
-    }, 1200);
-
-    actualizarUI(user, datosUsuario, { fecha: fechaServidor, hora: horaServidor, tipoEvento: mensajeTipo });
-
-    let mensaje = "";
-    if (tipoEvento === "puntual") {
-      mensaje = esUsuarioEspecial
-        ? `✅ Entrada registrada a las ${horaServidor} - Horario Especial`
-        : `✅ Entrada puntual a las ${horaServidor}`;
-    } else if (tipoEvento === "retardo") {
-      mensaje = `⚠️ Entrada con retardo a las ${horaServidor}`;
-    } else if (tipoEvento === "salida") {
-      mensaje = esUsuarioEspecial
-        ? `📤 Salida registrada a las ${horaServidor} - Horario Especial`
-        : `📤 Salida registrada a las ${horaServidor}`;
-    }
-
-    const mensajeEspecial = generarMensajeEspecial(timestampServidor.getDay(), tipoEvento, datosUsuario.nombre);
-    if (mensajeEspecial) {
-      mensaje += `\n${mensajeEspecial}`;
-    }
-
-    mostrarEstado(tipoEvento, mensaje);
-    setTimeout(() => {
-      window.close();
-    }, 7000);
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);

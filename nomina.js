@@ -2214,7 +2214,7 @@ function actualizarTarjetaEmpleado(empleadoId) {
   
   if (cambiosManual) {
     const original = window.datosOriginales;
-    const diasDescuentoPorRetardos = Math.floor(cambiosManual.retardos / 4);
+    const diasDescuentoPorRetardos = cambiosManual.retardos >= 4 ? 1 : 0;
     const diasEfectivos = Math.max(0, cambiosManual.diasTrabajados - diasDescuentoPorRetardos);
     const diasTotalesAPagar = diasEfectivos + cambiosManual.diasJustificados + cambiosManual.diasExtra;
     
@@ -3144,8 +3144,8 @@ window.mostrarDetallesRetardos = function(empleadoId) {
               `).join('')}
             </div>
             <div class="alert alert-info mt-3">
-              <strong>Política:</strong> Cada 4 retardos = 1 día de descuento<br>
-              <strong>Total:</strong> ${resultado.retardos} retardos = ${Math.floor(resultado.retardos / 4)} día(s) descontado(s)
+              <strong>Política:</strong> Al llegar a 4 retardos se descuenta 1 día (sin importar si tienen más retardos)<br>
+              <strong>Total:</strong> ${resultado.retardos} retardos = ${resultado.retardos >= 4 ? 1 : 0} día descontado
             </div>
           </div>
         </div>
