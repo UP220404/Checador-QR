@@ -912,10 +912,13 @@ function getMensajeDefault(tipoEvento, hora) {
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     usuarioActual = user;
-    
-    // Verificar acceso sospechoso con usuario identificado
+
+    // Verificar si es usuario remoto ANTES de la verificación de acceso sospechoso
+    const esUsuarioRemoto = USUARIOS_REMOTOS.includes(user.email);
+
+    // Verificar acceso sospechoso con usuario identificado (excepto usuarios remotos)
     const accesoSospechoso = verificarAccesoSospechoso();
-    if (accesoSospechoso && !sesionValidada) {
+    if (accesoSospechoso && !sesionValidada && !esUsuarioRemoto) {
       await registrarIntentoSospechoso(accesoSospechoso, user);
       mostrarEstado("error", `⚠️ ${user.displayName || user.email}, debes escanear el QR para registrar asistencia.`);
       return; // ✅ IMPORTANTE: Salir aquí si no está validado
