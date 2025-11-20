@@ -742,9 +742,25 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
     console.log("📝 Registro creado, obteniendo hora del servidor...");
 
-    // 2️⃣ Leer el documento para obtener el timestamp del servidor
-    const registroDoc = await getDoc(docRef);
-    const registroData = registroDoc.data();
+    // 2️⃣ Esperar y leer el documento para obtener el timestamp del servidor
+    // Firebase necesita un momento para resolver serverTimestamp()
+    let registroData = null;
+    let intentos = 0;
+    const maxIntentos = 5;
+
+    while (intentos < maxIntentos) {
+      await new Promise(resolve => setTimeout(resolve, 300)); // Esperar 300ms
+      const registroDoc = await getDoc(docRef);
+      registroData = registroDoc.data();
+
+      if (registroData && registroData.timestamp) {
+        console.log(`✅ Timestamp obtenido en intento ${intentos + 1}`);
+        break;
+      }
+
+      intentos++;
+      console.log(`⏳ Esperando timestamp del servidor... intento ${intentos}/${maxIntentos}`);
+    }
 
     if (!registroData || !registroData.timestamp) {
       // Si no hay timestamp, usar hora del cliente como fallback
