@@ -658,8 +658,8 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   let mensajeTipo = "";
 
   if (!yaRegistroEntrada) {
-    // ✅ Para usuarios especiales: sin restricciones de horario de entrada
-    if (!esUsuarioEspecial) {
+    // ✅ Para usuarios especiales o en modo pruebas: sin restricciones de horario de entrada
+    if (!esUsuarioEspecial && !esModoPruebas) {
       // Validación básica de ventana de entrada (hora local solo para prevenir intentos obviamente fuera de hora)
       const inicioEntrada = new Date();
       inicioEntrada.setHours(7, 0, 0, 0);
@@ -684,8 +684,8 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     mensajeTipo = "entrada";
 
   } else if (!yaRegistroSalida) {
-    // ✅ Para usuarios especiales: sin restricciones de horario de salida
-    if (!esUsuarioEspecial) {
+    // ✅ Para usuarios especiales o en modo pruebas: sin restricciones de horario de salida
+    if (!esUsuarioEspecial && !esModoPruebas) {
       // Validación básica de hora de salida
       const horaSalida = new Date();
       if (datosUsuario.tipo === "becario") {
