@@ -42,7 +42,7 @@ const CONFIG = {
 
 // Usuarios con modo pruebas individual (pueden hacer múltiples registros)
 const USUARIOS_MODO_PRUEBAS = [
-  "sistemasch16@gmail.com"
+  "sistemas16ch@gmail.com"
 ];
 
 async function validarQR() {
