@@ -102,26 +102,34 @@ async function validarQR() {
       
       // Lógica de múltiples usos según modo
       const modoToken = tokenData.modo || 'dinamico';
-      
+
+      // Verificar si el usuario está en modo pruebas
+      const esUsuarioPruebas = usuarioActual && USUARIOS_MODO_PRUEBAS.includes(usuarioActual.email);
+
       if (modoToken === 'dinamico') {
-        // En modo dinámico: solo un uso
-        if (tokenData.usado) {
+        // En modo dinámico: solo un uso (excepto usuarios en modo pruebas)
+        if (tokenData.usado && !esUsuarioPruebas) {
           mostrarEstado("error", "🚫 QR ya utilizado. Cada QR solo puede usarse una vez en horario de entrada.");
           await incrementarContador('bloqueados');
           return false;
         }
-        
-        // Marcar como usado SOLO en modo dinámico
-        await updateDoc(tokenRef, {
-          usado: true,
-          fechaUso: new Date(),
-          ultimoUsuario: usuarioActual?.email || 'desconocido'
-        });
-        
+
+        // Si es usuario de pruebas, solo loguear
+        if (esUsuarioPruebas) {
+          console.log('🧪 Modo pruebas: saltando restricción de QR usado');
+        } else {
+          // Marcar como usado SOLO si no es modo pruebas
+          await updateDoc(tokenRef, {
+            usado: true,
+            fechaUso: new Date(),
+            ultimoUsuario: usuarioActual?.email || 'desconocido'
+          });
+        }
+
       } else if (modoToken === 'estatico') {
         // En modo estático: múltiples usos permitidos
         console.log('🔓 Modo estático: permitiendo múltiples usos');
-        
+
         // Registrar quién lo usó sin marcarlo como usado
         await updateDoc(tokenRef, {
           ultimoAcceso: new Date(),
