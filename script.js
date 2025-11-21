@@ -18,7 +18,8 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Configuración de Firebase
@@ -33,11 +34,16 @@ const firebaseConfig = {
 
 // Constantes de configuración
 const CONFIG = {
-  MODO_PRUEBAS: false, // Cambiar a true para pruebas
+  MODO_PRUEBAS: false, // Cambiar a true para pruebas globales
   HORA_LIMITE_ENTRADA: { hours: 8, minutes: 10 }, // 8:10 AM
   HORA_LIMITE_SALIDA_BECARIO: { hours: 13, minutes: 0 }, // 1:00 PM
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
 };
+
+// Usuarios con modo pruebas individual (pueden hacer múltiples registros)
+const USUARIOS_MODO_PRUEBAS = [
+  "sistemasch16@gmail.com"
+];
 
 async function validarQR() {
   const params = new URLSearchParams(window.location.search);
@@ -603,6 +609,7 @@ function getBadgeClass(tipoEvento) {
 
 async function registrarAsistencia(user, datosUsuario, coords) {
   const esRemoto = USUARIOS_REMOTOS.includes(user.email);
+  const esModoPruebas = CONFIG.MODO_PRUEBAS || USUARIOS_MODO_PRUEBAS.includes(user.email);
 
   // ⚠️ SOLO para referencia inicial de fecha (no se usa para evaluar puntualidad)
   const ahoraLocal = new Date();
@@ -612,9 +619,37 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     String(ahoraLocal.getDate()).padStart(2, '0')
   ].join('-');
 
+  // Log para debug
+  if (esModoPruebas) {
+    console.log(`🧪 MODO PRUEBAS ACTIVO para ${user.email}`);
+  }
+
   // PRIMERO: Verificar registros existentes
-  const yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
-  const yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
+  let yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
+  let yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
+
+  // En modo pruebas: permitir múltiples registros, alternando entre entrada y salida
+  if (esModoPruebas) {
+    // Contar registros del día para alternar
+    const q = query(
+      collection(db, "registros"),
+      where("uid", "==", user.uid),
+      where("fecha", "==", fechaLocal)
+    );
+    const registrosHoy = await getDocs(q);
+    const totalRegistros = registrosHoy.size;
+
+    // Alternar: par = entrada, impar = salida
+    if (totalRegistros % 2 === 0) {
+      yaRegistroEntrada = false;
+      yaRegistroSalida = true; // Forzar entrada
+    } else {
+      yaRegistroEntrada = true;
+      yaRegistroSalida = false; // Forzar salida
+    }
+
+    console.log(`🧪 Modo pruebas: ${totalRegistros} registros hoy, siguiente será ${totalRegistros % 2 === 0 ? 'entrada' : 'salida'}`);
+  }
 
   // ✅ NUEVO: Lógica especial para usuario tipo "especial"
   const esUsuarioEspecial = datosUsuario.tipo === "especial" || datosUsuario.tipo === "horario_especial";
@@ -672,7 +707,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   }
 
   // TERCERO: Solo validar ubicación si NO es remoto Y NO está en modo pruebas
-  if (!esRemoto && !CONFIG.MODO_PRUEBAS) {
+  if (!esRemoto && !esModoPruebas) {
     // Validaciones normales de ubicación, fin de semana, etc.
     const diaSemana = ahoraLocal.getDay();
     if (diaSemana === 0 || diaSemana === 6) {
@@ -715,165 +750,193 @@ async function registrarAsistencia(user, datosUsuario, coords) {
   }
 
   // Mensaje de modo pruebas
-  if (CONFIG.MODO_PRUEBAS) {
-    console.warn("⚠️ MODO PRUEBAS ACTIVO - Validaciones de ubicación omitidas");
+  if (esModoPruebas) {
+    console.warn("⚠️ MODO PRUEBAS ACTIVO - Validaciones de ubicación y registro duplicado omitidas");
   }
 
   // CUARTO: Crear registro en Firestore con validación de servidor
   try {
-    // 1️⃣ Guardar registro con hora del cliente (temporal, se actualizará con servidor)
-    const horaClienteTemp = ahoraLocal.toLocaleTimeString("es-MX", {
+    // 1️⃣ Función para evaluar puntualidad
+    function evaluarEstado(fecha, tipoEvento) {
+      if (tipoEvento !== "entrada") return "salida";
+      if (esUsuarioEspecial || esModoPruebas) return "puntual";
+
+      const hora = fecha.getHours();
+      const minutos = fecha.getMinutes();
+      const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
+      const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
+
+      if (hora < limiteHora || (hora === limiteHora && minutos <= limiteMinutos)) {
+        return "puntual";
+      }
+      return "retardo";
+    }
+
+    // 2️⃣ Calcular estado inicial con hora del cliente
+    const horaClienteStr = ahoraLocal.toLocaleTimeString("es-MX", {
       hour12: false,
       timeZone: "America/Mexico_City"
     });
+    const estadoCliente = evaluarEstado(ahoraLocal, mensajeTipo);
 
+    console.log(`📱 Hora cliente: ${horaClienteStr}, Estado: ${estadoCliente}`);
+
+    // 3️⃣ Crear registro con estado inicial del cliente
     const docRef = await addDoc(collection(db, "registros"), {
       uid: user.uid,
       nombre: datosUsuario.nombre,
       email: user.email,
       tipo: datosUsuario.tipo,
       fecha: fechaLocal,
-      hora: horaClienteTemp, // Temporal, se actualizará
+      hora: horaClienteStr,
       tipoEvento: mensajeTipo,
-      estado: "verificando", // Se actualizará con hora del servidor
+      estado: estadoCliente,
       ubicacion: coords || null,
       timestamp: serverTimestamp()
     });
 
-    console.log("📝 Registro creado, obteniendo hora del servidor...");
+    console.log("📝 Registro creado, esperando timestamp del servidor...");
 
-    // 2️⃣ Esperar y leer el documento para obtener el timestamp del servidor
-    // Firebase necesita un momento para resolver serverTimestamp()
-    let registroData = null;
-    let intentos = 0;
-    const maxIntentos = 5;
+    // 4️⃣ Esperar timestamp del servidor con onSnapshot (forma correcta)
+    const registroData = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        unsubscribe();
+        // Si hay timeout, resolver con null para usar fallback
+        console.warn("⚠️ Timeout esperando servidor, usando hora del cliente");
+        resolve(null);
+      }, 8000); // 8 segundos máximo
 
-    while (intentos < maxIntentos) {
-      await new Promise(resolve => setTimeout(resolve, 300)); // Esperar 300ms
-      const registroDoc = await getDoc(docRef);
-      registroData = registroDoc.data();
-
-      if (registroData && registroData.timestamp) {
-        console.log(`✅ Timestamp obtenido en intento ${intentos + 1}`);
-        break;
-      }
-
-      intentos++;
-      console.log(`⏳ Esperando timestamp del servidor... intento ${intentos}/${maxIntentos}`);
-    }
-
-    if (!registroData || !registroData.timestamp) {
-      // Si no hay timestamp, usar hora del cliente como fallback
-      console.warn("⚠️ No se pudo obtener timestamp del servidor, usando hora del cliente");
-
-      let estadoFallback = "salida";
-      if (mensajeTipo === "entrada") {
-        if (esUsuarioEspecial) {
-          estadoFallback = "puntual";
-        } else {
-          const horaActual = ahoraLocal.getHours();
-          const minutosActual = ahoraLocal.getMinutes();
-          if (horaActual < CONFIG.HORA_LIMITE_ENTRADA.hours ||
-              (horaActual === CONFIG.HORA_LIMITE_ENTRADA.hours && minutosActual <= CONFIG.HORA_LIMITE_ENTRADA.minutes)) {
-            estadoFallback = "puntual";
-          } else {
-            estadoFallback = "retardo";
-          }
+      const unsubscribe = onSnapshot(docRef, (doc) => {
+        const data = doc.data();
+        if (data && data.timestamp) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve(data);
         }
-      }
+      }, (error) => {
+        clearTimeout(timeout);
+        unsubscribe();
+        console.error("Error en onSnapshot:", error);
+        resolve(null); // Usar fallback en caso de error
+      });
+    });
 
-      await updateDoc(docRef, { estado: estadoFallback });
+    // 5️⃣ Si no hay timestamp del servidor, usar datos del cliente (ya guardados)
+    if (!registroData || !registroData.timestamp) {
+      console.log(`✅ Registro guardado con hora del cliente: ${horaClienteStr}`);
 
-      actualizarUI(user, datosUsuario, { fecha: fechaLocal, hora: horaClienteTemp, tipoEvento: mensajeTipo });
-      mostrarEstado(estadoFallback, `${estadoFallback === "puntual" ? "✅" : "⚠️"} Registro guardado a las ${horaClienteTemp}`);
+      actualizarUI(user, datosUsuario, { fecha: fechaLocal, hora: horaClienteStr, tipoEvento: mensajeTipo });
+
+      const mensaje = estadoCliente === "puntual"
+        ? `✅ Entrada puntual a las ${horaClienteStr}`
+        : estadoCliente === "retardo"
+        ? `⚠️ Entrada con retardo a las ${horaClienteStr}`
+        : `📤 Salida registrada a las ${horaClienteStr}`;
+
+      mostrarEstado(estadoCliente, mensaje);
       setTimeout(() => window.close(), 7000);
       return;
     }
 
-    // 3️⃣ Calcular hora y estado con el TIMESTAMP DEL SERVIDOR (anti-trampa)
+    // 6️⃣ Comparar hora cliente vs servidor
     const timestampServidor = registroData.timestamp.toDate();
-    const horaServidor = timestampServidor.toLocaleTimeString("es-MX", {
+    const horaServidorStr = timestampServidor.toLocaleTimeString("es-MX", {
       hour12: false,
       timeZone: "America/Mexico_City"
     });
-    const fechaServidor = [
-      timestampServidor.getFullYear(),
-      String(timestampServidor.getMonth() + 1).padStart(2, '0'),
-      String(timestampServidor.getDate()).padStart(2, '0')
-    ].join('-');
 
-    console.log(`🔒 Hora del servidor: ${horaServidor} (no manipulable)`);
+    // Calcular diferencia en minutos
+    const diffMs = Math.abs(timestampServidor.getTime() - ahoraLocal.getTime());
+    const diffMinutos = Math.floor(diffMs / 60000);
 
-    // 4️⃣ Evaluar puntualidad con hora del SERVIDOR
-    let estadoRegistro = "salida";
+    console.log(`🖥️ Hora servidor: ${horaServidorStr}`);
+    console.log(`📊 Diferencia cliente-servidor: ${diffMinutos} minutos`);
 
-    if (mensajeTipo === "entrada") {
-      if (esUsuarioEspecial) {
-        estadoRegistro = "puntual";
-      } else {
-        const horaActualServidor = timestampServidor.getHours();
-        const minutosActualServidor = timestampServidor.getMinutes();
+    // 7️⃣ Si hay desfase > 2 minutos, usar hora del servidor (posible manipulación)
+    let estadoFinal = estadoCliente;
+    let horaFinal = horaClienteStr;
+    let fechaFinal = fechaLocal;
 
-        const limiteHora = CONFIG.HORA_LIMITE_ENTRADA.hours;
-        const limiteMinutos = CONFIG.HORA_LIMITE_ENTRADA.minutes;
+    if (diffMinutos > 2) {
+      console.warn(`⚠️ Desfase de ${diffMinutos} min detectado, usando hora del servidor`);
 
-        console.log(`🔒 Evaluando: ${horaActualServidor}:${String(minutosActualServidor).padStart(2, '0')} vs límite ${limiteHora}:${String(limiteMinutos).padStart(2, '0')}`);
+      estadoFinal = evaluarEstado(timestampServidor, mensajeTipo);
+      horaFinal = horaServidorStr;
+      fechaFinal = [
+        timestampServidor.getFullYear(),
+        String(timestampServidor.getMonth() + 1).padStart(2, '0'),
+        String(timestampServidor.getDate()).padStart(2, '0')
+      ].join('-');
 
-        if (horaActualServidor < limiteHora) {
-          estadoRegistro = "puntual";
-          console.log('✅ PUNTUAL: Antes de las 8:00 (servidor)');
-        } else if (horaActualServidor === limiteHora && minutosActualServidor <= limiteMinutos) {
-          estadoRegistro = "puntual";
-          console.log('✅ PUNTUAL: Entre 8:00 y 8:10:59 (servidor)');
-        } else {
-          estadoRegistro = "retardo";
-          console.log('⚠️ RETARDO: A partir de 8:11 (servidor)');
-        }
-      }
+      // Actualizar registro con datos del servidor
+      await updateDoc(docRef, {
+        fecha: fechaFinal,
+        hora: horaFinal,
+        estado: estadoFinal
+      });
+
+      console.log(`🔒 Registro actualizado con hora del servidor: ${horaFinal}, Estado: ${estadoFinal}`);
+    } else {
+      console.log(`✅ Horas sincronizadas, manteniendo datos del cliente`);
     }
 
-    // 5️⃣ Actualizar registro con valores del servidor
-    await updateDoc(docRef, {
-      fecha: fechaServidor,
-      hora: horaServidor,
-      estado: estadoRegistro
-    });
+    console.log(`✅ Registro finalizado: ${estadoFinal} a las ${horaFinal}`);
 
-    console.log(`✅ Registro finalizado: ${estadoRegistro} a las ${horaServidor}`);
-
-    // 6️⃣ Actualizar UI y mostrar mensaje
+    // 8️⃣ Actualizar UI y mostrar mensaje
     setTimeout(async () => {
       await cargarHistorial(user.uid);
     }, 1200);
 
-    actualizarUI(user, datosUsuario, { fecha: fechaServidor, hora: horaServidor, tipoEvento: mensajeTipo });
+    actualizarUI(user, datosUsuario, { fecha: fechaFinal, hora: horaFinal, tipoEvento: mensajeTipo });
 
     let mensaje = "";
-    if (estadoRegistro === "puntual") {
+    if (estadoFinal === "puntual") {
       mensaje = esUsuarioEspecial
-        ? `✅ Entrada registrada a las ${horaServidor} - Horario Especial`
-        : `✅ Entrada puntual a las ${horaServidor}`;
-    } else if (estadoRegistro === "retardo") {
-      mensaje = `⚠️ Entrada con retardo a las ${horaServidor}`;
-    } else if (estadoRegistro === "salida") {
+        ? `✅ Entrada registrada a las ${horaFinal} - Horario Especial`
+        : `✅ Entrada puntual a las ${horaFinal}`;
+    } else if (estadoFinal === "retardo") {
+      mensaje = `⚠️ Entrada con retardo a las ${horaFinal}`;
+    } else {
       mensaje = esUsuarioEspecial
-        ? `📤 Salida registrada a las ${horaServidor} - Horario Especial`
-        : `📤 Salida registrada a las ${horaServidor}`;
+        ? `📤 Salida registrada a las ${horaFinal} - Horario Especial`
+        : `📤 Salida registrada a las ${horaFinal}`;
     }
 
-    const mensajeEspecial = generarMensajeEspecial(timestampServidor.getDay(), estadoRegistro, datosUsuario.nombre);
+    // Mostrar si se usó hora del servidor por desfase
+    if (diffMinutos > 2) {
+      mensaje += ` (verificado)`;
+    }
+
+    const fechaParaMensaje = registroData ? timestampServidor : ahoraLocal;
+    const mensajeEspecial = generarMensajeEspecial(fechaParaMensaje.getDay(), estadoFinal, datosUsuario.nombre);
     if (mensajeEspecial) {
       mensaje += `\n${mensajeEspecial}`;
     }
 
-    mostrarEstado(estadoRegistro, mensaje);
+    mostrarEstado(estadoFinal, mensaje);
     setTimeout(() => {
       window.close();
     }, 7000);
 
   } catch (error) {
     console.error("Error al registrar asistencia:", error);
-    mostrarEstado("error", "❌ Error al registrar asistencia");
+
+    // Mensajes de error más específicos
+    let mensajeError = "❌ Error al registrar asistencia";
+
+    if (error.code === 'permission-denied') {
+      mensajeError = "❌ Sin permisos para registrar. Contacta al administrador.";
+    } else if (error.code === 'unavailable') {
+      mensajeError = "❌ Servidor no disponible. Verifica tu conexión e intenta nuevamente.";
+    } else if (error.code === 'not-found') {
+      mensajeError = "❌ Error de configuración. Contacta al administrador.";
+    } else if (error.message && error.message.includes('network')) {
+      mensajeError = "❌ Error de red. Verifica tu conexión a internet.";
+    } else if (error.message) {
+      mensajeError = `❌ Error: ${error.message}`;
+    }
+
+    mostrarEstado("error", mensajeError);
   }
 }
 
@@ -957,8 +1020,11 @@ onAuthStateChanged(auth, async (user) => {
       // Si llegamos aquí, el usuario está autorizado y el QR es válido (o es remoto)
 
       // Verificar si es usuario remoto O modo pruebas ANTES de obtener ubicación
-      if (esRemoto || CONFIG.MODO_PRUEBAS) {
+      const esModoPruebasUsuario = CONFIG.MODO_PRUEBAS || USUARIOS_MODO_PRUEBAS.includes(user.email);
+
+      if (esRemoto || esModoPruebasUsuario) {
         // Usuario remoto o modo pruebas: registrar sin ubicación
+        console.log(`📍 Saltando ubicación para ${user.email} (remoto: ${esRemoto}, pruebas: ${esModoPruebasUsuario})`);
         registrarAsistencia(user, userData, null);
       } else {
         // Usuario presencial: obtener ubicación
