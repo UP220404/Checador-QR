@@ -40,8 +40,13 @@ const CONFIG = {
   HORA_LIMITE_SALIDA_EMPLEADO: { hours: 16, minutes: 0 } // 4:00 PM
 };
 
-// Usuarios con modo pruebas individual (pueden hacer múltiples registros)
+// Usuarios con modo pruebas COMPLETO (saltan todas las restricciones)
 const USUARIOS_MODO_PRUEBAS = [
+  // Agregar correos aquí para pruebas sin restricciones
+];
+
+// Usuarios que solo pueden hacer múltiples registros (mantienen restricciones de QR y ubicación)
+const USUARIOS_MULTI_REGISTRO = [
   "sistemas16ch@gmail.com"
 ];
 
@@ -618,6 +623,7 @@ function getBadgeClass(tipoEvento) {
 async function registrarAsistencia(user, datosUsuario, coords) {
   const esRemoto = USUARIOS_REMOTOS.includes(user.email);
   const esModoPruebas = CONFIG.MODO_PRUEBAS || USUARIOS_MODO_PRUEBAS.includes(user.email);
+  const esMultiRegistro = USUARIOS_MULTI_REGISTRO.includes(user.email);
 
   // ⚠️ SOLO para referencia inicial de fecha (no se usa para evaluar puntualidad)
   const ahoraLocal = new Date();
@@ -629,15 +635,18 @@ async function registrarAsistencia(user, datosUsuario, coords) {
 
   // Log para debug
   if (esModoPruebas) {
-    console.log(`🧪 MODO PRUEBAS ACTIVO para ${user.email}`);
+    console.log(`🧪 MODO PRUEBAS COMPLETO para ${user.email}`);
+  }
+  if (esMultiRegistro) {
+    console.log(`🔄 MULTI-REGISTRO ACTIVO para ${user.email} (con restricciones de QR y ubicación)`);
   }
 
   // PRIMERO: Verificar registros existentes
   let yaRegistroEntrada = await yaRegistradoHoy(user.uid, "entrada");
   let yaRegistroSalida = await yaRegistradoHoy(user.uid, "salida");
 
-  // En modo pruebas: permitir múltiples registros, alternando entre entrada y salida
-  if (esModoPruebas) {
+  // Permitir múltiples registros para modo pruebas O multi-registro
+  if (esModoPruebas || esMultiRegistro) {
     // Contar registros del día para alternar
     const q = query(
       collection(db, "registros"),
@@ -656,7 +665,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
       yaRegistroSalida = false; // Forzar salida
     }
 
-    console.log(`🧪 Modo pruebas: ${totalRegistros} registros hoy, siguiente será ${totalRegistros % 2 === 0 ? 'entrada' : 'salida'}`);
+    console.log(`🔄 Multi-registro: ${totalRegistros} registros hoy, siguiente será ${totalRegistros % 2 === 0 ? 'entrada' : 'salida'}`);
   }
 
   // ✅ NUEVO: Lógica especial para usuario tipo "especial"
@@ -1027,15 +1036,15 @@ onAuthStateChanged(auth, async (user) => {
       
       // Si llegamos aquí, el usuario está autorizado y el QR es válido (o es remoto)
 
-      // Verificar si es usuario remoto O modo pruebas ANTES de obtener ubicación
+      // Verificar si es usuario remoto O modo pruebas COMPLETO (no multi-registro)
       const esModoPruebasUsuario = CONFIG.MODO_PRUEBAS || USUARIOS_MODO_PRUEBAS.includes(user.email);
 
       if (esRemoto || esModoPruebasUsuario) {
-        // Usuario remoto o modo pruebas: registrar sin ubicación
+        // Usuario remoto o modo pruebas completo: registrar sin ubicación
         console.log(`📍 Saltando ubicación para ${user.email} (remoto: ${esRemoto}, pruebas: ${esModoPruebasUsuario})`);
         registrarAsistencia(user, userData, null);
       } else {
-        // Usuario presencial: obtener ubicación
+        // Usuario presencial o multi-registro: REQUIERE ubicación
         try {
           mostrarEstado("info", "📍 Obteniendo ubicación...");
           const coords = await obtenerUbicacion();
