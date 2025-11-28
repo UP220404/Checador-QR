@@ -1,6 +1,6 @@
 // ===== CONFIGURACIÓN FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -184,8 +184,8 @@ function calcularDiasLaborablesPeriodo(año, mes, periodo, festivosDelAño = {})
       const fecha = new Date(año, mes - 1, dia);
       const diaSemana = fecha.getDay();
 
-      // ✅ Excluir fines de semana Y días festivos
-      if (diaSemana >= 1 && diaSemana <= 5 && !esDiaFestivo(año, mes, dia, festivosDelAño)) {
+      // ✅ Incluir días entre semana (lunes a viernes) - los festivos se incluyen como días laborables pagados
+      if (diaSemana >= 1 && diaSemana <= 5) {
         diasLaborales.push(dia);
       }
     }
@@ -197,12 +197,12 @@ function calcularDiasLaborablesPeriodo(año, mes, periodo, festivosDelAño = {})
       const fecha = new Date(año, mes - 1, dia);
       const diaSemana = fecha.getDay();
 
-      // ✅ Excluir fines de semana Y días festivos
-      if (diaSemana >= 1 && diaSemana <= 5 && !esDiaFestivo(año, mes, dia, festivosDelAño)) {
+      // ✅ Incluir días entre semana (lunes a viernes) - los festivos se incluyen como días laborables pagados
+      if (diaSemana >= 1 && diaSemana <= 5) {
         diasLaborales.push(dia);
       }
     }
-    // ✅ Retornar TODOS los días laborables del 16 al fin de mes (excluyendo festivos)
+    // ✅ Retornar TODOS los días laborables del 16 al fin de mes (los festivos cuentan como días pagados)
     return diasLaborales;
   }
 }
@@ -1044,6 +1044,30 @@ window.calcularNomina = async function() {
         let diasJustificadosCompletos = 0; // Solo permisos/vacaciones completas
         const justificacionesDetalle = [];
 
+        // 🎉 PRIMERO: Contar días festivos como días justificados automáticamente
+        let diasFestivosEnPeriodo = 0;
+        diasLaboralesEstandar.forEach(dia => {
+          if (esDiaFestivo(añoNum, mesNum, dia, festivosDelAño)) {
+            diasFestivosEnPeriodo++;
+            const fechaStr = `${añoNum}-${String(mesNum).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+            const festivoInfo = festivosDelAño[fechaStr];
+            justificacionesDetalle.push({
+              tipo: 'dia_festivo',
+              dias: 1,
+              motivo: festivoInfo?.nombre || 'Día Festivo',
+              nombreTipo: '🎉 Día Festivo Pagado',
+              fechaInicio: fechaStr,
+              fechaFin: fechaStr
+            });
+          }
+        });
+        diasJustificadosTotal += diasFestivosEnPeriodo;
+        diasJustificadosCompletos += diasFestivosEnPeriodo;
+        if (diasFestivosEnPeriodo > 0) {
+          console.log(`🎉 ${empleado.nombre}: +${diasFestivosEnPeriodo} día(s) festivo(s) pagado(s)`);
+        }
+
+        // SEGUNDO: Agregar ausencias justificadas
         ausenciasEmpleado.forEach(ausencia => {
           const dias = ausencia.diasJustificados || 0;
           if (dias > 0) {
