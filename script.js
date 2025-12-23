@@ -253,12 +253,16 @@ const CSS_CLASSES = {
   }
 };
 
-// Lista blanca de correos remotos
-const USUARIOS_REMOTOS = [
+// Lista blanca de correos remotos (OBSOLETA - Ahora se usa el campo 'rol' en Firestore)
+// Mantener esta lista solo como referencia histórica
+const USUARIOS_REMOTOS_LEGACY = [
   "sistemas20cielitoh@gmail.com",
   "operacionescielitoh@gmail.com",
   "atencionmedicacielitoh@gmail.com"
 ];
+
+// ⚠️ NUEVO SISTEMA DE ROLES: Ahora el rol se lee desde Firestore (campo 'rol')
+// Los usuarios pueden tener rol: 'empleado' (normal) o 'remoto' (sin QR ni ubicación)
 
 let ubicacionPrecargada = null;
 let ubicacionObteniendo = false;
@@ -621,7 +625,8 @@ function getBadgeClass(tipoEvento) {
  */
 
 async function registrarAsistencia(user, datosUsuario, coords) {
-  const esRemoto = USUARIOS_REMOTOS.includes(user.email);
+  // ✅ NUEVO: Leer rol desde datosUsuario (Firestore)
+  const esRemoto = datosUsuario.rol === 'remoto';
   const esModoPruebas = CONFIG.MODO_PRUEBAS || USUARIOS_MODO_PRUEBAS.includes(user.email);
   const esMultiRegistro = USUARIOS_MULTI_REGISTRO.includes(user.email);
 
@@ -993,39 +998,36 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     usuarioActual = user;
 
-    // Verificar si es usuario remoto ANTES de la verificación de acceso sospechoso
-    const esUsuarioRemoto = USUARIOS_REMOTOS.includes(user.email);
-
-    // Verificar acceso sospechoso con usuario identificado (excepto usuarios remotos)
-    const accesoSospechoso = verificarAccesoSospechoso();
-    if (accesoSospechoso && !sesionValidada && !esUsuarioRemoto) {
-      await registrarIntentoSospechoso(accesoSospechoso, user);
-      mostrarEstado("error", `⚠️ ${user.displayName || user.email}, debes escanear el QR para registrar asistencia.`);
-      return; // ✅ IMPORTANTE: Salir aquí si no está validado
-    }
-    
     // Usuario autenticado
     DOM.btnGoogle?.classList.add(CSS_CLASSES.dNone);
     DOM.btnLogout?.classList.remove(CSS_CLASSES.dNone);
     DOM.userName.textContent = `Hola, ${user.displayName || user.email}`;
 
-    // Obtener datos adicionales del usuario
+    // Obtener datos adicionales del usuario PRIMERO
     try {
       const userRef = doc(db, "usuarios", user.uid);
       const userDoc = await getDoc(userRef);
-      
+
       if (!userDoc.exists()) {
         mostrarEstado("error", `❌ El correo ${user.email} no está autorizado`);
         return;
       }
 
       const userData = userDoc.data();
-      
-      // ✅ CORREGIR AQUÍ: Validar QR ANTES de continuar
-      const esRemoto = USUARIOS_REMOTOS.includes(user.email);
-      
+
+      // ✅ NUEVO: Verificar si es usuario remoto usando el campo 'rol' de Firestore
+      const esUsuarioRemoto = userData.rol === 'remoto';
+
+      // Verificar acceso sospechoso con usuario identificado (excepto usuarios remotos)
+      const accesoSospechoso = verificarAccesoSospechoso();
+      if (accesoSospechoso && !sesionValidada && !esUsuarioRemoto) {
+        await registrarIntentoSospechoso(accesoSospechoso, user);
+        mostrarEstado("error", `⚠️ ${user.displayName || user.email}, debes escanear el QR para registrar asistencia.`);
+        return; // ✅ IMPORTANTE: Salir aquí si no está validado
+      }
+
       // Solo validar QR si NO es usuario remoto
-      if (!esRemoto) {
+      if (!esUsuarioRemoto) {
         const qrValido = await validarQR();
         if (!qrValido) {
           // ✅ Si el QR no es válido, NO continuar con el registro
@@ -1033,15 +1035,15 @@ onAuthStateChanged(auth, async (user) => {
           return; // ✅ DETENER AQUÍ
         }
       }
-      
+
       // Si llegamos aquí, el usuario está autorizado y el QR es válido (o es remoto)
 
       // Verificar si es usuario remoto O modo pruebas COMPLETO (no multi-registro)
       const esModoPruebasUsuario = CONFIG.MODO_PRUEBAS || USUARIOS_MODO_PRUEBAS.includes(user.email);
 
-      if (esRemoto || esModoPruebasUsuario) {
+      if (esUsuarioRemoto || esModoPruebasUsuario) {
         // Usuario remoto o modo pruebas completo: registrar sin ubicación
-        console.log(`📍 Saltando ubicación para ${user.email} (remoto: ${esRemoto}, pruebas: ${esModoPruebasUsuario})`);
+        console.log(`📍 Saltando ubicación para ${user.email} (remoto: ${esUsuarioRemoto}, pruebas: ${esModoPruebasUsuario})`);
         registrarAsistencia(user, userData, null);
       } else {
         // Usuario presencial o multi-registro: REQUIERE ubicación

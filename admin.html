@@ -43,6 +43,9 @@
     <a href="#seguridad" onclick="mostrarSeccion('seguridad')">
     <i class="bi bi-shield-exclamation"></i>Seguridad
     </a>
+    <a href="#gestion-usuarios" onclick="mostrarSeccion('gestion-usuarios')">
+      <i class="bi bi-people-fill"></i>Gestión de Usuarios
+    </a>
     <a href="#reportes" onclick="mostrarSeccion('reportes')">
       <i class="bi bi-file-earmark-bar-graph"></i>Reportes
     </a>
@@ -290,6 +293,96 @@
     </div>
   </div>
 </div>
+
+    <!-- Gestión de Usuarios -->
+    <div id="gestion-usuarios" class="seccion d-none">
+      <div class="section-header">
+        <h2><i class="bi bi-people-fill"></i> Gestión de Usuarios</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+          <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
+        </button>
+      </div>
+
+      <!-- Estadísticas rápidas -->
+      <div class="row mb-4 g-3">
+        <div class="col-md-3">
+          <div class="card text-center p-3">
+            <div class="text-primary mb-2"><i class="bi bi-people" style="font-size: 2rem;"></i></div>
+            <h5 id="stat-total-usuarios">0</h5>
+            <small class="text-muted">Total Usuarios</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center p-3">
+            <div class="text-success mb-2"><i class="bi bi-building" style="font-size: 2rem;"></i></div>
+            <h5 id="stat-empleados-normales">0</h5>
+            <small class="text-muted">Empleados Normales</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center p-3">
+            <div class="text-info mb-2"><i class="bi bi-house" style="font-size: 2rem;"></i></div>
+            <h5 id="stat-empleados-remotos">0</h5>
+            <small class="text-muted">Empleados Remotos</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center p-3">
+            <div class="text-warning mb-2"><i class="bi bi-clock" style="font-size: 2rem;"></i></div>
+            <h5 id="stat-becarios">0</h5>
+            <small class="text-muted">Becarios</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-bar mb-3 p-3 rounded-3 shadow-sm">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <input type="text" class="form-control" id="filtroBusquedaUsuario" placeholder="Buscar por nombre o correo...">
+          </div>
+          <div class="col-md-3">
+            <select id="filtroRolUsuario" class="form-select">
+              <option value="">Todos los roles</option>
+              <option value="empleado">Empleados Normales</option>
+              <option value="remoto">Empleados Remotos</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select id="filtroTipoUsuario" class="form-select">
+              <option value="">Todos los tipos</option>
+              <option value="becario">Becarios</option>
+              <option value="tiempo_completo">Tiempo Completo</option>
+              <option value="especial">Horario Especial</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-secondary w-100" onclick="limpiarFiltrosUsuarios()">
+              <i class="bi bi-x-circle me-1"></i>Limpiar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de usuarios -->
+      <div class="table-responsive rounded-3 shadow-sm">
+        <table id="tabla-usuarios" class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Tipo</th>
+              <th>Rol</th>
+              <th>Salario/Hora</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Se llenará dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- Justificantes, Permisos y Vacaciones -->
 <div id="justificantes" class="seccion d-none">
@@ -696,6 +789,140 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="generarReportePersonalizado()">Generar Reporte</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para nuevo usuario -->
+<div class="modal fade" id="modalNuevoUsuario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-person-plus me-2"></i>Crear Nuevo Usuario
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNuevoUsuario">
+          <div class="row">
+            <div class="col-md-6">
+              <label class="form-label">Nombre Completo *</label>
+              <input type="text" class="form-control" id="nuevoNombre" required placeholder="Ej: Juan Pérez">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Correo Electrónico *</label>
+              <input type="email" class="form-control" id="nuevoCorreo" required placeholder="ejemplo@cielitohome.com">
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Empleado *</label>
+              <select class="form-select" id="nuevoTipo" required>
+                <option value="">Seleccionar...</option>
+                <option value="becario">Becario</option>
+                <option value="tiempo_completo">Tiempo Completo</option>
+                <option value="especial">Horario Especial</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Rol *</label>
+              <select class="form-select" id="nuevoRol" required>
+                <option value="empleado">Empleado Normal (con QR y ubicación)</option>
+                <option value="remoto">Empleado Remoto (sin QR ni ubicación)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <label class="form-label">Salario Quincenal</label>
+              <input type="number" class="form-control" id="nuevoSalario" placeholder="0.00" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Pago por Hora</label>
+              <input type="number" class="form-control" id="nuevoPagoHora" placeholder="0.00" step="0.01">
+            </div>
+          </div>
+          <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Roles:</strong><br>
+            • <strong>Empleado Normal:</strong> Requiere escanear QR y estar en la oficina<br>
+            • <strong>Empleado Remoto:</strong> Puede checar sin QR y desde cualquier ubicación
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" form="formNuevoUsuario">
+          <i class="bi bi-save me-2"></i>Crear Usuario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar usuario -->
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-pencil-square me-2"></i>Editar Usuario
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditarUsuario">
+          <input type="hidden" id="editarUsuarioId">
+          <div class="row">
+            <div class="col-md-6">
+              <label class="form-label">Nombre Completo</label>
+              <input type="text" class="form-control" id="editarNombreUsuario" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Correo Electrónico</label>
+              <input type="email" class="form-control" id="editarCorreoUsuario" readonly>
+              <small class="text-muted">El correo no se puede modificar</small>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Empleado</label>
+              <select class="form-select" id="editarTipoUsuario">
+                <option value="becario">Becario</option>
+                <option value="tiempo_completo">Tiempo Completo</option>
+                <option value="especial">Horario Especial</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Rol</label>
+              <select class="form-select" id="editarRolUsuario">
+                <option value="empleado">Empleado Normal (con QR y ubicación)</option>
+                <option value="remoto">Empleado Remoto (sin QR ni ubicación)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <label class="form-label">Salario Quincenal</label>
+              <input type="number" class="form-control" id="editarSalarioUsuario" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Pago por Hora</label>
+              <input type="number" class="form-control" id="editarPagoHoraUsuario" step="0.01">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger me-auto" onclick="eliminarUsuario()">
+          <i class="bi bi-trash me-2"></i>Eliminar Usuario
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" form="formEditarUsuario">
+          <i class="bi bi-save me-2"></i>Guardar Cambios
+        </button>
       </div>
     </div>
   </div>

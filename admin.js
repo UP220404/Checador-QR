@@ -3329,3 +3329,315 @@ async function generarReporteAusenciasPDF() {
 }
 
 window.generarReporteAusenciasPDF = generarReporteAusenciasPDF;
+
+// ============================================
+// GESTIÓN DE USUARIOS
+// ============================================
+
+let usuariosData = [];
+
+// Cargar usuarios desde Firestore
+async function cargarUsuarios() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "usuarios"));
+    usuariosData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      rol: doc.data().rol || 'empleado' // Por defecto, empleado normal
+    }));
+
+    renderTablaUsuarios();
+    actualizarEstadisticasUsuarios();
+    console.log(`✅ ${usuariosData.length} usuarios cargados`);
+  } catch (error) {
+    console.error("Error cargando usuarios:", error);
+    mostrarNotificacion("Error al cargar usuarios", "danger");
+  }
+}
+
+// Actualizar estadísticas
+function actualizarEstadisticasUsuarios() {
+  const total = usuariosData.length;
+  const normales = usuariosData.filter(u => (u.rol || 'empleado') === 'empleado').length;
+  const remotos = usuariosData.filter(u => u.rol === 'remoto').length;
+  const becarios = usuariosData.filter(u => u.tipo === 'becario').length;
+
+  document.getElementById('stat-total-usuarios').textContent = total;
+  document.getElementById('stat-empleados-normales').textContent = normales;
+  document.getElementById('stat-empleados-remotos').textContent = remotos;
+  document.getElementById('stat-becarios').textContent = becarios;
+}
+
+// Renderizar tabla de usuarios con filtros
+function renderTablaUsuarios() {
+  const tbody = document.querySelector('#tabla-usuarios tbody');
+  tbody.innerHTML = '';
+
+  // Obtener valores de filtros
+  const busqueda = document.getElementById('filtroBusquedaUsuario')?.value.toLowerCase() || '';
+  const filtroRol = document.getElementById('filtroRolUsuario')?.value || '';
+  const filtroTipo = document.getElementById('filtroTipoUsuario')?.value || '';
+
+  // Filtrar usuarios
+  const usuariosFiltrados = usuariosData.filter(u => {
+    const matchBusqueda = !busqueda ||
+      u.nombre.toLowerCase().includes(busqueda) ||
+      u.email.toLowerCase().includes(busqueda);
+    const matchRol = !filtroRol || (u.rol || 'empleado') === filtroRol;
+    const matchTipo = !filtroTipo || u.tipo === filtroTipo;
+
+    return matchBusqueda && matchRol && matchTipo;
+  });
+
+  if (usuariosFiltrados.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center py-4 text-muted">
+          <i class="bi bi-inbox me-2"></i>No se encontraron usuarios
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Ordenar alfabéticamente
+  usuariosFiltrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  usuariosFiltrados.forEach(usuario => {
+    const rol = usuario.rol || 'empleado';
+    const fila = document.createElement('tr');
+
+    fila.innerHTML = `
+      <td>
+        <strong>${usuario.nombre}</strong>
+      </td>
+      <td>
+        <small class="text-muted">${usuario.email}</small>
+      </td>
+      <td>
+        <span class="badge ${
+          usuario.tipo === 'becario' ? 'bg-warning' :
+          usuario.tipo === 'especial' ? 'bg-info' :
+          'bg-primary'
+        }">
+          ${usuario.tipo === 'becario' ? 'Becario' :
+            usuario.tipo === 'especial' ? 'Especial' :
+            'Tiempo Completo'}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-sm ${rol === 'remoto' ? 'btn-info' : 'btn-success'}"
+                onclick="toggleRolUsuario('${usuario.id}', '${rol}')"
+                title="Click para cambiar rol">
+          <i class="bi ${rol === 'remoto' ? 'bi-house' : 'bi-building'} me-1"></i>
+          ${rol === 'remoto' ? 'Remoto' : 'Normal'}
+        </button>
+      </td>
+      <td>
+        ${usuario.salarioQuincenal ? `$${usuario.salarioQuincenal.toFixed(2)}` :
+          usuario.pagoPorHora ? `$${usuario.pagoPorHora.toFixed(2)}/hr` :
+          '-'}
+      </td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-primary me-1"
+                onclick="abrirEditarUsuario('${usuario.id}')"
+                title="Editar">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger"
+                onclick="confirmarEliminarUsuario('${usuario.id}')"
+                title="Eliminar">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    `;
+
+    tbody.appendChild(fila);
+  });
+}
+
+// Toggle rol de usuario (remoto <-> empleado)
+window.toggleRolUsuario = async function(userId, rolActual) {
+  const nuevoRol = rolActual === 'remoto' ? 'empleado' : 'remoto';
+  const usuario = usuariosData.find(u => u.id === userId);
+
+  if (!usuario) return;
+
+  const confirmacion = confirm(
+    `¿Cambiar rol de ${usuario.nombre}?\n\n` +
+    `Rol actual: ${rolActual === 'remoto' ? 'Empleado Remoto' : 'Empleado Normal'}\n` +
+    `Nuevo rol: ${nuevoRol === 'remoto' ? 'Empleado Remoto (sin QR ni ubicación)' : 'Empleado Normal (con QR y ubicación)'}`
+  );
+
+  if (!confirmacion) return;
+
+  try {
+    await updateDoc(doc(db, "usuarios", userId), { rol: nuevoRol });
+    mostrarNotificacion(
+      `✅ Rol actualizado: ${usuario.nombre} es ahora ${nuevoRol === 'remoto' ? 'Empleado Remoto' : 'Empleado Normal'}`,
+      "success"
+    );
+    await cargarUsuarios(); // Recargar
+  } catch (error) {
+    console.error("Error actualizando rol:", error);
+    mostrarNotificacion("Error al cambiar el rol", "danger");
+  }
+};
+
+// Abrir modal para editar usuario
+window.abrirEditarUsuario = function(userId) {
+  const usuario = usuariosData.find(u => u.id === userId);
+  if (!usuario) return;
+
+  document.getElementById('editarUsuarioId').value = userId;
+  document.getElementById('editarNombreUsuario').value = usuario.nombre;
+  document.getElementById('editarCorreoUsuario').value = usuario.email;
+  document.getElementById('editarTipoUsuario').value = usuario.tipo;
+  document.getElementById('editarRolUsuario').value = usuario.rol || 'empleado';
+  document.getElementById('editarSalarioUsuario').value = usuario.salarioQuincenal || '';
+  document.getElementById('editarPagoHoraUsuario').value = usuario.pagoPorHora || '';
+
+  new bootstrap.Modal(document.getElementById('modalEditarUsuario')).show();
+};
+
+// Confirmar eliminación de usuario
+window.confirmarEliminarUsuario = function(userId) {
+  const usuario = usuariosData.find(u => u.id === userId);
+  if (!usuario) return;
+
+  const confirmacion = confirm(
+    `⚠️ ¿ELIMINAR USUARIO?\n\n` +
+    `Nombre: ${usuario.nombre}\n` +
+    `Correo: ${usuario.email}\n\n` +
+    `Esta acción NO se puede deshacer.`
+  );
+
+  if (confirmacion) {
+    eliminarUsuarioConfirmado(userId);
+  }
+};
+
+// Eliminar usuario (llamada desde modal también)
+window.eliminarUsuario = function() {
+  const userId = document.getElementById('editarUsuarioId').value;
+  confirmarEliminarUsuario(userId);
+};
+
+async function eliminarUsuarioConfirmado(userId) {
+  try {
+    await deleteDoc(doc(db, "usuarios", userId));
+    mostrarNotificacion("✅ Usuario eliminado correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById('modalEditarUsuario'))?.hide();
+    await cargarUsuarios();
+  } catch (error) {
+    console.error("Error eliminando usuario:", error);
+    mostrarNotificacion("Error al eliminar usuario", "danger");
+  }
+}
+
+// Limpiar filtros
+window.limpiarFiltrosUsuarios = function() {
+  document.getElementById('filtroBusquedaUsuario').value = '';
+  document.getElementById('filtroRolUsuario').value = '';
+  document.getElementById('filtroTipoUsuario').value = '';
+  renderTablaUsuarios();
+};
+
+// Event Listeners
+document.getElementById('formNuevoUsuario')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const nombre = document.getElementById('nuevoNombre').value.trim();
+  const correo = document.getElementById('nuevoCorreo').value.trim().toLowerCase();
+  const tipo = document.getElementById('nuevoTipo').value;
+  const rol = document.getElementById('nuevoRol').value;
+  const salario = parseFloat(document.getElementById('nuevoSalario').value) || null;
+  const pagoHora = parseFloat(document.getElementById('nuevoPagoHora').value) || null;
+
+  if (!nombre || !correo || !tipo || !rol) {
+    mostrarNotificacion("Por favor completa todos los campos obligatorios", "warning");
+    return;
+  }
+
+  // Verificar si el correo ya existe
+  const existe = usuariosData.some(u => u.email.toLowerCase() === correo);
+  if (existe) {
+    mostrarNotificacion("⚠️ Ya existe un usuario con ese correo electrónico", "warning");
+    return;
+  }
+
+  try {
+    // Crear usuario en Firestore
+    const nuevoUsuario = {
+      nombre: nombre,
+      email: correo,
+      correo: correo, // Mantener ambos campos por compatibilidad
+      tipo: tipo,
+      rol: rol
+    };
+
+    if (salario) nuevoUsuario.salarioQuincenal = salario;
+    if (pagoHora) nuevoUsuario.pagoPorHora = pagoHora;
+
+    await addDoc(collection(db, "usuarios"), nuevoUsuario);
+
+    mostrarNotificacion(`✅ Usuario creado: ${nombre}`, "success");
+    bootstrap.Modal.getInstance(document.getElementById('modalNuevoUsuario')).hide();
+    document.getElementById('formNuevoUsuario').reset();
+    await cargarUsuarios();
+
+  } catch (error) {
+    console.error("Error creando usuario:", error);
+    mostrarNotificacion("Error al crear usuario", "danger");
+  }
+});
+
+document.getElementById('formEditarUsuario')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const userId = document.getElementById('editarUsuarioId').value;
+  const nombre = document.getElementById('editarNombreUsuario').value.trim();
+  const tipo = document.getElementById('editarTipoUsuario').value;
+  const rol = document.getElementById('editarRolUsuario').value;
+  const salario = parseFloat(document.getElementById('editarSalarioUsuario').value) || null;
+  const pagoHora = parseFloat(document.getElementById('editarPagoHoraUsuario').value) || null;
+
+  try {
+    const updateData = {
+      nombre: nombre,
+      tipo: tipo,
+      rol: rol
+    };
+
+    if (salario) {
+      updateData.salarioQuincenal = salario;
+    }
+    if (pagoHora) {
+      updateData.pagoPorHora = pagoHora;
+    }
+
+    await updateDoc(doc(db, "usuarios", userId), updateData);
+
+    mostrarNotificacion("✅ Usuario actualizado correctamente", "success");
+    bootstrap.Modal.getInstance(document.getElementById('modalEditarUsuario')).hide();
+    await cargarUsuarios();
+
+  } catch (error) {
+    console.error("Error actualizando usuario:", error);
+    mostrarNotificacion("Error al actualizar usuario", "danger");
+  }
+});
+
+// Event listeners para filtros
+document.getElementById('filtroBusquedaUsuario')?.addEventListener('input', renderTablaUsuarios);
+document.getElementById('filtroRolUsuario')?.addEventListener('change', renderTablaUsuarios);
+document.getElementById('filtroTipoUsuario')?.addEventListener('change', renderTablaUsuarios);
+
+// Cargar usuarios cuando se muestra la sección
+const originalMostrarSeccion = window.mostrarSeccion;
+window.mostrarSeccion = function(id) {
+  originalMostrarSeccion(id);
+  if (id === 'gestion-usuarios' && usuariosData.length === 0) {
+    cargarUsuarios();
+  }
+};

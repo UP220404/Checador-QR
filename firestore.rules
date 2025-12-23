@@ -35,7 +35,8 @@ service cloud.firestore {
              data.correo is string &&
              data.tipo is string &&
              (!('salarioQuincenal' in data) || data.salarioQuincenal is number) &&
-             (!('pagoPorHora' in data) || data.pagoPorHora is number);
+             (!('pagoPorHora' in data) || data.pagoPorHora is number) &&
+             (!('rol' in data) || data.rol in ['empleado', 'remoto']);
     }
 
     // Validar que el email sea válido
