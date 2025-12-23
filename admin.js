@@ -3392,7 +3392,7 @@ function renderTablaUsuarios() {
   if (usuariosFiltrados.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="text-center py-4 text-muted">
+        <td colspan="4" class="text-center py-4 text-muted">
           <i class="bi bi-inbox me-2"></i>No se encontraron usuarios
         </td>
       </tr>
@@ -3410,9 +3410,7 @@ function renderTablaUsuarios() {
     fila.innerHTML = `
       <td>
         <strong>${usuario.nombre}</strong>
-      </td>
-      <td>
-        <small class="text-muted">${usuario.email}</small>
+        <br><small class="text-muted">${usuario.email}</small>
       </td>
       <td>
         <span class="badge ${
@@ -3432,11 +3430,6 @@ function renderTablaUsuarios() {
           <i class="bi ${rol === 'remoto' ? 'bi-house' : 'bi-building'} me-1"></i>
           ${rol === 'remoto' ? 'Remoto' : 'Normal'}
         </button>
-      </td>
-      <td>
-        ${usuario.salarioQuincenal ? `$${usuario.salarioQuincenal.toFixed(2)}` :
-          usuario.pagoPorHora ? `$${usuario.pagoPorHora.toFixed(2)}/hr` :
-          '-'}
       </td>
       <td class="text-end">
         <button class="btn btn-sm btn-outline-primary me-1"
