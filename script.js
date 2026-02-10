@@ -744,7 +744,7 @@ async function registrarAsistencia(user, datosUsuario, coords) {
     }
 
     // Coordenadas y validación de ubicación (sin cambios)
-    const OFICINA = { lat: 21.92545657925517, lng: -102.31327431392519 };
+    const OFICINA = { lat: 21.917617, lng: -102.310117 };
     const RADIO_METROS = 40;
 
     function distanciaMetros(lat1, lng1, lat2, lng2) {
